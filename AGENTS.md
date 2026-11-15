@@ -11,7 +11,9 @@ numbered prompt before stage work.
   sequence. Repository review/reference intake does not authorize implementing
   all 44 stages. Resume from actual artifacts and `docs/prompts/PROGRESS.md`.
 - `docs/prompts/START_HERE.md` is the canonical execution guide;
-  `docs/prompts/SEQUENCE.json` owns stage ordering and dependencies.
+  `docs/prompts/SEQUENCE.json` owns stage ordering, dependencies and declared
+  producer/consumer IDs. `docs/prompts/HANDOFFS.md` explains usable outputs,
+  later integration owners and conditional firmware/hardware gates.
 - Exact-part TI PDFs pinned in `docs/reference/manifest.json` own silicon
   facts. Sibling implementations establish reusable conventions, not register
   behavior. Seed notes and public drivers must be checked against the PDFs.

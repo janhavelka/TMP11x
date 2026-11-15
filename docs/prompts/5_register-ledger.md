@@ -2,6 +2,8 @@
 
 Apply [COMMON.md](COMMON.md) and root [AGENTS.md](../../AGENTS.md). Phase: **Exact silicon source and feature evidence**. Type: **software**.
 Prerequisites: [3](3_ti-reference-intake.md), [4](4_family-identity.md).
+Produces: `register-ledger`, `feature-ledger`, `register-validator`.
+Consumes: `ti-archive`, `variant-contract`.
 
 ## Objective and boundaries
 
@@ -19,6 +21,7 @@ Use TI TMP116 printed p.24-31, TMP117 p.25-32, TMP119 p.32-39; check CONFIG/EEPR
 - Record that MOD=10 is a documented continuous-mode alias that reads back 00, not a reserved mode. High/low alert read effects depend on alert versus therm mode. EUN is bit 15 of 0x04; its busy bit 14 mirrors CONFIG bit 12. Keep register access permissions separate from the stricter first-release policy that denies EEPROM and unlock writes.
 - Preserve source conflicts explicitly: TMP116 p.17 says busy is cleared during reset-load, while p.26 Table 6/p.29 Table 10 say it indicates power-up; TMP119 p.20 says four EEPROM words, while its p.32 map exposes three plus offset; TMP119 ID defaults also disagree. Do not silently resolve contradictory prose by copying another model.
 - Create `docs/feature-coverage.md` seeded with source-backed documented capability, planned implementation stage, test owner, CLI and qualification evidence columns. No entry is implemented merely because it is listed.
+- Define `python tools/check_register_ledger.py` as the offline validation command with nonzero failure exit and register its regression tests. Stages 6/7 refine this same ledger; later stages update it when facts change and run the validator instead of creating competing tables. Stage 12 owns the corresponding reviewed C++ `CommandTable.h` constants.
 
 - Carry every R/F/X identifier from [FULL_COVERAGE](FULL_COVERAGE.md) into the coverage artifact with per-model disposition and source/test owners. Enumerate every field, reserved pointer 0x09–0x0E and invalid upper pointer bits; do not silently mask an invalid selector to a valid address.
 - Record field-level reset/NVM domains: CONFIG MOD1 (bit11) is explicitly not EEPROM-stored, whereas MOD0 and bits9:2 are. Include THIGH/TLOW/OFFSET factory defaults versus prior programmed values, and arbitrary EEPROM-shadow contents.

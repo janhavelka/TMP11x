@@ -2,6 +2,8 @@
 
 Apply [COMMON.md](COMMON.md) and root [AGENTS.md](../../AGENTS.md). Phase: **Cooperative operation and exhaustive native qualification**. Type: **software**.
 Prerequisites: [18](18_safe-initialize.md), [19](19_config-trust.md), [25](25_per-device-reset.md), [28](28_cooperative-admission.md).
+Produces: `configuration-jobs`.
+Consumes: `safe-apply-engine`, `sync-initialize-recover`, `config-trust`, `offset-feature`, `job-lifecycle`.
 
 ## Objective and boundaries
 
@@ -14,6 +16,7 @@ Inspect TMP1x2 `stepApply`, `poll`, `begin` synchronous state engine and tests. 
 ## Complete implementation work
 
 - Connect owner `INITIALIZE`, `CONFIGURE` and `RECOVER` phases to identity, lock/busy, checked writes and stable readback; do not duplicate an independent algorithm that can drift from blocking semantics.
+- Reuse stage 18's real synchronous apply/recover phases with stage 19 trust and stage 23 offset extension. INITIALIZE uses the existing binding; CONFIGURE stages sensor settings only. Execute stage 28's lifecycle/invalid-binding cases against these real engines and keep rejected binding changes bus-silent.
 - Track first mutating write attempt and commit staged desired settings then; cancellation before a write must preserve previous settings while cancellation after may require recovery.
 - Every `poll(nowMs,maxTransfers)` limits I2C callbacks and returns pending during EEPROM/startup waits; it does not call yield/sleep hooks. The application schedules the next turn. Reuse the TMP116 startup-conflict policy from stage 18 instead of equating busy-clear with reset-load completion.
 - Enforce callback timeouts against the remaining whole-operation budget and reobserve authoritative time after callbacks under stage 9's contract. Record possible effects even when a physically successful write completes after the operation deadline; logical timeout must not rewrite transport health.

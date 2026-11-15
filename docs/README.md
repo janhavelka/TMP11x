@@ -8,6 +8,8 @@ The project is in preparation; driver implementation has not started.
 - [Full promptset audit and remaining source conflicts](reports/promptset-audit.md)
 - [Datasheet/functionality gap audit](reports/feature-gap-audit.md) and
   [complete register/feature requirements](prompts/FULL_COVERAGE.md)
+- [Prompt handoff audit](reports/handoff-audit.md) and
+  [producer/consumer inventory](prompts/HANDOFFS.md)
 - [Library comparison](library-comparison.md), [source adoption](source-adoption.md),
   and [toolchain/package plan](toolchain-and-package-plan.md)
 - [Reference archive](reference/README.md) and [provenance manifest](reference/manifest.json)

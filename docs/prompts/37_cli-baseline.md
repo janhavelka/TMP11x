@@ -2,6 +2,8 @@
 
 Apply [COMMON.md](COMMON.md) and root [AGENTS.md](../../AGENTS.md). Phase: **Firmware, CLI and runner integrations**. Type: **software**.
 Prerequisites: [27](27_sync-helpers-cache.md), [28](28_cooperative-admission.md), [30](30_cooperative-measurement.md), [33](33_native-suite.md).
+Produces: `cli-baseline`, `cli-protocol`.
+Consumes: `sync-api`, `job-lifecycle`, `measurement-jobs`, `native-qualification`, `host-test-entrypoint`, `version-tools`.
 
 ## Objective and boundaries
 
@@ -16,12 +18,19 @@ Inspect TMP1x2 `examples/common/Tmp1x2Cli.cpp/.h`, CLI output and diagnostics so
 - Build one reusable parser/dispatcher under `examples/common/`; neither firmware backend may create a second command parser. No `String`, uncontrolled heap allocations or unbounded line buffering.
 - Implement the canonical observation commands from [CLI_CONTRACT](CLI_CONTRACT.md), including `read`, `latest` and `caps`; do not invent competing `temp`/`fresh` names. `read` observes TEMP without claiming a new conversion; cached `latest` and model capabilities are bus-silent. CONFIG/TEMP diagnostics disclose read-to-clear effects. One-shot triggering belongs to the explicit mutating route in stage 38.
 - Define deterministic tagged records for runner correlation, bounded output, invalid/malformed input errors, no-echo/quiet behavior, and consistent status/operation names. A line that overflows or loses bytes must be rejected through its next delimiter; never dispatch a valid-looking prefix or suffix of a truncated command. Output loss must be observable so the runner cannot accept a partial success record.
+- Produce `docs/cli-protocol.md` plus checked-in golden transcripts under `test/cli/`. Freeze protocol version, complete command grammar, record schema/size bounds, firmware versus library identity, boot/session/request identity, restart detection, unknown/null fields, and request acceptance versus operation completion. `job start` acknowledgement is not a completed measurement; terminal request and operation records must be distinguishable. Bus-silent commands never probe the sensor just to fill an unknown ID field.
 - Keep console processing separate from the transport; application adapters own `Wire`, `Serial`, IDF USB/UART tasks and output flow control.
-- Add a host compiled CLI fixture driven by scripted fake transport, with parser tests and exact complete help matrix; `eeprom` commands must remain read-only. Test bus-silent binding/startup and observation commands before initialization; opening the console must not silently configure the sensor. Tests of this host fixture do not require installed MCU SDKs or hardware.
+- Add a host compiled CLI fixture driven by scripted fake transport, with parser tests and help for implemented observation routes. The complete grammar is frozen here, but stage 38 implements mutation/jobs and the final help matrix; unimplemented commands must not advertise successful operation. Test bus-silent binding/startup and read-only EEPROM/observation commands before initialization. Host tests require no MCU SDK or hardware.
+- Register the fixture/parser/golden-transcript tests in the standard host entrypoint from stages 10/33 and update `docs/testing.md`. Stage 38 completes firmware source wiring and fresh link evidence; stage 39 consumes this exact protocol and fixture rather than creating an unrelated transcript generator.
 
 ## Verification and exit criteria
 
-Check fuzzed line lengths, split input, overlapping pending operations, no terminal newline, invalid model/enum, quiet-batch overflow and exact command parity on both framework examples. No hardware activity is required.
+Check fuzzed line lengths, split input, no terminal newline, invalid model/enum
+and quiet-batch overflow in the compiled host fixture. Stage 38 executes live
+job/command parity tests once those routes exist. Check available framework
+source adapters now; missing sources/SDKs leave explicit stage 38 integration
+or target-link gates, not a dependency on both frameworks for the host engine.
+No hardware activity is required.
 
 ## Documentation and delegation
 

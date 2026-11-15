@@ -2,6 +2,8 @@
 
 Apply [COMMON.md](COMMON.md) and root [AGENTS.md](../../AGENTS.md). Phase: **Features, safe measurements and diagnostics**. Type: **software**.
 Prerequisites: [16](16_temperature-codec.md), [19](19_config-trust.md), [20](20_conversion-settings.md), [21](21_fresh-one-shot.md), [22](22_limits-alert.md), [23](23_offset-feature.md), [24](24_readonly-eeprom.md), [25](25_per-device-reset.md), [26](26_diagnostic-access.md).
+Produces: `sync-api`.
+Consumes: `latest-read-engine`, `config-trust`, `conversion-settings`, `sync-acquisition`, `limits-alert`, `offset-feature`, `readonly-eeprom`, `device-reset`, `diagnostics`.
 
 ## Objective and boundaries
 

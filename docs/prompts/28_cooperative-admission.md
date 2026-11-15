@@ -2,6 +2,8 @@
 
 Apply [COMMON.md](COMMON.md) and root [AGENTS.md](../../AGENTS.md). Phase: **Cooperative operation and exhaustive native qualification**. Type: **software**.
 Prerequisites: [9](9_owner-deadline-contract.md), [14](14_binding-lifecycle.md), [15](15_passive-health.md), [27](27_sync-helpers-cache.md).
+Produces: `job-lifecycle`.
+Consumes: `owner-contract`, `binding-api`, `transport-health`, `config-trust`, `sync-api`.
 
 ## Objective and boundaries
 
@@ -18,6 +20,8 @@ Adapt audited TMP1x2 `src/TMP1x2Operations.cpp`, `OperationResult`, token API an
 - Implement and unit-test private poll/result transitions with `maxTransfers` budget (including zero), bounded CPU-only transitions, no yield/sleep and `takeResult` exactly once with token match. Public admitted operations must have real execution, cancellation and timeout terminal paths.
 - Apply stage 9's post-callback clock policy. Entry `nowMs` alone cannot measure time spent inside a callback or prove a timely completion. Do not present the selected peer's external-time approximation as an exact callback-completion timestamp.
 - Define and test cancel, end/unbind behavior for active operations/result slots; no operation state may become silently unreachable.
+- Connect stage 14 lifecycle and stage 19 invalidation guards to actual active/retained slots. Test rebind/end/unbind/invalidate with active jobs and pending results under the frozen policy, initially using the private lifecycle harness and again with real engines in stages 29/30.
+- Validate immutable binding fields before token/slot commitment. A configure/initialize/recover request cannot change model, address, callbacks/contexts, clock epoch or transport policy. Reject mismatch with zero I2C and unchanged caller token; deliberate binding changes use the lifecycle API.
 - Owner budget counts physical transfer callbacks, not number of register bytes. No global transport queue or TCA mux state.
 
 ## Verification and exit criteria

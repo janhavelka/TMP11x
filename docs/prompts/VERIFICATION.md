@@ -10,7 +10,8 @@ python scripts/test_check_references.py
 git diff --check
 ```
 
-These prove navigation/dependency consistency and pinned archive integrity,
+These prove navigation/dependency and declared artifact-handoff consistency,
+plus pinned archive integrity,
 including corruption/no-overwrite behavior. They do not validate register
 interpretation or establish any of the implementation layers below.
 
@@ -48,13 +49,23 @@ Typical target commands **after the agent has implemented them**:
 
 ```sh
 python scripts/check_promptset.py
+python tools/check_register_ledger.py
 cmake -S . -B build-tests -DTMP11X_BUILD_TESTS=ON
 cmake --build build-tests --parallel
 ctest --test-dir build-tests --output-on-failure
 python tools/check_version_sync.py
 python tools/check_package.py
+python tools/check_doxygen.py
 ```
 
 On Windows use `-G "MinGW Makefiles"` or an available compatible CMake
 generator. PlatformIO uses the adapted `scripts/pio.cmd`. Do not claim these
 implementation-dependent commands pass before their files and tests exist.
+
+Tool producers are explicit in [HANDOFFS](HANDOFFS.md): stage 5 creates the
+register validator, stage 10 the version generator/checker and standard host
+test entrypoint, and stage 42 the package/Doxygen checkers. Stages 37–39 append
+CLI/golden/runner tests to the host entrypoint; stage 43 runs its current suite.
+A compatible HIL image must include the final stage 38 CLI integration and
+match the runner protocol/build identity; an older stage 34/35 build does not
+qualify merely because its library version matches.

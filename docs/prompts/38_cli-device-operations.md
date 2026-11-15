@@ -2,6 +2,8 @@
 
 Apply [COMMON.md](COMMON.md) and root [AGENTS.md](../../AGENTS.md). Phase: **Firmware, CLI and runner integrations**. Type: **software**.
 Prerequisites: [22](22_limits-alert.md), [23](23_offset-feature.md), [24](24_readonly-eeprom.md), [25](25_per-device-reset.md), [26](26_diagnostic-access.md), [28](28_cooperative-admission.md), [29](29_cooperative-config.md), [30](30_cooperative-measurement.md), [31](31_failure-recovery.md), [37](37_cli-baseline.md).
+Produces: `cli-complete`, `firmware-cli-handoff`.
+Consumes: `cli-baseline`, `cli-protocol`, `limits-alert`, `offset-feature`, `readonly-eeprom`, `device-reset`, `diagnostics`, `configuration-jobs`, `measurement-jobs`, `fault-closure`.
 
 ## Objective and boundaries
 
@@ -18,6 +20,9 @@ Review current public API and tests, TMP1x2 shared CLI measured one-shots/owner-
 - Render raw/cached/observed values and timestamp validity distinctly, including readiness flag consumption and one-shot evidence. Do not show a newly completed measurement from a stale data-ready read.
 - Preserve one owner token/result, per-transfer budgets, cancellation and status diagnostics from library, not synthetic CLI state. Include error reasons and safe no-I/O refusals. Explicit setting commands leave the requested settings applied; only temporary diagnostic campaigns capture and restore a baseline. Restoration cannot replay raw status/self-clearing bits or guarantee reconstruction of consumed flags.
 - Register native CLI tests and shared grammar checks so Arduino and IDF use the same exact commands and help definitions. A finite `watch` observes existing conversions by default; any one-shot-triggering mode requires the explicit mutating option and its own deadline/cancellation behavior.
+- Enforce the shared one-shot policy: desired continuous mode rejects without I2C; the caller explicitly requests shutdown before one-shot or one-shot watch. Do not silently change the persistent profile or restore a previous mode inside the command.
+- Complete stage 37's grammar/help and register every command/job test in the standard host suite. Integrate the shared processor, final routes and application identity/session fields into available stage 34/35 firmware sources. Rebuild affected targets when their toolchain exists; preserve pending source/link gates when unavailable without blocking the host CLI work.
+- Produce `docs/firmware-cli-handoff.md` listing each backend/target, final protocol version, source/build/image identity and current full-link result or exact missing gate. A pre-37/38 example build is not a compatible runner image. Stage 40 requires one actual matching image from this handoff; stage 42/43 must refresh links if later changes invalidate them.
 
 - Reconcile R/F/X coverage against canonical commands and output fields: all stable settings, both limits, supported offset, all permitted shadow words, identity, status and profile trust need a route. Excluded ARA/broadcast/persistence/alternate-family UID procedures must have no command/raw escape. Report unsupported/unknown explicitly; do not infer electrical grade or factory serial validity.
 

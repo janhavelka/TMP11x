@@ -2,6 +2,8 @@
 
 Apply [COMMON.md](COMMON.md) and root [AGENTS.md](../../AGENTS.md). Phase: **Portable device protocol, identity and trustworthy configuration**. Type: **software**.
 Prerequisites: [5](5_register-ledger.md), [8](8_api-architecture.md), [9](9_owner-deadline-contract.md), [10](10_package-foundation.md), [11](11_status-values.md).
+Produces: `register-transport`, `command-table`.
+Consumes: `register-ledger`, `api-contract`, `owner-contract`, `value-types`, `build-foundation`.
 
 ## Objective and boundaries
 
@@ -13,7 +15,8 @@ Adapt TMP1x2 callback signatures and physical read/write helpers, its sensor tra
 
 ## Complete implementation work
 
-- Implement one register pointer write+two-byte read and one pointer+two-byte write with borrowed terminal callbacks; reject invalid lengths/address or an unbound instance/missing callback. Do not reject a null opaque user context when callbacks are stateless.
+- Implement private register transport over a validated borrowed binding view: one pointer write+two-byte read and one pointer+two-byte write. Reject invalid lengths/address or missing callbacks; a stateless callback may use a null opaque context. Stage 14 adds public unbound-instance guards once lifecycle exists; do not create a fake binding API here.
+- Produce `include/TMP11x/CommandTable.h` with reviewed literal register addresses, field/access metadata and variant distinctions from stage 5. Keep it framework-free; stage 17 adds CONFIG codecs, not a second register table. Test this private transport seam directly before public lifecycle integration.
 - Define checked read/write access against the per-model register ledger, including read-only registers and EEPROM/0x07 alias; keep safety gates separate from the low-level wire serializer.
 - Track exact physical callback counts; callback always bounded by timeout including lock acquisition. No retry, pin init, implicit bus reset or cross-device address changes.
 - Normalize callback `IN_PROGRESS`/incoherent return without mislabeling NACK phase. Preserve diagnostic `detail`, and do not publish output arguments after failed/incomplete reads. If the frozen callback returns only Status, the adapter owns byte-count validation and must return an error on a short transfer; core cannot detect a dishonest OK with a short buffer fill. Do not use sentinel bytes as a substitute for transferred-length reporting.

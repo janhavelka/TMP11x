@@ -2,6 +2,8 @@
 
 Apply [COMMON.md](COMMON.md) and root [AGENTS.md](../../AGENTS.md). Phase: **Exact silicon source and feature evidence**. Type: **software**.
 Prerequisites: [1](1_ecosystem-core-audit.md), [2](2_tooling-peer-audit.md).
+Produces: `ti-archive`.
+Consumes: `ecosystem-audit`, `tooling-plan`.
 
 ## Objective and boundaries
 

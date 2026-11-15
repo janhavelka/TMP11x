@@ -2,6 +2,8 @@
 
 Apply [COMMON.md](COMMON.md) and root [AGENTS.md](../../AGENTS.md). Phase: **Package, CI and final review**. Type: **software**.
 Prerequisites: [31](31_failure-recovery.md), [32](32_variant-model-fixtures.md), [33](33_native-suite.md), [38](38_cli-device-operations.md), [39](39_python-hil-runner.md), [42](42_package-docs.md).
+Produces: `final-audit`.
+Consumes: `fault-closure`, `variant-fixtures`, `native-qualification`, `cli-complete`, `hil-runner`, `package-qualification`, `feature-ledger`.
 
 ## Objective and boundaries
 

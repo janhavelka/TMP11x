@@ -2,6 +2,8 @@
 
 Apply [COMMON.md](COMMON.md) and root [AGENTS.md](../../AGENTS.md). Phase: **Cooperative operation and exhaustive native qualification**. Type: **software**.
 Prerequisites: [20](20_conversion-settings.md), [21](21_fresh-one-shot.md), [22](22_limits-alert.md), [28](28_cooperative-admission.md), [29](29_cooperative-config.md).
+Produces: `measurement-jobs`.
+Consumes: `sync-acquisition`, `conversion-settings`, `limits-alert`, `job-lifecycle`, `configuration-jobs`.
 
 ## Objective and boundaries
 
@@ -22,6 +24,13 @@ Compare TI timing/data-ready/one-shot sections and TMP1x2 `startRead` job state 
 - Carry stage 6/21's accumulated-average, aborted-partial-block and TEMP coherence qualifications into cooperative results. Changes to limits/offset/settings use the shared profile-generation policy; no accepted job may relabel an earlier sample under a new profile or resolve unknown silicon semantics via a fake.
 
 ## Verification and exit criteria
+
+Apply stage 21's shutdown-only managed one-shot policy unchanged: reject
+desired continuous before admission, verify hardware shutdown before trigger,
+retain desired shutdown across transient MOD=11 and completion, and preserve
+uncertain conversion evidence on cancel/timeout without mode restore/retrigger.
+Run lifecycle/invalidation integration tests from stages 14/19/28 against real
+measurement jobs, not only the admission harness.
 
 Test interleaved two-sensor fake transport, one transfer per poll, 32-bit wrap, invalid/no clock, same temperature consecutive one-shots, missed ready and late successful read not published as timely result.
 

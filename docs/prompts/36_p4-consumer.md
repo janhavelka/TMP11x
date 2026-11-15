@@ -2,6 +2,8 @@
 
 Apply [COMMON.md](COMMON.md) and root [AGENTS.md](../../AGENTS.md). Phase: **Firmware, CLI and runner integrations**. Type: **software**.
 Prerequisites: [33](33_native-suite.md), [35](35_idf-examples.md).
+Produces: `p4-consumer-source`, `p4-build-record`.
+Consumes: `board-guide`, `native-qualification`, `idf-adapter-source`.
 
 ## Objective and boundaries
 

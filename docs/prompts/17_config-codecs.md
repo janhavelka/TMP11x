@@ -1,7 +1,9 @@
 # 17 — Implement type-safe CONFIG codecs and validation
 
 Apply [COMMON.md](COMMON.md) and root [AGENTS.md](../../AGENTS.md). Phase: **Portable device protocol, identity and trustworthy configuration**. Type: **software**.
-Prerequisites: [5](5_register-ledger.md), [6](6_timing-status.md), [7](7_eeprom-reset-policy.md), [8](8_api-architecture.md), [11](11_status-values.md), [12](12_i2c-register-transport.md).
+Prerequisites: [5](5_register-ledger.md), [6](6_timing-status.md), [7](7_eeprom-reset-policy.md), [8](8_api-architecture.md), [11](11_status-values.md), [12](12_i2c-register-transport.md), [16](16_temperature-codec.md).
+Produces: `config-codec`.
+Consumes: `register-ledger`, `behavior-contract`, `safety-policy`, `value-types`, `command-table`, `temperature-codec`.
 
 ## Objective and boundaries
 
@@ -16,7 +18,7 @@ Read original CONFIG table for each part, including mode[11:10], CONV[9:7], AVG[
 - Implement `encodeConfiguration`, `decodeConfiguration`, validation of typed settings, stable writable masks and documented legal values. Emit the documented values for reserved bits (zero in these CONFIG tables), mask read-only status out of write values, and force Soft_Reset=0 for all ordinary settings writes. Never preserve/replay a command-only bit or copy read-to-clear status as persistent configuration.
 - Distinguish volatile hardware state from reset-loaded EEPROM defaults. Do not hardcode `0x0220` as proof of live configuration or assume a sensor has factory calibration.
 - Enumerate allowed conversion mode, 3-bit cycle selection, 2-bit averaging, therm/alert, polarity and data-ready output. Thresholds are separate registers using prompt 16 codecs. MOD=10 is legal continuous mode and reads back 00 (TMP116 p.26, TMP117 p.27, TMP119 p.34); normal encoders may canonicalize continuous to 00, but raw decoders must not call 10 reserved. Treat MOD=11 one-shot and Soft_Reset as operations, not replayable steady settings.
-- Create pure expected-register comparisons of stable settings with mode normalization and explicit exclusion of command/status transitions. A one-shot returning to shutdown is not ordinary configuration drift. A configuration snapshot retains raw observed flags and their mode-dependent read effects; raw CONFIG status is not an EEPROM lock proof (EUN is in 0x04).
+- Create pure expected-register comparisons of stable settings with mode normalization and explicit exclusion of command/status transitions. Under the shutdown-only one-shot policy, an owned transient MOD=11 and return to desired shutdown are expected; an unowned one-shot is not universally exempt from drift. A configuration snapshot retains raw observed flags and their mode-dependent read effects; raw CONFIG status is not an EEPROM lock proof (EUN is in 0x04).
 - Add independent literal bit/word vectors and invalid enum/reserved-bit tests for all supported families.
 
 - Keep field-level persistence separate from ordinary write masks: MOD1 is not EEPROM-stored, and a legal command encoding is not a replayable desired setting. Include reset fixtures with nonfactory stable fields; neither a whole-word EEPROM image nor factory 0x0220 may be assumed to describe current CONFIG.

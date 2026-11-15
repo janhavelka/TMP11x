@@ -2,6 +2,8 @@
 
 Apply [COMMON.md](COMMON.md) and root [AGENTS.md](../../AGENTS.md). Phase: **Portable device protocol, identity and trustworthy configuration**. Type: **software**.
 Prerequisites: [7](7_eeprom-reset-policy.md), [8](8_api-architecture.md), [15](15_passive-health.md), [17](17_config-codecs.md), [18](18_safe-initialize.md).
+Produces: `config-trust`.
+Consumes: `safe-apply-engine`, `sync-initialize-recover`, `config-codec`, `transport-health`, `safety-policy`.
 
 ## Objective and boundaries
 
@@ -13,12 +15,12 @@ Inspect TMP1x2 `src/TMP1x2Configuration.cpp` CONFIG/threshold comparisons, dirty
 
 ## Complete implementation work
 
-- Add typed setters for supported stable settings and `readConfiguration`, `verifyConfiguration`, observed-versus-desired `SettingsSnapshot`, dirty reason and last successful verification time.
+- Extend stage 18's shared apply/readback/trust machinery with `readConfiguration`, `verifyConfiguration`, observed-versus-desired `SettingsSnapshot`, dirty reason and last verification time. Stages 20 and 22 own the typed mode/cycle/AVG and limit/alert convenience setters; those wrappers reuse this engine instead of duplicating writes or replay.
 - A failed write attempt may reach the sensor: mark hardware config dirty even when callback returns NACK/timeout unless the failure demonstrably proves no effect. Preserve the user's desired target for recovery.
 - A live read of changed stable fields or an explicitly reported external reset invalidates cached assumptions; monitoring status flags alone is not a stable-config mismatch. The driver cannot detect an unannounced outside writer or reset from a cache. Document exclusive device ownership and the caller's invalidation duty.
-- Implement `invalidateDeviceState()` bus-silently and explicitly document effect on prior sample freshness and pending owner jobs.
+- Implement `invalidateDeviceState()` bus-silently for existing samples/trust, and define its pending-job/result policy for stage 28 to integrate and execute once slots exist.
 - Centralize destructive-read bookkeeping for every CONFIG/TEMP path, including failed transfers that may already have cleared flags in hardware. CONFIG consumes DATA_READY and alert-mode flags, but therm-mode HIGH_Alert survives the read; TEMP consumes DATA_READY, not high/low alert flags. Verification must record these effects without treating them as configuration mismatches.
-- Compare canonical stable configuration: MOD=10 reads as continuous MOD=00; one-shot is an operation that returns to shutdown, and Soft_Reset always reads zero. Exclude status/command bits from stable readback. See TMP116 p.26 Table 6, TMP117 pp.27-28 Table 7-6 and TMP119 pp.34-35 Table 8-5.
+- Compare canonical stable configuration: MOD=10 reads as continuous MOD=00; Soft_Reset always reads zero. Exclude status/command bits from stable readback, but retain operation ownership: MOD=11 is expected only during this instance's owned shutdown-mode one-shot, whose completion matches desired shutdown. An unrelated observed mode cannot be hidden by unconditional normalization. Stage 21 connects these comparison rules to real acquisition. See TMP116 p.26 Table 6, TMP117 pp.27-28 Table 7-6 and TMP119 pp.34-35 Table 8-5.
 
 - Trust covers the entire desired profile, not only CONFIG. Observe/compare both limits and, once stage 23 lands, the supported offset; preserve per-field validity when only part was read. An unobserved field is unknown, and detecting a mismatch must not silently adopt it or overwrite the desired replay target. The coverage row F11 closes only when replay/readback includes every owned field.
 

@@ -40,6 +40,13 @@ protocol authority. Stage 8 freezes any needed exact signatures in
   commands and cannot be replayed by initialization or recovery. Bind-only
   diagnostics can observe permitted registers without managed initialization;
   report unknown startup/configuration/sample trust instead of writing settings.
+- Managed one-shot requires desired shutdown and verified hardware shutdown;
+  a continuous desired mode rejects before I2C. The caller explicitly selects
+  shutdown first. Desired shutdown remains unchanged across the owned transient
+  one-shot and its completion; cancellation does not restore a prior mode.
+- Binding fields are immutable during settings/owner operations. Changing
+  model/address/callbacks/contexts/clock epoch requires explicit rebind; INITIALIZE,
+  CONFIGURE and RECOVER jobs reuse the established binding.
 - `Err::OK` / `Status::Ok()` report a successful **call**, not a new conversion.
   Return `MEASUREMENT_NOT_READY` or explicit `freshConversion=false` as
   contract requires. `I2C_NACK_ADDR` only when transport knows the phase.

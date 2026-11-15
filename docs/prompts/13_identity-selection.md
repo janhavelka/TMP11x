@@ -2,6 +2,8 @@
 
 Apply [COMMON.md](COMMON.md) and root [AGENTS.md](../../AGENTS.md). Phase: **Portable device protocol, identity and trustworthy configuration**. Type: **software**.
 Prerequisites: [4](4_family-identity.md), [5](5_register-ledger.md), [8](8_api-architecture.md), [11](11_status-values.md), [12](12_i2c-register-transport.md).
+Produces: `identity-engine`.
+Consumes: `variant-contract`, `register-ledger`, `value-types`, `register-transport`.
 
 ## Objective and boundaries
 
@@ -13,10 +15,10 @@ Check exact TI ID sections, documented revision fields, TMP119 contradictory def
 
 ## Complete implementation work
 
-- Implement `readIdentity`, `probe` and selected-model validation that reads 0x0F with no configuration write. Retain raw ID, recognized group, revision field, selected BOM model and confidence/ambiguity.
+- Implement the private identity read/match engine and selected-model validation over stage 12's binding view, reading 0x0F with no data-register write. Retain raw ID, recognized group, revision field, selected BOM model and confidence/ambiguity. Stage 14 connects public `readIdentity`/`probe` to real binding; test the engine directly here without an initializer or fake lifecycle.
 - TMP116 group expects all 16 documented ID bits 0x1116; it has no separately documented revision field. TMP117 and TMP119 accept verified base DID[11:0] `0x117` with revision separately recorded; do not reject an otherwise compatible 117-family response solely for a different revision nibble. Do not extrapolate that policy to undocumented TMP116 IDs or assert accuracy grade from an address ACK.
 - Reject incompatible family IDs, malformed register reads, unsupported addresses and mismatched selected model/group. Distinguish transport errors from valid but unexpected identity.
-- Ensure `probe` is a diagnostics operation with explicit health side effects (or lack thereof) and that discovery never mutates hardware.
+- Specify `probe` as health-neutral diagnostics for stage 14's public route and stage 15's accounting integration. Discovery remains application-owned and never mutates hardware.
 - Provide tests for known 0x1116, 0x0117, 0x2117 examples, alternate 117-family revision nibble, wrong full TMP116 ID and same-bus unrelated responders. The selected model gates capabilities after compatible-family validation; a compatible numeric response is not unique proof of physical part identity.
 
 - Add named TMP114 and TMP118 negative responders from the [exclusion audit](../reference/extracted/excluded-families-audit.md). A mismatch at 0x0F terminates validation without data writes, alternate ID scans or the TMP118 UID unlock-like write procedure. Their different ID pointers/bit layouts must not be accepted as related revisions. If unrelated hardware happens to return compatible data, retain the documented family-confidence limitation.

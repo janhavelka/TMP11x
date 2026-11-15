@@ -2,6 +2,8 @@
 
 Apply [COMMON.md](COMMON.md) and root [AGENTS.md](../../AGENTS.md). Phase: **Features, safe measurements and diagnostics**. Type: **software**.
 Prerequisites: [6](6_timing-status.md), [9](9_owner-deadline-contract.md), [16](16_temperature-codec.md), [18](18_safe-initialize.md), [19](19_config-trust.md), [20](20_conversion-settings.md).
+Produces: `sync-acquisition`.
+Consumes: `behavior-contract`, `owner-contract`, `latest-read-engine`, `sync-initialize-recover`, `config-trust`, `conversion-settings`.
 
 ## Objective and boundaries
 
@@ -13,7 +15,9 @@ Read TI data-ready clearing, one-shot trigger and timing sequences. Check OPT400
 
 ## Complete implementation work
 
-- Implement explicit one-shot trigger, readiness observation, latest sample read, `tryReadFresh` and bounded synchronous `readBlocking` as contracted. Establish a shutdown baseline and consume stale readiness before the owned trigger; TMP116 documents OS from shutdown (p.14 section 7.4.1.5). Associate evidence with that trigger/profile generation, not with a preexisting DATA_READY bit.
+- Implement explicit one-shot trigger, readiness observation, `tryReadFresh` and bounded synchronous `readBlocking` around stage 16's latest-read engine. Managed one-shot requires desired shutdown; reject desired continuous locally with zero I2C. Verify hardware shutdown and consume stale readiness before the owned trigger. Do not silently change desired mode. TMP116 documents OS from shutdown (p.14 section 7.4.1.5); the stricter admission rule is library policy. Bind evidence to that trigger/profile generation, not a preexisting DATA_READY bit.
+- During an owned one-shot, MOD=11 is an expected transient; completed shutdown matches the unchanged desired mode. Unowned MOD=11 is not universally exempt from drift. Cancellation/timeout preserves uncertain conversion evidence without automatic restore or retrigger; later operations must reestablish their explicit baseline.
+- Before stage 23 extends the profile, report a fresh conversion under the known CONFIG/limits while retaining unknown hardware-offset provenance. Freshness does not assert a zero offset or calibrated reading. Stage 23 connects offset trust/generation to this same acquisition engine.
 - Preserve a successfully captured ready event only while it still belongs to an unconsumed result of the same generation. Diagnostic TEMP reads, outside access, reset or ambiguous failed CONFIG/TEMP reads can consume evidence; invalidate it conservatively rather than duplicating a fresh sample. A lost one-shot ready event must not cause an automatic retrigger.
 - When reading CONFIG to check DATA_READY, capture status before it clears; handle DATA_READY and alert flags separately and avoid duplicating completion on a stale bit.
 - Disallow prematurely returning initial `0x8000` as fresh before completed conversion including averaging; support a read of raw reset value for diagnostics.

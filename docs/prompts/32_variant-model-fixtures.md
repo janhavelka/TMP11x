@@ -2,6 +2,8 @@
 
 Apply [COMMON.md](COMMON.md) and root [AGENTS.md](../../AGENTS.md). Phase: **Cooperative operation and exhaustive native qualification**. Type: **software**.
 Prerequisites: [13](13_identity-selection.md), [17](17_config-codecs.md), [18](18_safe-initialize.md), [21](21_fresh-one-shot.md), [23](23_offset-feature.md), [24](24_readonly-eeprom.md), [29](29_cooperative-config.md), [30](30_cooperative-measurement.md), [31](31_failure-recovery.md).
+Produces: `variant-fixtures`.
+Consumes: `variant-contract`, `register-ledger`, `behavior-vectors`, `public-identity-api`, `config-codec`, `sync-acquisition`, `offset-feature`, `readonly-eeprom`, `configuration-jobs`, `measurement-jobs`, `fault-closure`.
 
 ## Objective and boundaries
 

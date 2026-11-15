@@ -2,6 +2,8 @@
 
 Apply [COMMON.md](COMMON.md) and root [AGENTS.md](../../AGENTS.md). Phase: **Cooperative operation and exhaustive native qualification**. Type: **software**.
 Prerequisites: [16](16_temperature-codec.md), [17](17_config-codecs.md), [18](18_safe-initialize.md), [21](21_fresh-one-shot.md), [22](22_limits-alert.md), [23](23_offset-feature.md), [24](24_readonly-eeprom.md), [25](25_per-device-reset.md), [26](26_diagnostic-access.md), [27](27_sync-helpers-cache.md), [28](28_cooperative-admission.md), [29](29_cooperative-config.md), [30](30_cooperative-measurement.md), [31](31_failure-recovery.md), [32](32_variant-model-fixtures.md).
+Produces: `native-qualification`.
+Consumes: `host-test-entrypoint`, `sync-api`, `variant-fixtures`, `fault-closure`, `feature-ledger`.
 
 ## Objective and boundaries
 

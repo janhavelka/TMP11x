@@ -23,7 +23,7 @@ or API freeze. Preparation is not permission to execute the full sequence.
 ```text
 You are the lead coding agent in my new TMP11x repository.
 Read root AGENTS.md, README.md, docs/prompts/START_HERE.md,
-docs/prompts/README.md, docs/prompts/COMMON.md, SEQUENCE.json, and relevant
+docs/prompts/README.md, docs/prompts/COMMON.md, HANDOFFS.md, SEQUENCE.json, and relevant
 shared contracts before changing implementation. Verify existing preparation
 and implementation artifacts. Follow prompts 1–44 in ascending numeric order,
 resuming from PROGRESS.md if prior work exists. Do not run later prompts if
@@ -82,7 +82,7 @@ blocked, record exact outstanding requirements without fake stubs.
 ## Copy/paste: resume
 
 ```text
-Read docs/prompts/PROGRESS.md and SEQUENCE.json. Resume the earliest usable
+Read docs/prompts/PROGRESS.md, HANDOFFS.md and SEQUENCE.json. Resume the earliest usable
 incomplete stage in ascending numeric order. Verify actual prerequisite
 artifacts, unchanged source references and local Git state before continuing.
 Complete the requested sequence without rerunning already verified unaffected
@@ -92,4 +92,7 @@ work. Record partial/blocked hardware separately from software completion.
 **Execution:** File names use `1_...md`, `2_...md`, ... `44_...md`, not
 lexicographic order. Only a deliberate whole-set instruction authorizes
 continuing through all stages in one agent task. A single-stage instruction
-ends after one stage.
+ends after one stage. The [handoff inventory](HANDOFFS.md) distinguishes source
+artifacts from build/fixture evidence and assigns forward integration owners;
+verify it at each boundary instead of assuming every earlier stage delivered
+every later API or tool.

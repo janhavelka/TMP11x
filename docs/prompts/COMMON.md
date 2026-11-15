@@ -11,7 +11,7 @@ Preparatory evidence may be reused later after checking its hashes/revisions.
 1. Read root AGENTS, active prompt, its prerequisites/reports and relevant
    [CONVENTIONS](CONVENTIONS.md), [ENGINEERING](ENGINEERING.md),
    [EVIDENCE](EVIDENCE.md), [SILICON](SILICON.md),
-   [FULL_COVERAGE](FULL_COVERAGE.md), [SOURCE_MAP](SOURCE_MAP.md),
+   [FULL_COVERAGE](FULL_COVERAGE.md), [HANDOFFS](HANDOFFS.md), [SOURCE_MAP](SOURCE_MAP.md),
    [VERIFICATION](VERIFICATION.md) and [DELEGATION](DELEGATION.md).
 2. Inspect Git branch/HEAD/upstream/dirty status. Preserve unrelated work and
    verify actual prerequisite artifacts/tests. `NOT_STARTED`, `PARTIAL`,
@@ -26,6 +26,10 @@ Preparatory evidence may be reused later after checking its hashes/revisions.
    A secondary library's API name alone does not establish semantic equivalence.
 4. At entry identify owned files, exact source evidence, tests, hardware
    availability and this stage's only delivered outcome.
+5. Check the active prompt's `Consumes` against actual producer artifacts and
+   required evidence, not numeric order alone. A planned ID or report is not
+   working code. Source can be usable while its producer's MCU link is blocked;
+   retain that missing gate and consume only the verified artifact scope.
 
 ## Implement a complete work unit
 
@@ -35,6 +39,10 @@ Preparatory evidence may be reused later after checking its hashes/revisions.
 - Build usable behavior, validation, failure/cancellation handling, focused
   tests, documentation/Doxygen and affected CLI/tool changes together. Do not
   leave production placeholders that return invented success.
+- Update CLI/tool integrations in the same stage once those consumers exist.
+  Before their producer stage, record a named forward owner and test existing
+  policy/core seams instead; do not require future CLI/raw/job implementations
+  to close an earlier stage. HANDOFFS identifies those integration boundaries.
 - Preserve bus and instance ownership. A bus callback completes one physical
   bounded transfer. No I2C outside the owner, no locks held during conversion
   waits, no hidden retry, no bus-wide commands, no EEPROM unlock/program.
@@ -74,12 +82,19 @@ reference verifier; reference tooling changes also require
 `python scripts/test_check_references.py`. Do not run implementation-dependent
 commands before the relevant sources exist. Native simulator results do not prove
 hardware or ESP-IDF linking; no hardware is *not* a software failure.
+Once stage 5 creates `tools/check_register_ledger.py`, run it for changed ledger
+facts/policies and their consumers. Once stage 10 establishes the host test
+entrypoint, register each later suite there, including CLI/runner tests from
+37–39. An earlier stage's PASS does not cover subsequently introduced tests.
 
 Update `docs/reports/prompt_N.md` with: input revisions and selected source
 pages, exact work, accepted/rejected sibling patterns, tests/commands/results,
 known gaps, current commit and upstream sync status. Update PROGRESS and
 coverage at this checkpoint. A preparation report may be separate from stage
 reports; distinguish complete intake from still-open stage obligations.
+Record consumed/produced artifact IDs with actual paths, revision/check evidence
+and next integration owner. Changes to public contracts or producer ownership
+must update affected prompts, SEQUENCE, HANDOFFS and tests together.
 Record the input/base SHA before committing; identify the resulting commit
 in the handoff or a later checkpoint rather than inventing a self-referential
 commit hash in a file being committed. Commit/sync completed work using the

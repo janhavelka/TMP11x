@@ -11,6 +11,11 @@ The [promptset audit](../reports/promptset-audit.md) records the review of all
 The subsequent [feature-gap audit](../reports/feature-gap-audit.md) covers
 all five pinned datasheets and fills register, behavior and integration gaps.
 Its mandatory R/F/X requirements are in [FULL_COVERAGE](FULL_COVERAGE.md).
+The [handoff inventory](HANDOFFS.md) maps every stage's usable outputs and
+integration boundaries. `Produces`/`Consumes` IDs in SEQUENCE and each prompt
+are checked for unique ownership, known inputs and dependency reachability.
+See the [handoff consistency audit](../reports/handoff-audit.md) for corrected
+missing producers, future-stage requirements and integration/evidence gaps.
 
 Each prompt is a bounded engineering work unit with evidence inputs, exact
 scope, concrete code/documentation, adversarial tests and a report/commit
@@ -22,6 +27,7 @@ invocation in START_HERE explicitly authorizes continuation.
 | File | Purpose |
 |---|---|
 | [COMMON.md](COMMON.md) | Required task intake, safe execution, blocked stages and commit/sync |
+| [HANDOFFS.md](HANDOFFS.md) | Every producer/consumer boundary, artifact ownership and conditional evidence gates |
 | [SOURCE_MAP.md](SOURCE_MAP.md) | Exact sibling GitHub repositories, source code routes and adopted behavior |
 | [SILICON.md](SILICON.md) | Initial TI part comparison and flagged source contradictions |
 | [EVIDENCE.md](EVIDENCE.md) | Primary PDF authority, hashes, literal vectors and source-status limits |
@@ -53,13 +59,13 @@ invocation in START_HERE explicitly authorizes continuation.
 | 14 | [Implement bus-silent binding and lifecycle state](14_binding-lifecycle.md) | 8, 9, 11, 12, 13 | software |
 | 15 | [Implement tracked transport health and error observation](15_passive-health.md) | 8, 11, 12, 14 | software |
 | 16 | [Implement signed temperature and threshold codecs](16_temperature-codec.md) | 5, 6, 11, 12, 13, 14, 15 | software |
-| 17 | [Implement type-safe CONFIG codecs and validation](17_config-codecs.md) | 5, 6, 7, 8, 11, 12 | software |
+| 17 | [Implement type-safe CONFIG codecs and validation](17_config-codecs.md) | 5, 6, 7, 8, 11, 12, 16 | software |
 | 18 | [Implement EEPROM-safe initialization and configuration writes](18_safe-initialize.md) | 7, 8, 9, 12, 13, 14, 16, 17 | software |
 | 19 | [Implement observed configuration, verification and dirty state](19_config-trust.md) | 7, 8, 15, 17, 18 | software |
 | 20 | [Implement continuous operation, averaging and cycle timing](20_conversion-settings.md) | 6, 8, 16, 17, 18, 19 | software |
 | 21 | [Implement fresh-conversion acquisition and one-shot behavior](21_fresh-one-shot.md) | 6, 9, 16, 18, 19, 20 | software |
 | 22 | [Implement temperature limits, therm/alert and ALERT pin](22_limits-alert.md) | 5, 6, 7, 16, 17, 19, 21 | software |
-| 23 | [Implement hardware offset for TMP117/TMP119 only](23_offset-feature.md) | 4, 5, 7, 11, 12, 16, 17, 19 | software |
+| 23 | [Implement hardware offset for TMP117/TMP119 only](23_offset-feature.md) | 4, 5, 7, 11, 12, 16, 17, 19, 21 | software |
 | 24 | [Implement safe EEPROM reads and traceability metadata](24_readonly-eeprom.md) | 4, 5, 7, 11, 12, 13, 19 | software |
 | 25 | [Implement supported per-device reset and invalidation safely](25_per-device-reset.md) | 5, 7, 9, 14, 18, 19, 21, 23 | software |
 | 26 | [Implement read-only register snapshots and guarded raw access](26_diagnostic-access.md) | 5, 7, 12, 13, 19, 21, 22, 23, 24 | software |
@@ -90,6 +96,7 @@ NOT RUN; do not change software evidence to PASS. Firmware builds similarly
 require actual installed target toolchains. Remote CI is reserved for prompt
 43. Final stage 44 reconciles every required software and physical scope
 without inventing completions or overwriting unresolved source conflicts.
-Stage 40 additionally requires one fully linked, matching observation firmware
-from stage 34 **or** 35 and an authorized fixture; it does not require both
-frameworks for one hardware run. Stage 37's host CLI tests do not require an SDK.
+Stage 40 additionally requires one current fully linked observation image from
+a stage 34 **or** 35 backend after the final stage 38 CLI integration, matching
+the runner protocol/build identity, and an authorized fixture. It does not
+require both frameworks. Stage 37's host CLI tests do not require an SDK.

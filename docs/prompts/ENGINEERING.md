@@ -68,6 +68,11 @@ provenance but is not a newly acquired sample on every read. A timestamp taken
 after TEMP transfer is an observation time, not the exact conversion instant.
 DATA_READY is one bit, not a conversion counter: missed updates cannot be counted
 from that bit or repeated temperatures.
+The API policy requires desired shutdown before admission and verifies physical
+shutdown before trigger. A continuous desired mode rejects locally; the caller
+explicitly selects shutdown. Desired mode stays shutdown while owned MOD=11
+is transient. Unknown/unowned one-shot state is not automatically normalized
+away; cancellation/timeout never restores a mode or retriggers implicitly.
 
 Averaging is accumulated in nonoverlapping blocks, not a moving average.
 The pinned datasheets do not explicitly define same-value CONFIG restart,

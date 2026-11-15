@@ -8,6 +8,8 @@
 **Last completed stage:** 3 (intake scope clarified by the full promptset audit).
 **Last update:** 2026-11-15; see [full promptset audit](../reports/promptset-audit.md)
 and [datasheet/functionality gap audit](../reports/feature-gap-audit.md).
+The latest [handoff consistency audit](../reports/handoff-audit.md) assigns
+every planned deliverable a producer and checks consumer dependencies.
 
 | Stage range | Objective | Current state and evidence |
 |---|---|---|
@@ -33,6 +35,11 @@ The subsequent completeness audit adds full per-chip source inventories and
 32 prompts. These are stronger future stage obligations, not completion of
 stages 4–7 or a sensor implementation. Stage 25 now explicitly depends on
 stage 23 for nonfactory offset reset/recovery tests.
+The handoff audit adds `Produces`/`Consumes` declarations to all 44 prompts,
+60 artifact IDs and 226 required-input links. Stage 17 additionally requires
+16 and stage 23 requires 21. Research, private engines, public integration,
+firmware source/link evidence and physical gates now have explicit boundaries
+in [HANDOFFS](HANDOFFS.md). No implementation-stage status changed.
 
 The [report index](../reports/index.md) separates completed preparation from
 stage-owned evidence. Final commit/upstream synchronization is recorded in the

@@ -128,6 +128,98 @@ class PromptsetCheckerTests(unittest.TestCase):
         (self.root / "docs/prompts/1_ecosystem-core-audit.md").write_text("", encoding="utf-8")
         self.assertTrue(any("title differs" in s for s in validate(self.root)))
 
+    def edit_handoff(self, stage, field, value, sync_prose=True):
+        path = self.root / "docs/prompts/SEQUENCE.json"
+        info = json.loads(path.read_text(encoding="utf-8"))
+        item = info["prompts"][stage - 1]
+        item[field] = value
+        path.write_text(json.dumps(info), encoding="utf-8")
+        if sync_prose:
+            prompt = self.root / "docs/prompts" / item["file"]
+            label = field.capitalize() + ":"
+            text = label + " " + (", ".join(f"`{v}`" for v in value) or "None") + "."
+            prompt.write_text(re.sub(rf"^{label}.*$", text,
+                                    prompt.read_text(encoding="utf-8"), flags=re.M), encoding="utf-8")
+
+    def test_handoff_unknown_producer(self):
+        self.edit_handoff(2, "consumes", ["missing-artifact"])
+        self.assertTrue(any("has no producer" in s for s in validate(self.root)))
+
+    def test_handoff_future_or_self_producer(self):
+        for name in ("ti-archive", "tooling-plan"):
+            with self.subTest(artifact=name):
+                self.edit_handoff(2, "consumes", [name])
+                self.assertTrue(any("not an earlier stage" in s for s in validate(self.root)))
+
+    def test_handoff_requires_dependency_path(self):
+        # Stage 34 precedes host CLI37 numerically but is deliberately not a
+        # mandatory host prerequisite. Simply naming it cannot add that edge.
+        self.edit_handoff(37, "consumes", ["arduino-adapter-source"])
+        self.assertTrue(any("outside dependency closure" in s for s in validate(self.root)))
+
+    def test_handoff_transitive_input_is_allowed(self):
+        # Stage4 -> stage3 -> stage1 provides a valid indirect producer.
+        self.edit_handoff(4, "consumes", ["ti-archive", "ecosystem-audit"])
+        self.assertEqual(validate(self.root), [])
+
+    def test_handoff_duplicate_producer(self):
+        self.edit_handoff(2, "produces", ["ecosystem-audit"])
+        self.assertTrue(any("duplicate producer" in s for s in validate(self.root)))
+
+    def test_handoff_invalid_lists(self):
+        for value in (None, {}, "ecosystem-audit", [True], [{}], ["Bad_ID"]):
+            with self.subTest(value=value):
+                self.edit_handoff(2, "consumes", value, sync_prose=False)
+                self.assertTrue(any("invalid consumes artifact list" in s for s in validate(self.root)))
+        self.edit_handoff(2, "produces", [], sync_prose=False)
+        self.assertTrue(any("invalid produces artifact list" in s for s in validate(self.root)))
+
+    def test_handoff_duplicate_input(self):
+        self.edit_handoff(2, "consumes", ["ecosystem-audit", "ecosystem-audit"])
+        self.assertTrue(any("duplicate consumes artifact ID" in s for s in validate(self.root)))
+
+    def test_handoff_prose_mismatch(self):
+        self.edit_handoff(2, "consumes", [], sync_prose=False)
+        self.assertTrue(any("prose consumes differs" in s for s in validate(self.root)))
+
+    def test_handoff_inventory_mismatch(self):
+        path = self.root / "docs/prompts/HANDOFFS.md"
+        path.write_text(path.read_text(encoding="utf-8").replace(
+            "| 1 | `ecosystem-audit` |", "| 1 | `wrong-artifact` |"), encoding="utf-8")
+        self.assertTrue(any("HANDOFFS outputs differ" in s for s in validate(self.root)))
+
+    def test_handoff_inventory_missing_or_duplicate_stage(self):
+        path = self.root / "docs/prompts/HANDOFFS.md"
+        original = path.read_text(encoding="utf-8")
+        row = next(line for line in original.splitlines() if line.startswith("| 1 |"))
+        path.write_text(original.replace(row + "\n", ""), encoding="utf-8")
+        self.assertTrue(any("HANDOFFS inventory must contain" in s for s in validate(self.root)))
+        path.write_text(original + "\n" + row + "\n", encoding="utf-8")
+        self.assertTrue(any("duplicate stage 1 in HANDOFFS" in s for s in validate(self.root)))
+
+    def test_missing_handoff_contract(self):
+        (self.root / "docs/prompts/HANDOFFS.md").unlink()
+        self.assertTrue(any("missing shared contract: HANDOFFS.md" in s for s in validate(self.root)))
+
+    def test_non_ascii_or_excessive_table_stage_number(self):
+        for filename in ("HANDOFFS.md", "README.md"):
+            path = self.root / "docs/prompts" / filename
+            original = path.read_text(encoding="utf-8")
+            for numeral in ("²", "9" * 5000):
+                with self.subTest(file=filename, numeral=numeral[:10]):
+                    path.write_text(original.replace("| 1 |", f"| {numeral} |", 1), encoding="utf-8")
+                    self.assertTrue(any("invalid stage number" in s for s in validate(self.root)))
+            path.write_text(original, encoding="utf-8")
+
+    def test_duplicate_manifest_key(self):
+        path = self.root / "docs/prompts/SEQUENCE.json"
+        original = path.read_text(encoding="utf-8")
+        for field in ("consumes", "produces", "depends_on"):
+            with self.subTest(field=field):
+                duplicate = original.replace(f'"{field}":', f'"{field}": [], "{field}":', 1)
+                path.write_text(duplicate, encoding="utf-8")
+                self.assertTrue(any("duplicate JSON key" in s for s in validate(self.root)))
+
     def test_fixture_excludes_repository_and_pdf_bytes(self):
         self.assertFalse((self.root / ".git").exists())
         self.assertTrue(all(path.stat().st_size == 0 for path in self.root.rglob("*.pdf")))

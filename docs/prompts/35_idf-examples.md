@@ -2,6 +2,8 @@
 
 Apply [COMMON.md](COMMON.md) and root [AGENTS.md](../../AGENTS.md). Phase: **Firmware, CLI and runner integrations**. Type: **software**.
 Prerequisites: [27](27_sync-helpers-cache.md), [30](30_cooperative-measurement.md), [33](33_native-suite.md).
+Produces: `idf-adapter-source`, `idf-build-record`.
+Consumes: `tooling-plan`, `board-guide`, `version-tools`, `sync-api`, `measurement-jobs`, `native-qualification`.
 
 ## Objective and boundaries
 
@@ -18,9 +20,10 @@ Inspect TMP1x2 `examples/esp_idf/basic` CMake/PlatformIO, modern ESP-IDF `driver
 - Implement nonblocking caller scheduling, monotonic time and a CLI transport shell that can share prompt-37's framework-neutral processor without including Arduino code. Input/ISR callbacks may queue bounded input or GPIO observations; only the owner calls driver APIs. Preserve a register-write-free observation startup path for stage 40.
 - Demonstrate one device/one bus owner and coexistence with a second I2C device. GPIO and bus recovery/reset remain app-owned. Create handles only for intended sensor addresses; do not inherit TMP1x2's general-call/SMBus alert-response handles or commands.
 - Register clean native ESP-IDF app linking and component-only builds, not only header syntax tests. Keep IDF-only CMake source/target dependencies outside portable native `find_package` consumers.
+- Supply application-owned firmware build identity and per-boot session identity, separate from the core library version and obtained without sensor access. Stage 37 defines the protocol fields; stage 38 integrates the final CLI and refreshes linked images. Preserve precise target/SDK/source identity so stage 40 cannot select an older pre-CLI image.
 
 - Validate the application-owned device clock against1–400 kHz and document the chip's20–40 ms held-line/no-clock timeout separately from IDF software deadlines. Verify explicit pointer, repeated START and terminal ACK/NACK/STOP via backend evidence; no sensor clock-stretch feature is assumed.
-- Reuse the board/precision guide: ADD0 straps, exact package/supply/temp constraints, external pullups,100 nF decoupling, open-drain active-high ALERT and thermal/strain conditions. Internal MCU pullups or a successful link alone do not qualify electrical timing or accuracy.
+- Extend stage 4's `docs/board-integration.md` independently with IDF setup: ADD0 straps, exact package/supply/temp constraints, external pullups, 100 nF decoupling, open-drain active-high ALERT and thermal/strain conditions. This guide does not require an Arduino build. Internal MCU pullups or a successful link alone do not qualify electrical timing or accuracy.
 
 ## Verification and exit criteria
 

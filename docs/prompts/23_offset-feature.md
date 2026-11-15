@@ -1,7 +1,9 @@
 # 23 — Implement hardware offset for TMP117/TMP119 only
 
 Apply [COMMON.md](COMMON.md) and root [AGENTS.md](../../AGENTS.md). Phase: **Features, safe measurements and diagnostics**. Type: **software**.
-Prerequisites: [4](4_family-identity.md), [5](5_register-ledger.md), [7](7_eeprom-reset-policy.md), [11](11_status-values.md), [12](12_i2c-register-transport.md), [16](16_temperature-codec.md), [17](17_config-codecs.md), [19](19_config-trust.md).
+Prerequisites: [4](4_family-identity.md), [5](5_register-ledger.md), [7](7_eeprom-reset-policy.md), [11](11_status-values.md), [12](12_i2c-register-transport.md), [16](16_temperature-codec.md), [17](17_config-codecs.md), [19](19_config-trust.md), [21](21_fresh-one-shot.md).
+Produces: `offset-feature`.
+Consumes: `variant-contract`, `register-ledger`, `safety-policy`, `temperature-codec`, `config-trust`, `sync-acquisition`.
 
 ## Objective and boundaries
 
@@ -14,7 +16,8 @@ Verify TI TMP117/TMP119 `Temp_Offset` register, saturation behavior and its EEPR
 ## Complete implementation work
 
 - Implement `setTemperatureOffset`, `readTemperatureOffset`, desired offset snapshot and safe guarded 16-bit encoding for TMP117/M/N and TMP119.
-- For TMP116/TMP116N, return `UNSUPPORTED` without any I2C transfer; also prevent the same access through generic raw-write or CLI paths.
+- Introduce the public configurable offset member and its desired/observed/trusted state now, as frozen in stage 8. Connect every accepted value, including zero, to actual safe apply/readback/recovery; update existing initialization/acquisition tests from 18/21 so final-profile trust includes offset on supporting models. TMP116 remains explicitly unsupported.
+- For TMP116/TMP116N, return `UNSUPPORTED` without any I2C transfer. Enforce this in the shared capability/write-policy seam now; stage 26 must apply it to any raw route and stage 38 to CLI routes when they exist.
 - Distinguish offset applied by chip to sensor reading from an application software correction; do not reapply offset in software when reading TEMP.
 - Preserve write/readback/dirty-state behavior and quantization. The offset register encodes -256 through +255.9921875 degrees C. Reject out-of-range/nonfinite API inputs under the codec policy; do not silently saturate the requested offset. Sensor saturation applies to the sum of conversion plus offset, as described in TMP117 p.31 section 7.6.9 and TMP119 p.38 section 8.5.9.
 - Offset changes invalidate the current profile's sample/freshness evidence. A read of an existing TEMP word is not proof that a new offset has been applied; require a subsequent confirmed conversion before publishing a sample attributed to the new offset.

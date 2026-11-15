@@ -2,6 +2,8 @@
 
 Apply [COMMON.md](COMMON.md) and root [AGENTS.md](../../AGENTS.md). Phase: **Exact silicon source and feature evidence**. Type: **software**.
 Prerequisites: [3](3_ti-reference-intake.md), [4](4_family-identity.md), [5](5_register-ledger.md), [6](6_timing-status.md).
+Produces: `safety-policy`.
+Consumes: `variant-contract`, `register-ledger`, `behavior-contract`.
 
 ## Objective and boundaries
 
@@ -25,6 +27,9 @@ Read TI EEPROM unlock, programming, busy, factory data and general-call reset se
 ## Verification and exit criteria
 
 Adversarial review checks every path capable of a mutating I2C transaction; confirm no normal path reaches EUN or general-call address `0x00`. Record any incompatible TI source footnotes.
+At this research stage, review planned paths and forbidden transcript vectors;
+production callback assertions belong to the implementation owners. Update
+stage 5's policy/access/reset metadata and run its register-ledger validator.
 
 ## Documentation and delegation
 

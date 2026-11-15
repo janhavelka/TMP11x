@@ -2,6 +2,8 @@
 
 Apply [COMMON.md](COMMON.md) and root [AGENTS.md](../../AGENTS.md). Phase: **Features, safe measurements and diagnostics**. Type: **software**.
 Prerequisites: [5](5_register-ledger.md), [7](7_eeprom-reset-policy.md), [9](9_owner-deadline-contract.md), [14](14_binding-lifecycle.md), [18](18_safe-initialize.md), [19](19_config-trust.md), [21](21_fresh-one-shot.md), [23](23_offset-feature.md).
+Produces: `device-reset`.
+Consumes: `safety-policy`, `owner-contract`, `binding-api`, `sync-initialize-recover`, `config-trust`, `sync-acquisition`, `offset-feature`.
 
 ## Objective and boundaries
 

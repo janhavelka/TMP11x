@@ -2,6 +2,8 @@
 
 Apply [COMMON.md](COMMON.md) and root [AGENTS.md](../../AGENTS.md). Phase: **Features, safe measurements and diagnostics**. Type: **software**.
 Prerequisites: [5](5_register-ledger.md), [7](7_eeprom-reset-policy.md), [12](12_i2c-register-transport.md), [13](13_identity-selection.md), [19](19_config-trust.md), [21](21_fresh-one-shot.md), [22](22_limits-alert.md), [23](23_offset-feature.md), [24](24_readonly-eeprom.md).
+Produces: `diagnostics`.
+Consumes: `register-ledger`, `safety-policy`, `binding-api`, `config-trust`, `sync-acquisition`, `limits-alert`, `offset-feature`, `readonly-eeprom`.
 
 ## Objective and boundaries
 

@@ -2,6 +2,8 @@
 
 Apply [COMMON.md](COMMON.md) and root [AGENTS.md](../../AGENTS.md). Phase: **Cooperative operation and exhaustive native qualification**. Type: **software**.
 Prerequisites: [15](15_passive-health.md), [19](19_config-trust.md), [25](25_per-device-reset.md), [28](28_cooperative-admission.md), [29](29_cooperative-config.md), [30](30_cooperative-measurement.md).
+Produces: `fault-closure`.
+Consumes: `transport-health`, `config-trust`, `device-reset`, `job-lifecycle`, `configuration-jobs`, `measurement-jobs`.
 
 ## Objective and boundaries
 
@@ -15,7 +17,7 @@ Revisit TMP1x2 owner/dirty/health/timeout fault tests, ADS1115 indeterminate wri
 
 - Inject I2C_NACK, TIMEOUT, BUS and malformed terminal-callback IN_PROGRESS during every READ/CONFIG/RECOVER phase. With Status-only callbacks, the adapter must map a short transfer to an error: a core cannot detect a callback that falsely reports success without exposing byte counts. Test that boundary in mock adapters now and real adapters at stages 34/35.
 - Distinguish tracked bus health, whole-operation timeout, failed precondition, unsupported variant, EEPROM unsafe, and configuration dirty status. Counter saturation and last error preservation must be deterministic.
-- Implement intentional recovery after outside reset and power interruption: require identity/locked-state proof before writes; preserve desired settings; do not automatically reset entire I2C bus.
+- Harden the synchronous recovery delivered in stage 18 and cooperative recovery from 29 after outside reset/power interruption: require identity/locked-state proof before writes; preserve desired settings; do not automatically reset the I2C bus. This stage adds adversarial closure, not the first working recover API.
 - Cancellation retains terminal result and uncertain write effects, plus possible destructive-read consumption. Failed CONFIG/TEMP reads can lose status evidence without altering settings. Keep those two uncertainties separate; no automatic retrigger, write replay or fake rollback.
 - Verify polling/reading does not silently consume an already retained terminal result; overflowed time domain and bad deadline are explicitly rejected.
 

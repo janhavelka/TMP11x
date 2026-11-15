@@ -2,6 +2,8 @@
 
 Apply [COMMON.md](COMMON.md) and root [AGENTS.md](../../AGENTS.md). Phase: **Firmware, CLI and runner integrations**. Type: **software**.
 Prerequisites: [37](37_cli-baseline.md), [38](38_cli-device-operations.md).
+Produces: `hil-runner`.
+Consumes: `cli-complete`, `cli-protocol`, `firmware-cli-handoff`, `host-test-entrypoint`.
 
 ## Objective and boundaries
 
@@ -18,6 +20,8 @@ Study TMP1x2 `tools/hil_tmp1x2_runner.py` and parser/unit tests, OPT4001 and LDC
 - Implement observation-only identity, configuration, temperature, device-capability, flags and EEPROM campaigns by default. Permit pointer selection but no register-data writes; identify CONFIG/TEMP flag consumption explicitly. Prove the same policy across firmware startup, CLI setup and runner commands. More intrusive volatile config/restoration trials must be opt-in and require explicit fixture authorization.
 - Record exact raw transcript, structured JSON summary, input environment/firmware git identity, document revision, suite counts, PASS/FAIL/SKIP/NOT RUN and restoration outcome; no synthetic serial printout may be marked physical PASS. Persist the baseline before the first trial write, distinguish primary and restoration outcomes, and report a reboot or transport loss as loss of session continuity. Never blindly replay a saved baseline to an unconfirmed replacement device.
 - Provide a dry-run plan that opens no port, unit tests for runner parser/record integrity, and a compiled fake CLI integration harness for full protocol exercise.
+- Consume `docs/cli-protocol.md`, golden transcripts and the actual compiled stage 37/38 fixture. Verify protocol compatibility and boot/session changes independently of library version; reject unknown/mismatched firmware identity for a physical qualification claim. Add runner unit and subprocess CLI integration tests to the standard host entrypoint and `docs/testing.md`; stage 33's earlier PASS does not cover these new suites.
+- The runner may be fully host-tested without an MCU SDK. Physical execution separately selects a current image from `docs/firmware-cli-handoff.md` and the fixture gate; do not require both firmware backends or use an older example image simply because it once linked.
 
 - Make campaigns identify the exact model/package/firmware and applicable R/F evidence rows. Record bus speed, supply, ADD0 and ALERT wiring, actual AVG/cycle/offset/limits and restoration scope. Recipes for new latch/re-arm, averaging and saturation/coherence questions must separate observed results from unresolved silicon claims and never silently enable excluded operations.
 

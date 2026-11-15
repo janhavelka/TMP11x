@@ -2,6 +2,8 @@
 
 Apply [COMMON.md](COMMON.md) and root [AGENTS.md](../../AGENTS.md). Phase: **Portable device protocol, identity and trustworthy configuration**. Type: **software**.
 Prerequisites: [8](8_api-architecture.md), [11](11_status-values.md), [12](12_i2c-register-transport.md), [14](14_binding-lifecycle.md).
+Produces: `transport-health`.
+Consumes: `api-contract`, `value-types`, `register-transport`, `binding-api`.
 
 ## Objective and boundaries
 
@@ -17,6 +19,7 @@ Read TMP1x2 `src/TMP1x2.cpp`, `Status.h`, `HealthSnapshot` tests; compare OPT400
 - Count only actual tracked physical I2C outcomes as transport failures/successes. Invalid parameters, unsupported model, not-ready, configuration mismatch and owner deadline are not fabricated physical transfers.
 - Keep `OFFLINE` passive: it does not block an otherwise authorized normal tracked operation, probe or recovery. The application owns backoff; only tracked successes affect tracked health. A raw health-neutral diagnostic path must still surface transfer failure directly and must not repair health merely because it succeeds.
 - Test no counted preconditions, multi-transfer operations, device disappearance, first tracked success, an ordinary tracked success from OFFLINE, raw success leaving health unchanged, count saturation, timestamp 0 validity, clock wrap and repeated errors. Keep binding/initialized state separate; prompt 18 completes initialization-health integration without a fake successful begin here.
+- Use the private tracked transport seam and stage 14's public health-neutral probe for these tests now. Stage 16/18 integrate managed sample/initialization paths; stage 26 repeats health-neutral assertions for its broader raw diagnostics when those routes exist.
 
 ## Verification and exit criteria
 

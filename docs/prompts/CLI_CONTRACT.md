@@ -34,6 +34,9 @@ return unknown startup/configuration/freshness rather than auto-initializing.
 Continuous `read --fresh` requires the known mode/evidence preconditions from
 the API contract; observation-only sessions may refuse it while allowing raw
 `read`, `config` and `identity`.
+`oneshot` and one-shot watch obey the same shutdown-only API precondition:
+desired continuous mode rejects without I2C, and the caller explicitly invokes
+shutdown first. CLI commands must not silently change or restore desired mode.
 
 Temporary test campaigns snapshot restorable settings and verify restoration
 or report failure. Restore only writable stable fields, with reset commands
@@ -43,6 +46,26 @@ one-shot command or raw CONFIG word. The user must select safe fixture
 conditions for mutating campaigns; no such campaign runs on connection alone.
 
 ## Tooling and evidence
+
+Stage 37 produces `docs/cli-protocol.md` and golden transcripts under `test/cli/`;
+stage 38 completes commands/help and firmware integration, and stage 39 consumes
+that same protocol/compiled fixture. Freeze the full grammar in 37 while only
+advertising implemented capabilities as operational. All three stages register
+their executing tests in the standard host entrypoint; stage 43 runs them.
+
+The protocol distinguishes library version, application firmware source/build
+identity, protocol version and per-boot session identity. Application adapters
+from 34/35 supply firmware/session metadata without sensor access; 38 wires it
+into final images and records them in `docs/firmware-cli-handoff.md`. Unknown
+device ID/observations are explicit null/unknown fields, never a reason for an
+implicit probe during `version`, `help` or other bus-silent commands.
+
+Define restart/session detection and request-versus-operation terminal records
+before the Python runner is written. An accepted `job start` response is not a
+completed operation; request IDs, tokens, progress and terminal operation results
+have distinct roles. The runner must detect incompatible schema, old boot/session
+records and unavailable firmware identity instead of mistaking a matching core
+library version for a matching image.
 
 Use strict bounded UTF-8/ASCII line parsing and finite output buffers; no
 hidden device access on help. JSONL record or equivalent must include

@@ -2,6 +2,8 @@
 
 Apply [COMMON.md](COMMON.md) and root [AGENTS.md](../../AGENTS.md). Phase: **Features, safe measurements and diagnostics**. Type: **software**.
 Prerequisites: [5](5_register-ledger.md), [6](6_timing-status.md), [7](7_eeprom-reset-policy.md), [16](16_temperature-codec.md), [17](17_config-codecs.md), [19](19_config-trust.md), [21](21_fresh-one-shot.md).
+Produces: `limits-alert`.
+Consumes: `register-ledger`, `behavior-vectors`, `temperature-codec`, `config-codec`, `config-trust`, `sync-acquisition`.
 
 ## Objective and boundaries
 
@@ -22,7 +24,7 @@ Compare TMP116/TMP117/TMP119 limit representations, alert vs therm behavior, pol
 - Verify no unsupported TMP1x2 fault queue, interrupt queue or extended temperature mode leaks into API.
 
 - Test latch re-arm explicitly: out-of-range then in-range before CONFIG acknowledgement retains an alert; acknowledgement clears it; a later still-out-of-range conversion reasserts. Exercise all eight T/nA×POL×DR/Alert combinations, independently observing logical status and pin interpretation. Active-high open-drain means released/pulled high, not driven high.
-- Extend full-profile apply/readback/recovery to both limits. Document separate-write intermediate states and partial failures; no atomic or glitch-free limit-pair promise. Preserve any API ordering restriction as policy.
+- Add typed limit/alert wrappers and public observations using the limit apply/readback/recovery already delivered by stages 18/19. Do not add a second engine. Document separate-write intermediate states and partial failures; no atomic or glitch-free limit-pair promise. Preserve any API ordering restriction as policy.
 - Retain the unresolved offset/comparator ordering on supporting models and mode-specific effects of an outside ARA. Addressed CONFIG reads are the included acknowledgement path; no ARA transaction is emitted.
 
 ## Verification and exit criteria

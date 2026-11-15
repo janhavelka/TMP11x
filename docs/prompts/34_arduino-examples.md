@@ -2,6 +2,8 @@
 
 Apply [COMMON.md](COMMON.md) and root [AGENTS.md](../../AGENTS.md). Phase: **Firmware, CLI and runner integrations**. Type: **software**.
 Prerequisites: [27](27_sync-helpers-cache.md), [30](30_cooperative-measurement.md), [33](33_native-suite.md).
+Produces: `arduino-adapter-source`, `arduino-build-record`.
+Consumes: `tooling-plan`, `board-guide`, `version-tools`, `sync-api`, `measurement-jobs`, `native-qualification`.
 
 ## Objective and boundaries
 
@@ -18,9 +20,10 @@ Study TMP1x2 `examples/01_basic_bringup_cli/main.cpp` (including its inline Wire
 - Examples demonstrate a BOM-selected TMP117/address, revision-aware identity and temperature/readiness provenance. Provide an observation startup path using bus-silent binding and approved diagnostics; no automatic `begin`, reset, one-shot or configuration write may precede a claimed read-only session. An explicit initialization demonstration may write safe volatile settings and must identify that behavior.
 - Add an optional second sensor instance on the same shared bus to demonstrate external serialization; if a TCA9548A mux is used, establish route before and hold it for each transfer only, not an entire conversion wait. Count mux-selection transfers separately in application scheduling; the driver's sensor-transfer budget does not bound external route traffic.
 - Keep any initial console harness minimal and use the canonical names in [CLI_CONTRACT](CLI_CONTRACT.md); prompt 37 owns the authoritative parser. Reading CONFIG/TEMP can acknowledge flags even when no data register is written. A fresh one-shot demonstration is an explicit mutating operation, not a read-only temperature query.
+- Supply application-owned firmware build identity (source revision or explicit unknown/dirty state, target, build identifier) and a per-boot session identity without sensor I2C. Library `Version.h` is a separate value. Stage 37 freezes the wire fields; stage 38 connects this metadata and the final CLI, then refreshes the linked image. This initial example image alone is not the later HIL firmware handoff.
 
 - Enforce the example-owned bus configuration within 1–400 kHz; document hardware 20–40 ms line-held/no-clock timeout separately from Wire's timeout. Show actual ADD0 mapping, package pins, supply/logic compatibility, external SDA/ALERT pullups and 100 nF bypass; active-high ALERT remains open-drain.
-- Link a shared board/precision guide covering exact-grade accuracy conditions, self-heating from I2C/averaging, thermal coupling/settling and package-specific pad/strain guidance. Default example setup is not proof of calibrated accuracy. Preserve the TMP116 ALERT-to-ground wording conflict; do not ground a used ALERT signal.
+- Extend stage 4's `docs/board-integration.md` with actual Arduino setup, covering exact-grade accuracy conditions, self-heating from I2C/averaging, thermal coupling/settling and package-specific pad/strain guidance. Default example setup is not proof of calibrated accuracy. Preserve the TMP116 ALERT-to-ground wording conflict; do not ground a used ALERT signal.
 
 ## Verification and exit criteria
 

@@ -2,6 +2,8 @@
 
 Apply [COMMON.md](COMMON.md) and root [AGENTS.md](../../AGENTS.md). Phase: **Ecosystem inspection**. Type: **software**.
 Prerequisites: None — first evidence stage.
+Produces: `ecosystem-audit`.
+Consumes: None.
 
 ## Objective and boundaries
 

@@ -2,6 +2,8 @@
 
 Apply [COMMON.md](COMMON.md) and root [AGENTS.md](../../AGENTS.md). Phase: **Portable device protocol, identity and trustworthy configuration**. Type: **software**.
 Prerequisites: [7](7_eeprom-reset-policy.md), [8](8_api-architecture.md), [9](9_owner-deadline-contract.md), [12](12_i2c-register-transport.md), [13](13_identity-selection.md), [14](14_binding-lifecycle.md), [16](16_temperature-codec.md), [17](17_config-codecs.md).
+Produces: `safe-apply-engine`, `sync-initialize-recover`.
+Consumes: `safety-policy`, `api-contract`, `owner-contract`, `binding-api`, `public-identity-api`, `transport-health`, `temperature-codec`, `config-codec`.
 
 ## Objective and boundaries
 
@@ -19,13 +21,14 @@ all describe writes ignored during the initial load interval.
 
 ## Complete implementation work
 
-- Validate the full desired profile locally before I2C. Then verify identity, establish startup/reset readiness using the stage 6 timing policy, and check EEPROM lock/busy before applying stable CONFIG and limit words. Read back only stable fields; do not assume an acknowledged write escaped POR suppression.
+- Implement real synchronous `begin(Config)`, `begin()` and `recover()` over one bounded apply/readback engine. Reuse stage 14 binding and stage 15 tracking. Validate all currently accepted profile fields locally before I2C, then verify identity, establish stage 6 startup readiness, and check EEPROM lock/busy before stable CONFIG and limit writes. Verify all owned stable fields; do not assume an acknowledged write escaped POR suppression. Stage 23 adds offset to this same engine. Until then, offset control remains unavailable and its trust is unknown; no accepted offset request, including zero, may be silently ignored or reported applied.
 - Before each mutating transaction or explicitly justified exclusive-device phase, establish EUN disabled and busy clear. A failed proof is an explicit unsafe/no-write result. Do not write EUN to lock/unlock silently; an I2C mutex alone cannot prevent another owner from changing EUN between callbacks.
 - Handle EEPROM busy and startup timing with bounded waits and a clock, never indefinite loops or hidden delay. Use a conservative reset/load timing policy and readback; the approximate 1.5-ms POR interval is not a guaranteed worst-case specification. One-shot cannot be an EEPROM startup mode. Keep its trigger out of stable configuration application.
-- Separate partial write uncertainty from physical transfer status; preserve staged desired profile for later explicit recover.
+- Own the minimum desired/observed/dirty state needed for truthful apply failure and explicit recovery now. Commit a staged sensor target on the first mutating write attempt; before that, rejection/failure preserves the old target. After an ambiguous attempt retain the candidate for explicit `recover()`. Keep binding immutable during settings replay. Stage 19 extends observation/snapshots; stage 29 reuses the same phases for jobs and stage 31 hardens them.
 - Verify that initialization, even if repeated on a factory-configured sensor, does not read a destructive status and then misrepresent its freshness.
 
 - Make apply order and intermediate states explicit for CONFIG and both limits, with a defined extension for the supported offset when stage 23 lands. Separate register writes are not atomic; do not promise glitch-free paired limits, suppressed intermediate alerts or rollback. Validate the entire candidate before the first write, record partial application, and require readback of all owned fields.
+- Use the stage 11 Config without a public offset setting until stage 23. A successful begin here verifies CONFIG/limits only; it does not assert hardware offset zero or full final-profile trust. Preserve unknown offset provenance in observations and documentation while allowing real initialized temperature acquisition.
 
 ## Verification and exit criteria
 
@@ -34,6 +37,9 @@ readiness is unestablished, including a TMP116 reset-load fixture with busy clea
 and ignored writes. Check invalid profiles cause zero I2C, exact pointer
 sequences, no general-call address, partial-write dirty state, canonical CONFIG
 readback and independent limit verification.
+Include public begin/recover success and failure transcripts, real managed
+latest-read integration from stage 16, health integration from stage 15 and
+profile validation failures after a structurally valid bus-silent bind.
 
 ## Documentation and delegation
 

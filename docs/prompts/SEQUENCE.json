@@ -10,7 +10,11 @@
       "title": "Audit current sensor-driver ownership and APIs",
       "phase": "Ecosystem inspection",
       "kind": "software",
-      "depends_on": []
+      "depends_on": [],
+      "produces": [
+        "ecosystem-audit"
+      ],
+      "consumes": []
     },
     {
       "id": 2,
@@ -20,6 +24,12 @@
       "kind": "software",
       "depends_on": [
         1
+      ],
+      "produces": [
+        "tooling-plan"
+      ],
+      "consumes": [
+        "ecosystem-audit"
       ]
     },
     {
@@ -31,6 +41,13 @@
       "depends_on": [
         1,
         2
+      ],
+      "produces": [
+        "ti-archive"
+      ],
+      "consumes": [
+        "ecosystem-audit",
+        "tooling-plan"
       ]
     },
     {
@@ -41,6 +58,13 @@
       "kind": "software",
       "depends_on": [
         3
+      ],
+      "produces": [
+        "variant-contract",
+        "board-guide"
+      ],
+      "consumes": [
+        "ti-archive"
       ]
     },
     {
@@ -52,6 +76,15 @@
       "depends_on": [
         3,
         4
+      ],
+      "produces": [
+        "register-ledger",
+        "feature-ledger",
+        "register-validator"
+      ],
+      "consumes": [
+        "ti-archive",
+        "variant-contract"
       ]
     },
     {
@@ -63,6 +96,15 @@
       "depends_on": [
         3,
         5
+      ],
+      "produces": [
+        "behavior-contract",
+        "behavior-vectors"
+      ],
+      "consumes": [
+        "register-ledger",
+        "register-validator",
+        "ti-archive"
       ]
     },
     {
@@ -76,6 +118,14 @@
         4,
         5,
         6
+      ],
+      "produces": [
+        "safety-policy"
+      ],
+      "consumes": [
+        "variant-contract",
+        "register-ledger",
+        "behavior-contract"
       ]
     },
     {
@@ -91,6 +141,18 @@
         5,
         6,
         7
+      ],
+      "produces": [
+        "api-contract"
+      ],
+      "consumes": [
+        "ecosystem-audit",
+        "tooling-plan",
+        "variant-contract",
+        "register-ledger",
+        "behavior-contract",
+        "safety-policy",
+        "feature-ledger"
       ]
     },
     {
@@ -103,6 +165,14 @@
         8,
         6,
         7
+      ],
+      "produces": [
+        "owner-contract"
+      ],
+      "consumes": [
+        "api-contract",
+        "behavior-contract",
+        "safety-policy"
       ]
     },
     {
@@ -115,6 +185,16 @@
         2,
         8,
         9
+      ],
+      "produces": [
+        "build-foundation",
+        "version-tools",
+        "host-test-entrypoint"
+      ],
+      "consumes": [
+        "tooling-plan",
+        "api-contract",
+        "owner-contract"
       ]
     },
     {
@@ -127,6 +207,14 @@
         8,
         9,
         10
+      ],
+      "produces": [
+        "value-types"
+      ],
+      "consumes": [
+        "api-contract",
+        "owner-contract",
+        "build-foundation"
       ]
     },
     {
@@ -141,6 +229,17 @@
         9,
         10,
         11
+      ],
+      "produces": [
+        "register-transport",
+        "command-table"
+      ],
+      "consumes": [
+        "register-ledger",
+        "api-contract",
+        "owner-contract",
+        "value-types",
+        "build-foundation"
       ]
     },
     {
@@ -155,6 +254,15 @@
         8,
         11,
         12
+      ],
+      "produces": [
+        "identity-engine"
+      ],
+      "consumes": [
+        "variant-contract",
+        "register-ledger",
+        "value-types",
+        "register-transport"
       ]
     },
     {
@@ -169,6 +277,17 @@
         11,
         12,
         13
+      ],
+      "produces": [
+        "binding-api",
+        "public-identity-api"
+      ],
+      "consumes": [
+        "api-contract",
+        "owner-contract",
+        "value-types",
+        "register-transport",
+        "identity-engine"
       ]
     },
     {
@@ -182,6 +301,15 @@
         11,
         12,
         14
+      ],
+      "produces": [
+        "transport-health"
+      ],
+      "consumes": [
+        "api-contract",
+        "value-types",
+        "register-transport",
+        "binding-api"
       ]
     },
     {
@@ -198,6 +326,18 @@
         13,
         14,
         15
+      ],
+      "produces": [
+        "temperature-codec",
+        "latest-read-engine"
+      ],
+      "consumes": [
+        "register-ledger",
+        "behavior-vectors",
+        "value-types",
+        "register-transport",
+        "binding-api",
+        "transport-health"
       ]
     },
     {
@@ -212,7 +352,19 @@
         7,
         8,
         11,
-        12
+        12,
+        16
+      ],
+      "produces": [
+        "config-codec"
+      ],
+      "consumes": [
+        "register-ledger",
+        "behavior-contract",
+        "safety-policy",
+        "value-types",
+        "command-table",
+        "temperature-codec"
       ]
     },
     {
@@ -230,6 +382,20 @@
         14,
         16,
         17
+      ],
+      "produces": [
+        "safe-apply-engine",
+        "sync-initialize-recover"
+      ],
+      "consumes": [
+        "safety-policy",
+        "api-contract",
+        "owner-contract",
+        "binding-api",
+        "public-identity-api",
+        "transport-health",
+        "temperature-codec",
+        "config-codec"
       ]
     },
     {
@@ -244,6 +410,16 @@
         15,
         17,
         18
+      ],
+      "produces": [
+        "config-trust"
+      ],
+      "consumes": [
+        "safe-apply-engine",
+        "sync-initialize-recover",
+        "config-codec",
+        "transport-health",
+        "safety-policy"
       ]
     },
     {
@@ -259,6 +435,16 @@
         17,
         18,
         19
+      ],
+      "produces": [
+        "conversion-settings"
+      ],
+      "consumes": [
+        "behavior-contract",
+        "behavior-vectors",
+        "config-codec",
+        "safe-apply-engine",
+        "config-trust"
       ]
     },
     {
@@ -274,6 +460,17 @@
         18,
         19,
         20
+      ],
+      "produces": [
+        "sync-acquisition"
+      ],
+      "consumes": [
+        "behavior-contract",
+        "owner-contract",
+        "latest-read-engine",
+        "sync-initialize-recover",
+        "config-trust",
+        "conversion-settings"
       ]
     },
     {
@@ -290,6 +487,17 @@
         17,
         19,
         21
+      ],
+      "produces": [
+        "limits-alert"
+      ],
+      "consumes": [
+        "register-ledger",
+        "behavior-vectors",
+        "temperature-codec",
+        "config-codec",
+        "config-trust",
+        "sync-acquisition"
       ]
     },
     {
@@ -306,7 +514,19 @@
         12,
         16,
         17,
-        19
+        19,
+        21
+      ],
+      "produces": [
+        "offset-feature"
+      ],
+      "consumes": [
+        "variant-contract",
+        "register-ledger",
+        "safety-policy",
+        "temperature-codec",
+        "config-trust",
+        "sync-acquisition"
       ]
     },
     {
@@ -323,6 +543,17 @@
         12,
         13,
         19
+      ],
+      "produces": [
+        "readonly-eeprom"
+      ],
+      "consumes": [
+        "variant-contract",
+        "register-ledger",
+        "safety-policy",
+        "register-transport",
+        "public-identity-api",
+        "config-trust"
       ]
     },
     {
@@ -340,6 +571,18 @@
         19,
         21,
         23
+      ],
+      "produces": [
+        "device-reset"
+      ],
+      "consumes": [
+        "safety-policy",
+        "owner-contract",
+        "binding-api",
+        "sync-initialize-recover",
+        "config-trust",
+        "sync-acquisition",
+        "offset-feature"
       ]
     },
     {
@@ -358,6 +601,19 @@
         22,
         23,
         24
+      ],
+      "produces": [
+        "diagnostics"
+      ],
+      "consumes": [
+        "register-ledger",
+        "safety-policy",
+        "binding-api",
+        "config-trust",
+        "sync-acquisition",
+        "limits-alert",
+        "offset-feature",
+        "readonly-eeprom"
       ]
     },
     {
@@ -376,6 +632,20 @@
         24,
         25,
         26
+      ],
+      "produces": [
+        "sync-api"
+      ],
+      "consumes": [
+        "latest-read-engine",
+        "config-trust",
+        "conversion-settings",
+        "sync-acquisition",
+        "limits-alert",
+        "offset-feature",
+        "readonly-eeprom",
+        "device-reset",
+        "diagnostics"
       ]
     },
     {
@@ -389,6 +659,16 @@
         14,
         15,
         27
+      ],
+      "produces": [
+        "job-lifecycle"
+      ],
+      "consumes": [
+        "owner-contract",
+        "binding-api",
+        "transport-health",
+        "config-trust",
+        "sync-api"
       ]
     },
     {
@@ -402,6 +682,16 @@
         19,
         25,
         28
+      ],
+      "produces": [
+        "configuration-jobs"
+      ],
+      "consumes": [
+        "safe-apply-engine",
+        "sync-initialize-recover",
+        "config-trust",
+        "offset-feature",
+        "job-lifecycle"
       ]
     },
     {
@@ -416,6 +706,16 @@
         22,
         28,
         29
+      ],
+      "produces": [
+        "measurement-jobs"
+      ],
+      "consumes": [
+        "sync-acquisition",
+        "conversion-settings",
+        "limits-alert",
+        "job-lifecycle",
+        "configuration-jobs"
       ]
     },
     {
@@ -431,6 +731,17 @@
         28,
         29,
         30
+      ],
+      "produces": [
+        "fault-closure"
+      ],
+      "consumes": [
+        "transport-health",
+        "config-trust",
+        "device-reset",
+        "job-lifecycle",
+        "configuration-jobs",
+        "measurement-jobs"
       ]
     },
     {
@@ -449,6 +760,22 @@
         29,
         30,
         31
+      ],
+      "produces": [
+        "variant-fixtures"
+      ],
+      "consumes": [
+        "variant-contract",
+        "register-ledger",
+        "behavior-vectors",
+        "public-identity-api",
+        "config-codec",
+        "sync-acquisition",
+        "offset-feature",
+        "readonly-eeprom",
+        "configuration-jobs",
+        "measurement-jobs",
+        "fault-closure"
       ]
     },
     {
@@ -473,6 +800,16 @@
         30,
         31,
         32
+      ],
+      "produces": [
+        "native-qualification"
+      ],
+      "consumes": [
+        "host-test-entrypoint",
+        "sync-api",
+        "variant-fixtures",
+        "fault-closure",
+        "feature-ledger"
       ]
     },
     {
@@ -485,6 +822,18 @@
         27,
         30,
         33
+      ],
+      "produces": [
+        "arduino-adapter-source",
+        "arduino-build-record"
+      ],
+      "consumes": [
+        "tooling-plan",
+        "board-guide",
+        "version-tools",
+        "sync-api",
+        "measurement-jobs",
+        "native-qualification"
       ]
     },
     {
@@ -497,6 +846,18 @@
         27,
         30,
         33
+      ],
+      "produces": [
+        "idf-adapter-source",
+        "idf-build-record"
+      ],
+      "consumes": [
+        "tooling-plan",
+        "board-guide",
+        "version-tools",
+        "sync-api",
+        "measurement-jobs",
+        "native-qualification"
       ]
     },
     {
@@ -508,6 +869,15 @@
       "depends_on": [
         33,
         35
+      ],
+      "produces": [
+        "p4-consumer-source",
+        "p4-build-record"
+      ],
+      "consumes": [
+        "board-guide",
+        "native-qualification",
+        "idf-adapter-source"
       ]
     },
     {
@@ -521,6 +891,18 @@
         28,
         30,
         33
+      ],
+      "produces": [
+        "cli-baseline",
+        "cli-protocol"
+      ],
+      "consumes": [
+        "sync-api",
+        "job-lifecycle",
+        "measurement-jobs",
+        "native-qualification",
+        "host-test-entrypoint",
+        "version-tools"
       ]
     },
     {
@@ -540,6 +922,22 @@
         30,
         31,
         37
+      ],
+      "produces": [
+        "cli-complete",
+        "firmware-cli-handoff"
+      ],
+      "consumes": [
+        "cli-baseline",
+        "cli-protocol",
+        "limits-alert",
+        "offset-feature",
+        "readonly-eeprom",
+        "device-reset",
+        "diagnostics",
+        "configuration-jobs",
+        "measurement-jobs",
+        "fault-closure"
       ]
     },
     {
@@ -551,6 +949,15 @@
       "depends_on": [
         37,
         38
+      ],
+      "produces": [
+        "hil-runner"
+      ],
+      "consumes": [
+        "cli-complete",
+        "cli-protocol",
+        "firmware-cli-handoff",
+        "host-test-entrypoint"
       ]
     },
     {
@@ -561,6 +968,13 @@
       "kind": "physical",
       "depends_on": [
         39
+      ],
+      "produces": [
+        "readonly-hil-record"
+      ],
+      "consumes": [
+        "hil-runner",
+        "firmware-cli-handoff"
       ]
     },
     {
@@ -573,6 +987,14 @@
         31,
         39,
         40
+      ],
+      "produces": [
+        "volatile-hil-record"
+      ],
+      "consumes": [
+        "readonly-hil-record",
+        "hil-runner",
+        "fault-closure"
       ]
     },
     {
@@ -587,6 +1009,22 @@
         35,
         38,
         39
+      ],
+      "produces": [
+        "package-qualification",
+        "package-doc-tools"
+      ],
+      "consumes": [
+        "native-qualification",
+        "version-tools",
+        "board-guide",
+        "arduino-adapter-source",
+        "idf-adapter-source",
+        "cli-complete",
+        "firmware-cli-handoff",
+        "hil-runner",
+        "arduino-build-record",
+        "idf-build-record"
       ]
     },
     {
@@ -599,6 +1037,19 @@
         33,
         35,
         42
+      ],
+      "produces": [
+        "ci-record"
+      ],
+      "consumes": [
+        "native-qualification",
+        "idf-adapter-source",
+        "register-validator",
+        "version-tools",
+        "package-doc-tools",
+        "package-qualification",
+        "cli-complete",
+        "hil-runner"
       ]
     },
     {
@@ -614,6 +1065,18 @@
         38,
         39,
         42
+      ],
+      "produces": [
+        "final-audit"
+      ],
+      "consumes": [
+        "fault-closure",
+        "variant-fixtures",
+        "native-qualification",
+        "cli-complete",
+        "hil-runner",
+        "package-qualification",
+        "feature-ledger"
       ]
     }
   ]

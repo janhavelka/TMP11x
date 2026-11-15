@@ -2,6 +2,8 @@
 
 Apply [COMMON.md](COMMON.md) and root [AGENTS.md](../../AGENTS.md). Phase: **Package, CI and final review**. Type: **ci**.
 Prerequisites: [33](33_native-suite.md), [35](35_idf-examples.md), [42](42_package-docs.md).
+Produces: `ci-record`.
+Consumes: `native-qualification`, `idf-adapter-source`, `register-validator`, `version-tools`, `package-doc-tools`, `package-qualification`, `cli-complete`, `hil-runner`.
 
 ## Objective and boundaries
 
@@ -15,6 +17,7 @@ Audit TMP1x2 and TCA9548A pinned current workflow actions/dependency rules, `scr
 
 - Create or complete `.github/workflows/ci.yml` after inspecting stage 10's scaffolding. Preserve existing push/pull_request/optional workflow_dispatch triggers and required checks; use minimal permissions, pinned actions, finite timeouts and cache keys matching actual dependencies. Do not replace an existing workflow merely because this stage says to create one.
 - Register native GCC/Clang or installed toolchain checks, active Release assertions, registered tests, ledger/promptset/checker integrity, sanitizer if reliable, clean source/package/install consumer, documentation, plus feasible Arduino S2/S3 and native ESP-IDF full-link jobs.
+- Explicitly execute the compiled CLI/parser/golden tests added in 37/38 and Python runner plus real compiled-fixture integration tests added in 39. Use the updated standard host entrypoint and named version/register/package/Doxygen tools from 5/10/42; checking only the stage 33 test inventory is insufficient. Full firmware jobs use the final CLI-integrated sources and refresh the stage 38 handoff evidence.
 - Keep an ESP32-P4 job when stage 36's source and a supported SDK/toolchain are available; no physical board is needed for linking. Report any missing target gate explicitly, without turning a skipped job into support evidence. Hardware HIL remains a separate opt-in fixture job and must never open a physical port in default hosted CI.
 - Run corresponding local checks, commit and safely push inputs first; identify exact GitHub workflow run associated with the tested commit, inspect completed required jobs, fix actual failures and rerun this single checkpoint as necessary to establish a green final tested SHA.
 - A subsequent report/README commit does not retroactively become the tested SHA. Keep original hooks/permissions intact, never use skip-ci to avoid failures and never label queued/pending jobs PASS.

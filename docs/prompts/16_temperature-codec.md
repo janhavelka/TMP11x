@@ -2,6 +2,8 @@
 
 Apply [COMMON.md](COMMON.md) and root [AGENTS.md](../../AGENTS.md). Phase: **Portable device protocol, identity and trustworthy configuration**. Type: **software**.
 Prerequisites: [5](5_register-ledger.md), [6](6_timing-status.md), [11](11_status-values.md), [12](12_i2c-register-transport.md), [13](13_identity-selection.md), [14](14_binding-lifecycle.md), [15](15_passive-health.md).
+Produces: `temperature-codec`, `latest-read-engine`.
+Consumes: `register-ledger`, `behavior-vectors`, `value-types`, `register-transport`, `binding-api`, `transport-health`.
 
 ## Objective and boundaries
 

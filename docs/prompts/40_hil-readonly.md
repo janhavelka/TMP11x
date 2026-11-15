@@ -2,10 +2,14 @@
 
 Apply [COMMON.md](COMMON.md) and root [AGENTS.md](../../AGENTS.md). Phase: **Physical fixture qualification**. Type: **physical**.
 Prerequisites: [39](39_python-hil-runner.md).
+Produces: `readonly-hil-record`.
+Consumes: `hil-runner`, `firmware-cli-handoff`.
 
-Physical execution also requires one identified, fully linked compatible
-firmware from stage 34 **or** stage 35, its observation startup path, and an
-authorized fixture. The dependency list does not waive those runtime gates.
+Physical execution also requires one identified, fully linked image from a
+stage 34 **or** stage 35 backend **after** the stage 38 final CLI/protocol
+integration, selected from `docs/firmware-cli-handoff.md`. Its actual image,
+protocol and build identity must match the runner, with observation startup
+and an authorized fixture. A pre-CLI example build does not satisfy this gate.
 
 ## Objective and boundaries
 
@@ -28,7 +32,7 @@ Recheck exact actual PCB/BOM chip marking, board power/pullups/ADD0/ALERT/wiring
 
 ## Verification and exit criteria
 
-Physical PASS only with identified hardware, one compatible fully linked firmware image and actual unmodified runner transcripts. Both Arduino and IDF builds are not needed to qualify one fixture run. Review failed/mismatched IDs and unstable readings as evidence; keep host/software claims separate. No absolute accuracy/traceability qualification follows merely from an ID or EEPROM read.
+Physical PASS only with identified hardware, one current compatible fully linked firmware image containing the completed stage 37/38 protocol/routes, and actual unmodified runner transcripts. Both Arduino and IDF builds are not needed to qualify one fixture run. Review failed/mismatched IDs and unstable readings as evidence; keep host/software claims separate. No absolute accuracy/traceability qualification follows merely from an ID or EEPROM read.
 
 ## Documentation and delegation
 

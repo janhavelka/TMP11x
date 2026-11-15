@@ -2,6 +2,8 @@
 
 Apply [COMMON.md](COMMON.md) and root [AGENTS.md](../../AGENTS.md). Phase: **Portable device protocol, identity and trustworthy configuration**. Type: **software**.
 Prerequisites: [8](8_api-architecture.md), [9](9_owner-deadline-contract.md), [11](11_status-values.md), [12](12_i2c-register-transport.md), [13](13_identity-selection.md).
+Produces: `binding-api`, `public-identity-api`.
+Consumes: `api-contract`, `owner-contract`, `value-types`, `register-transport`, `identity-engine`.
 
 ## Objective and boundaries
 
@@ -13,10 +15,11 @@ Trace TMP1x2 `bind`, `unbind`, `begin`, `end` implementation and tests; compare 
 
 ## Complete implementation work
 
-- Implement bus-silent `bind(Config)`, `unbind()` and `end()`, with precise handling for active jobs/results, clock hooks, config reuse and caller callback lifetime.
+- Implement bus-silent `bind(Config)`, `unbind()` and `end()`. Validate binding structure (model/address/callbacks, timeout/clock contract and contexts) here; stage 18 validates the complete sensor profile with stages 16/17 codecs before any I2C. Define active-job/result policy and guard seams now; stage 28 supplies actual slots and executable teardown/result tests.
+- Attach stage 13's real identity engine as public bound `readIdentity`/`probe`, including unbound refusal and bound-but-uninitialized success. These reads do not initialize the managed profile; stage 15 connects their health-neutral accounting policy.
 - Establish the state and guard interfaces required by prompt 18's real `begin(Config)`/`begin()`: bound versus initialized, selected profile, identity observations, startup state and verified configuration. No public initializer reports success before that implementation exists; identity-only probe remains a distinct prompt 13 operation.
 - Record initialized state separately from transport health, fresh-conversion evidence and dirty config state. `end` never sends physical shutdown implicitly; offer explicit shutdown later.
-- Define rebind semantics for model/address change or externally reset device, including invalidated old samples and operation tokens; maintain no heap and no task creation.
+- Define rebind semantics for model/address change or externally reset device, including invalidation of available observations and the future operation-token rules. Integrate sample caches at stage 16 and active/retained operation slots at 28; maintain no heap and no task creation.
 
 ## Verification and exit criteria
 

@@ -2,6 +2,8 @@
 
 Apply [COMMON.md](COMMON.md) and root [AGENTS.md](../../AGENTS.md). Phase: **Package, CI and final review**. Type: **software**.
 Prerequisites: [33](33_native-suite.md), [34](34_arduino-examples.md), [35](35_idf-examples.md), [38](38_cli-device-operations.md), [39](39_python-hil-runner.md).
+Produces: `package-qualification`, `package-doc-tools`.
+Consumes: `native-qualification`, `version-tools`, `board-guide`, `arduino-adapter-source`, `idf-adapter-source`, `cli-complete`, `firmware-cli-handoff`, `hil-runner`, `arduino-build-record`, `idf-build-record`.
 
 ## Objective and boundaries
 
@@ -14,6 +16,7 @@ Recheck TMP1x2 `CMakeLists.txt`, `library.json`, `idf_component.yml`, version ge
 ## Complete implementation work
 
 - Audit and complete `library.json`, CMake config/install/export, native `add_subdirectory`, ESP-IDF component metadata, Arduino `lib_deps` from GitHub and generated committed `Version.h` with single version source.
+- Implement `tools/check_package.py` and `tools/check_doxygen.py`, invoked with `python <path>` and nonzero failure exits, plus their meaningful negative tests. Consume stage 10's real version generator/checker instead of inventing another version authority. Publish exact commands in `docs/testing.md` and register checks in the host/packaging entrypoints used by stage 43.
 - Create isolated source-consumer, archive/extracted consumer and relocated CMake-installed `find_package` consumer tests without source-tree/sibling fallbacks or hidden generated outputs. Prove native consumers do not invoke Git/Python or need an SDK; build tools used to prepare the archive/test harness may still use them. SDK consumer tests explicitly declare their toolchain and dependencies.
 - Ensure source/header license/attribution, archive include/exclude, no vendor/GPL code, no reference PDFs, no test fixtures or CLI auto-linked into portable core. `#include <TMP11x/TMP11x.h>` must work without a generator execution.
 - Add strict meaningful public Doxygen, user/architecture/variant/config/freshness/EEPROM/CLI/HIL/IDF/Arduino integration, troubleshooting and test documentation. Separate documented/implemented/native-tested/MCU-built/physical-verified capability rows.
@@ -21,6 +24,7 @@ Recheck TMP1x2 `CMakeLists.txt`, `library.json`, `idf_component.yml`, version ge
 
 - Publish the board/precision guide and exact-grade/package matrix required by F01–F04/F16–F17. Include voltage/temperature/accuracy-test conditions, bus timing/timeout/pulls, ADD0, decoupling, thermal response/strain/self-heating and part-specific thermal-pad recommendations. Distinguish typical current curves from guaranteed operating limits.
 - Document all included R/F and excluded X rows, reset-content conflicts and source-unknown semantics. Headline sensor accuracy, NIST words and a hardware offset never establish system certification or calibrated application accuracy.
+- Finalize the guide created in stage 4 and extended by 34/35; reconcile stage 38 firmware integration metadata after any packaging/example changes. Maintain independent availability of native package checks and target-specific build evidence; do not imply an old image covers changed CLI or adapter source.
 
 ## Verification and exit criteria
 

@@ -2,6 +2,8 @@
 
 Apply [COMMON.md](COMMON.md) and root [AGENTS.md](../../AGENTS.md). Phase: **Physical fixture qualification**. Type: **physical**.
 Prerequisites: [31](31_failure-recovery.md), [39](39_python-hil-runner.md), [40](40_hil-readonly.md).
+Produces: `volatile-hil-record`.
+Consumes: `readonly-hil-record`, `hil-runner`, `fault-closure`.
 
 ## Objective and boundaries
 
