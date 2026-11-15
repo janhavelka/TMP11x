@@ -14,10 +14,10 @@ Recheck TMP1x2 `CMakeLists.txt`, `library.json`, `idf_component.yml`, version ge
 ## Complete implementation work
 
 - Audit and complete `library.json`, CMake config/install/export, native `add_subdirectory`, ESP-IDF component metadata, Arduino `lib_deps` from GitHub and generated committed `Version.h` with single version source.
-- Create isolated source-consumer, archive/extracted consumer and relocated CMake-installed `find_package` consumer tests in directories that cannot see sibling repos, hidden generated outputs, Git, Python or SDK unless the SDK path is the explicit test.
+- Create isolated source-consumer, archive/extracted consumer and relocated CMake-installed `find_package` consumer tests without source-tree/sibling fallbacks or hidden generated outputs. Prove native consumers do not invoke Git/Python or need an SDK; build tools used to prepare the archive/test harness may still use them. SDK consumer tests explicitly declare their toolchain and dependencies.
 - Ensure source/header license/attribution, archive include/exclude, no vendor/GPL code, no reference PDFs, no test fixtures or CLI auto-linked into portable core. `#include <TMP11x/TMP11x.h>` must work without a generator execution.
 - Add strict meaningful public Doxygen, user/architecture/variant/config/freshness/EEPROM/CLI/HIL/IDF/Arduino integration, troubleshooting and test documentation. Separate documented/implemented/native-tested/MCU-built/physical-verified capability rows.
-- Prove a sample application can simultaneously use TMP1x2 and TMP11x from independent dependencies, and demonstrate each typed model without requiring a sibling at build time.
+- Prove a sample application can simultaneously use TMP1x2 and TMP11x from independent pinned packages; it may fetch/install the explicitly declared TMP1x2 dependency but must not require the local sibling checkout. Demonstrate each typed model separately from physical qualification. Keep TMP1x2 optional and absent from TMP11x's exported dependency graph.
 
 ## Verification and exit criteria
 

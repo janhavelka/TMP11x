@@ -14,13 +14,15 @@ Use TI TMP116 printed p.24-31, TMP117 p.25-32, TMP119 p.32-39; check CONFIG/EEPR
 ## Complete implementation work
 
 - Create `docs/registers/tmp11x.json` schema and validator under `tools/check_register_ledger.py`; record per-model register address, width, access, reset domain, field masks/encodings, side effects, prerequisites, source file/page, and feature-stage owner.
-- Cover TEMP 0x00, CONFIG 0x01, THIGH 0x02, TLOW 0x03, EEPROM_UL 0x04, EEPROM 0x05..0x08, OFFSET 0x07 only on TMP117/TMP119, DEVICE_ID 0x0F.
+- Cover TEMP 0x00, CONFIG 0x01, THIGH 0x02, TLOW 0x03, EEPROM_UL 0x04, DEVICE_ID 0x0F; TMP116 EEPROM words are 0x05/0x06/0x07/0x08, while TMP117/TMP119 EEPROM words are 0x05/0x06/0x08 and OFFSET is 0x07. The same address across different model profiles is legal; reject overlapping fields/duplicate registers within one profile, not the intentional 0x07 model distinction.
 - Record CONFIG R/C DATA_READY and high/low alert flags, EEPROM busy, conversion mode/cycle/average, therm/alert/polarity/pin select and per-part low-bit/soft-reset semantics. Explicitly distinguish `write 1 command` vs persistent bit and reserved bits.
+- Record that MOD=10 is a documented continuous-mode alias that reads back 00, not a reserved mode. High/low alert read effects depend on alert versus therm mode. EUN is bit 15 of 0x04; its busy bit 14 mirrors CONFIG bit 12. Keep register access permissions separate from the stricter first-release policy that denies EEPROM and unlock writes.
+- Preserve source conflicts explicitly: TMP116 p.17 says busy is cleared during reset-load, while p.26 Table 6/p.29 Table 10 say it indicates power-up; TMP119 p.20 says four EEPROM words, while its p.32 map exposes three plus offset; TMP119 ID defaults also disagree. Do not silently resolve contradictory prose by copying another model.
 - Create `docs/feature-coverage.md` seeded with source-backed documented capability, planned implementation stage, test owner, CLI and qualification evidence columns. No entry is implemented merely because it is listed.
 
 ## Verification and exit criteria
 
-Test schema rejection of overlap, duplicate keys, out-of-range masks, missing provenance, incompatible variant semantics, and marked-resolved conflicts without evidence. Independent literal masks come from PDF, not from the driver's future code.
+Test schema rejection of same-profile overlap, duplicate keys, out-of-range masks, missing provenance, incompatible variant semantics, and marked-resolved conflicts without evidence. Verify duplicate JSON keys are caught while parsing rather than discarded by a default dictionary parser. Independent literal masks come from PDF, not from the driver's future code.
 
 ## Documentation and delegation
 

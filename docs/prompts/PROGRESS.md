@@ -5,27 +5,28 @@
 **Repository:** `main`, tracking `origin/main` at `https://github.com/janhavelka/TMP11x.git`.
 **Preparation input HEAD:** `6c5e4496d5c896af689228d4bee4382a53c20626` (clean and synchronized at entry).
 **Hardware:** Physical TMP11x board and test wiring NOT CONFIRMED.
-**Last completed stage:** 2. Stage 3 source intake is PARTIAL.
-**Last update:** 2026-11-15; see [preparation report](../reports/preparation.md).
+**Last completed stage:** 3 (intake scope clarified by the full promptset audit).
+**Last update:** 2026-11-15; see [full promptset audit](../reports/promptset-audit.md).
 
 | Stage range | Objective | Current state and evidence |
 |---|---|---|
-| 1 | Current sibling API/ownership audit | COMPLETE ? [report](../reports/prompt_1.md) |
-| 2 | Toolchain/package/prompt workflow audit | COMPLETE ? [report](../reports/prompt_2.md) |
-| 3 | Official source intake | PARTIAL ? [report](../reports/prompt_3.md); all required PDFs pinned, TI code/license access remains open |
-| 4?7 | Model identity, field/timing ledger, safety policy | NOT STARTED |
-| 8?15 | Architecture, package foundation, transport/identity/health | NOT STARTED |
-| 16?27 | Temperature, config, fresh conversions, limits, offset, EEPROM-read, diagnostics | NOT STARTED |
-| 28?33 | Cooperative owner operations and adversarial native tests | NOT STARTED |
-| 34?39 | Arduino/IDF/P4 integration, CLI and Python runner | NOT STARTED |
-| 40?41 | Physical HIL qualification (fixture-dependent) | NOT STARTED; physical evidence NOT RUN |
-| 42?44 | Package/docs, one CI checkpoint, independent final audit | NOT STARTED |
+| 1 | Current sibling API/ownership audit | COMPLETE — [report](../reports/prompt_1.md) |
+| 2 | Toolchain/package/prompt workflow audit | COMPLETE — [report](../reports/prompt_2.md) |
+| 3 | Official source intake | COMPLETE — [report](../reports/prompt_3.md); optional TI code access gaps retained |
+| 4–7 | Model identity, field/timing ledger, safety policy | NOT STARTED |
+| 8–15 | Architecture, package foundation, transport/identity/health | NOT STARTED |
+| 16–27 | Temperature, config, fresh conversions, limits, offset, EEPROM-read, diagnostics | NOT STARTED |
+| 28–33 | Cooperative owner operations and adversarial native tests | NOT STARTED |
+| 34–39 | Arduino/IDF/P4 integration, CLI and Python runner | NOT STARTED |
+| 40–41 | Physical HIL qualification (fixture-dependent) | NOT STARTED; physical evidence NOT RUN |
+| 42–44 | Package/docs, one CI checkpoint, independent final audit | NOT STARTED |
 
-Next explicit implementation task: verify archive integrity and relevant audit
-revisions. Retain stage 3's inaccessible TI source obligation; independent
-stage 4 work may proceed using acquired datasheets after confirming concrete
-prerequisite inputs. Stage 6 must revisit the unreadable E2E DATA_READY race
-lead. Do not infer implementation completion from these downloads.
+All 44 prompts and shared contracts were audited; this does not execute their
+implementation work. Next implementation stage: 4, after verifying archive
+integrity and relevant source revisions. Optional inaccessible TI source code
+does not gate datasheet research. Stage 6 retains the unreadable E2E DATA_READY
+race lead and stage 4 the exact-grade scope question. Do not infer implemented
+chip support or physical qualification from this audit.
 
 The [report index](../reports/index.md) separates completed preparation from
 stage-owned evidence. Final commit/upstream synchronization is recorded in the

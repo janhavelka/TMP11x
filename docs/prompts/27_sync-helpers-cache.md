@@ -14,9 +14,9 @@ Audit TMP1x2 `readTemperature`, `readBlocking`, getters/cached sample, settings 
 ## Complete implementation work
 
 - Provide stable conventional public method names and aliases only when their behavior is identical. Ensure latest/try-fresh/blocking semantics are unambiguous in signatures and documentation.
-- Implement `getLastSample`, timestamp validity, wrap-safe age check and unit helpers. Cached sample age is NOT proof of newly completed continuous conversion.
+- Implement `getLastSample`, timestamp validity, wrap-safe age check and unit helpers. A timestamp records host acquisition/observation, not the unknown physical conversion instant; cached age is not proof of a new continuous conversion. Define stale-cache access after reconfiguration/reset separately from a current-generation valid sample.
 - Make all getters either explicitly cached/bus-silent or explicitly live I2C, without hidden side effects. Provide `getSettingsSnapshot` and `readRegisterSnapshot` separate from source live read state.
-- Test simple initialization, calibration, limits, offset and read on one TMP117 plus at least one TMP116 and TMP119 identity fixture through public API.
+- Test initialization, limits, offset and read through public API on TMP117, TMP116 and TMP119 fixtures. Offset on TMP116 must reject before I2C. Setting an offset is not a complete calibration procedure or certified accuracy evidence; do not add an unplanned calibration API.
 - Provide a minimal framework-neutral C++ consumer file that uses injected callbacks; no CLI/Arduino dependencies.
 
 ## Verification and exit criteria

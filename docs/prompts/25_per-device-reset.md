@@ -9,19 +9,27 @@ Handle documented individually addressed software reset, if supported, without s
 
 ## Source audit
 
-Investigate TMP117/TMP119 CONFIG bit 1 `Soft_Reset` versus TMP116 reserved bits and exact write/readback procedure. Check TI wording/access table carefully: some figures mark it read-only while naming reset. Review TMP1x2 external reset handling, not its bus-wide reset implementation.
+TMP117 p.28 Table 7-6 and TMP119 p.35 Table 8-5 explicitly describe CONFIG
+bit 1 `Soft_Reset` as R/W, triggering a 2-ms reset and reading zero. Their
+figures label it R-0; record that inconsistency without ignoring the detailed
+field definitions. TMP116 p.26 reserves bits 1:0. Review TMP1x2 external reset
+handling, not its bus-wide reset implementation.
 
 ## Complete implementation work
 
 - Record a source-verified reset capability for each part and define `softResetDevice` only when the exact datasheet proves a safe individually addressed command and write encoding.
 - If the source remains ambiguous, report capability gated and do not emit a reset write. Use `invalidateDeviceState` as the supported local operation; do not disguise it as physical reset.
-- For a proven reset, implement only selected-device address, restore EEPROM-loaded startup state, invalidate conversion/alert evidence, wait for EEPROM busy to clear and optionally reapply desired volatile settings under normal locked-state checks.
+- For supported reset, establish startup readiness and EUN=0/busy=0 before writing CONFIG; reset is not a way to escape an unlocked device safely. Emit one reset-command write to the selected address, invalidate configuration/conversion/alert evidence before the attempt, and retain uncertainty if the write fails.
+- The sensor reloads its EEPROM-backed state; software must not assume factory defaults or write them back as reset proof. Honor the documented 2-ms reset interval before readiness/readback checks, using stage 6's explicit timing policy. A cleared Soft_Reset bit is not completion evidence because it always reads zero. Reapply desired volatile settings only when the caller explicitly selected that behavior.
 - Never use I2C general-call address 0x00, global reset from TMP1x2 or TCA9548A RESET as a shortcut. No reset in begin()/recover() without explicit caller request.
 - Include reset decision in device ledger and per-variant capability matrix.
 
 ## Verification and exit criteria
 
-Native tests assert exactly one addressed command for supported part, zero bus-wide commands, unsupported variant error before I2C, failed reset trust and post-reset re-read evidence.
+Native tests assert one addressed reset write plus separately counted preflight
+and post-reset reads, zero bus-wide commands, unsupported TMP116 error before
+I2C, no CONFIG write when EUN is set/busy/startup is uncertain, failed-reset
+trust invalidation, and no premature readiness from the self-cleared command.
 
 ## Documentation and delegation
 

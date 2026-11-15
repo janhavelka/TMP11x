@@ -11,6 +11,9 @@ For each documented claim and implemented bitfield:
    Adafruit or other libraries where helpful. Record exact source revisions
    and licenses. GPL or incompatible reference code is factual evidence only;
    do not copy it into production MIT sources.
+   Secondary code is optional comparison evidence: an unavailable TI GUI,
+   generated source or export-gated firmware must not block stages whose
+   exact-part datasheet inputs are available. Record the lookup/access limit.
 3. Record in `docs/reference/manifest.json` source URLs, local paths, SHA-256,
    title/revision/license and acquisition date. Save immutable vendor PDFs
    under `docs/reference/source/` in the development repository; exclude
@@ -32,6 +35,10 @@ For each documented claim and implemented bitfield:
 8. For freshness, distinguish latest register observation, explicitly completed
    one-shot, and DATA_READY that can be cleared by another read. Preserve
    ambiguous samples instead of promoting them to fresh.
+9. Separate chip facts, source contradictions and project policy. Preserve
+   contradictory prose/tables with both page references. A conservative guard,
+   timeout margin or stronger raw-access restriction is a design decision,
+   not a newly invented silicon guarantee.
 
 Each stage report cites actual paths/line/symbols and source-page records.
 Unresolved essential silicon behavior gates that one implementation; it does

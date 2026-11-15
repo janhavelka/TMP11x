@@ -18,16 +18,16 @@ matrix at `docs/feature-coverage.md` created in stage 5.
 | High/low limits and therm/alert | Yes | Yes | Yes | 22 |
 | Polarity and ALERT vs data-ready output | Yes | Yes | Yes | 22 |
 | Temperature offset register at 0x07 | No | Yes | Yes | 23 |
-| EEPROM read-only data | 4 x 16-bit | 3 x 16-bit | 3 x 16-bit | 7, 24 |
+| EEPROM-backed shadow-register reads | 4 x 16-bit | 3 x 16-bit | 3 x 16-bit | 7, 24 |
 | EEPROM unlock/program/persist | **Intentionally excluded** | **Intentionally excluded** | **Intentionally excluded** | 7, 24 |
-| Individual software reset | Check exact part | Check exact part | Check exact part | 25 |
+| Individual software reset | Unsupported; reject without I2C | CONFIG bit 1, guarded | CONFIG bit 1, guarded | 25 |
 | General-call reset | **Intentionally excluded** | **Intentionally excluded** | **Intentionally excluded** | 7, 25 |
 | Raw read / safe diagnostics | Yes | Yes | Yes | 26 |
 | Safe raw volatile writes | Guarded | Guarded | Guarded | 26 |
 | Health, dirty state, explicit recovery | Yes | Yes | Yes | 15, 19, 31 |
 | Cooperative jobs / retained results | Yes | Yes | Yes | 28–31 |
 | Arduino S2/S3 and native IDF examples | Core + thin adapters | Core + thin adapters | Core + thin adapters | 34–35 |
-| ESP32-P4 native IDF consumer | Core compatible | Primary PCB use | Core compatible | 36 |
+| ESP32-P4 native IDF consumer | Planned, build to verify | Planned, build to verify | Planned, build to verify | 36 |
 | Shared CLI / Python runner | Yes | Yes | Yes | 37–39 |
 | Actual physical temperature/ALERT proof | Per fixture | Primary expected | Per fixture | 40–41 |
 
@@ -35,6 +35,8 @@ matrix at `docs/feature-coverage.md` created in stage 5.
 accuracy grades by I2C, general-call reset, EEPROM reprogramming, automatic
 retry/bus recovery, I2C/TCA mux ownership, device certificate claims, and
 absolute physical accuracy validation without a calibrated fixture.
+Read-only register access can still consume status flags. EEPROM-backed reads
+do not independently verify NVM contents, original factory data or accuracy.
 
 At each prompt, add `source reference`, `owner stage`, `implementation path`,
 `registered test`, `CLI command`, `real board/variant`, `status`, and `remaining

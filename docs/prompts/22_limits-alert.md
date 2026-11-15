@@ -13,15 +13,19 @@ Compare TMP116/TMP117/TMP119 limit representations, alert vs therm behavior, pol
 
 ## Complete implementation work
 
-- Implement `setLimits`, `readLimits`, negative threshold encoding, strict ordering policy if documented, therm/alert mode, polarity and ALERT vs data-ready pin selection, with readback.
+- Implement `setLimits`, `readLimits`, negative threshold encoding, therm/alert mode, polarity and ALERT vs data-ready pin selection, with readback. Any low/high ordering restriction is an explicit library policy; do not invent it as a register encoding restriction. Representable limit codes and rated sensor measurement range are different.
 - Publish decoded `AlertStatus` with high/low flags, source read timestamp/validity and explicit read-to-clear effects. In therm mode, low flag semantics differ; do not infer a symmetric window.
 - Optional GPIO read callback must not configure a pin or be invoked from ISR. Physical pin state and sensor register flags remain distinct observations.
-- Document all scenarios where CONFIG/TEMP reads clear alert/data-ready status. One probe/dashboard action must not silently promise non-destructive observation.
+- Document the exact read effects: CONFIG clears DATA_READY and alert-mode high/low flags; TEMP clears DATA_READY but does not acknowledge high/low flags. In therm mode, HIGH_Alert sets above THIGH and clears below TLOW only at conversion completion; LOW_Alert is always zero and CONFIG reads do not clear HIGH_Alert (TMP116 pp.15-16; TMP117 pp.16-17; TMP119 pp.18-19).
+- POL=1 is active high and POL=0 active low. DR/Alert=1 routes DATA_READY to the pin, not a second threshold interrupt. Do not implement SMBus alert-response traffic in this first-release driver; flag acknowledgement by addressed CONFIG read is sufficient for the selected scope.
+- TMP117 p.15 and TMP119 p.17 mention an ALERT flag at one-shot completion. Do not interpret this as unconditional HIGH_Alert/LOW_Alert assertion: their detailed flag tables and selected DR/Alert routing determine comparator flags and pin behavior. Retain the prose ambiguity in the ledger.
 - Verify no unsupported TMP1x2 fault queue, interrupt queue or extended temperature mode leaks into API.
 
 ## Verification and exit criteria
 
-Register tests: high/low positive and negative exact words, therm/hysteresis state machine, flag clear-on-read, disabled GPIO, polarity and explicit data-ready output mode.
+Register tests: high/low positive and negative exact words, strict threshold
+comparisons including equality, therm/hysteresis retention, CONFIG versus TEMP
+read effects, disabled GPIO, polarity and explicit data-ready output mode.
 
 ## Documentation and delegation
 

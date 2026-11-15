@@ -5,7 +5,7 @@ Prerequisites: [31](31_failure-recovery.md), [39](39_python-hil-runner.md), [40]
 
 ## Objective and boundaries
 
-Exercise configuration, recovery and sustained read behavior on a known fixture with verified preimage/restore, without risking nonvolatile EEPROM state.
+Exercise configuration, recovery and sustained read behavior on a known fixture with verified writable-setting preimage/restoration and fail-closed EEPROM guards. Do not promise exact restoration of transient status or conversion history.
 
 ## Source audit
 
@@ -13,15 +13,15 @@ Revisit TMP11x EEPROM protection and TI power-up busy behavior, TMP1x2 full HIL 
 
 ## Complete implementation work
 
-- Obtain explicit active-fixture authorization and capture initial CONFIG/THIGH/TLOW/OFFSET as raw preimage plus EEPROM_UL locked proof, temperature/ID and exact firmware identity.
+- Obtain explicit active-fixture authorization and capture raw CONFIG/THIGH/TLOW plus OFFSET only on supporting models, EEPROM_UL locked/not-busy evidence, temperature/ID and exact firmware identity. Derive the restoration profile from the per-model writable-field mask; TMP116 address 0x07 is EEPROM3, not OFFSET. Quiesce a pre-existing one-shot or decline the mutating trial rather than pretending its in-progress conversion can be restored.
 - Run finite mode/cycle/averaging and limits/ALERT/offset volatile trials only when model supports them; verify write-readback, measurement fresh evidence and each restoration step. Never unlock or program EEPROM.
-- Test unplug/replug/power cycling and recovery only when electrical setup permits safe handling; record physical behavior, duration, sample counts and missing/duplicate conversion evidence. Do not use unbounded or unattended unsafe writes.
-- Every failed/aborted test attempts bounded restoration and reports independent primary and restoration results; if restore cannot be proven, record a hard failure and current hardware state.
+- Test disconnect/reconnect/power-cycle recovery only with an explicitly suitable fixture and quiesced or isolated bus. TMP117 SNOSD82D section 7.5.3.1 (PDF p.20) forbids connecting the device during active communication; do not hot-plug it into a running shared bus. Record acquisition counts, observed readiness and timing; these chips have no conversion sequence counter, so equal temperatures or a DATA_READY bit cannot establish how many conversions were missed or duplicated.
+- Every failed/aborted trial attempts bounded restoration only while the same target/route, transport and locked/not-busy EEPROM state remain established. Refuse unsafe restoration after identity loss or uncertain lock state, retain the baseline for an operator, and report separate primary/restoration failures with observed state (or unknown when unreadable). Never send a reset or raw preimage write as unconditional cleanup.
 - A sensor unavailable at stage40 leaves this stage BLOCKED; prepare runner commands and guard tests without producing a false hardware PASS.
 
 ## Verification and exit criteria
 
-Verify actual physical transcripts, no EEPROM write/protection violations, exact restored raw register values, stable soak counters and failure handling. Qualify per exact tested part and fixture only.
+Verify actual physical transcripts, no EEPROM write/protection violations, restored writable fields/limits and supported offset, finite acquisition counters and failure handling. Compare CONFIG through the approved mask and canonical mode encoding; read-to-clear flags, busy status, self-clearing reset and one-shot transitions cannot equal an arbitrary raw preimage. See TMP117 Tables 7-6/7-10 (PDF pp.27-30), corresponding TMP116 Table 6 and TMP119 Table 8-5. Qualify per exact tested part and fixture only.
 
 ## Documentation and delegation
 

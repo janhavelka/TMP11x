@@ -14,8 +14,8 @@ Read TMP1x2 `Status.h`, `Config.h`, `TMP1x2.h` structs, `test/helpers/test_helpe
 ## Complete implementation work
 
 - Implement `Status`, `Err`, `errorName`, `DriverState`, `Model`, relevant capability selectors and typed `Config` without Arduino/ESP-IDF dependencies. Messages have static lifetime.
-- Implement pure model/address validity, capability `hasOffset`, EEPROM word count, documented supported addresses 0x48–0x4B, rate/average enum bounds and chosen precision/value helper types.
-- Define `Sample` and `IdentityInfo` with raw register, exact signed counts, °C, timestamp validity, freshness proof and selected BOM model (not fabricated auto-discovery).
+- Implement pure model/address validity, capability `hasOffset`, EEPROM word count, documented supported addresses 0x48–0x4B, conversion-cycle/average enum bounds and chosen precision/value helper types. Model CONV as a cycle setting whose effective period also depends on AVG, not TMP1x2's independent conversion-rate enum.
+- Define `Sample` with raw temperature, exact signed counts, degrees Celsius, timestamp validity and freshness evidence; define `IdentityInfo` separately with raw identity, documented family/revision interpretation and selected BOM model. A decoded sample value alone conveys neither startup validity nor proof of a new conversion.
 - Add public Doxygen with error meanings, units, input/output semantics and invalid-model behavior. Reject unsupported features with meaningful status, not default-success placeholders.
 
 ## Verification and exit criteria

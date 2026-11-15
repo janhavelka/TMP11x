@@ -13,10 +13,10 @@ Study TMP1x2 `tools/hil_tmp1x2_runner.py` and parser/unit tests, OPT4001 and LDC
 
 ## Complete implementation work
 
-- Build Python CLI tool with explicit serial port, baud, expected firmware version/identity/model, optional fixture/board description, command timeout and output directory.
+- Build Python CLI tool with explicit serial port, baud, expected firmware version/identity/model, fixture description for physical claims, command timeout and output directory. Report the selected serial reset/control-line behavior; port opening or MCU reboot must not cause implicit sensor initialization/configuration in an observation campaign.
 - Correlate requests and completions by nonce/sequence; detect split/late/duplicated/missing records, reboot/line noise, incomplete transactions and failure while waiting. Keep finite buffer/record/time bounds and return meaningful nonzero exits.
-- Implement read-only identity, configuration, temperature, device-capability, flags and EEPROM campaigns by default. More intrusive volatile config/restoration trials must be opt-in and require explicit fixture authorization.
-- Record exact raw transcript, structured JSON summary, input environment/firmware git identity, document revision, suite counts, PASS/FAIL/SKIP/NOT RUN and restoration outcome; no synthetic serial printout may be marked physical PASS.
+- Implement observation-only identity, configuration, temperature, device-capability, flags and EEPROM campaigns by default. Permit pointer selection but no register-data writes; identify CONFIG/TEMP flag consumption explicitly. Prove the same policy across firmware startup, CLI setup and runner commands. More intrusive volatile config/restoration trials must be opt-in and require explicit fixture authorization.
+- Record exact raw transcript, structured JSON summary, input environment/firmware git identity, document revision, suite counts, PASS/FAIL/SKIP/NOT RUN and restoration outcome; no synthetic serial printout may be marked physical PASS. Persist the baseline before the first trial write, distinguish primary and restoration outcomes, and report a reboot or transport loss as loss of session continuity. Never blindly replay a saved baseline to an unconfirmed replacement device.
 - Provide a dry-run plan that opens no port, unit tests for runner parser/record integrity, and a compiled fake CLI integration harness for full protocol exercise.
 
 ## Verification and exit criteria

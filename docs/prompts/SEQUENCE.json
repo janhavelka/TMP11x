@@ -160,7 +160,7 @@
     {
       "id": 14,
       "file": "14_binding-lifecycle.md",
-      "title": "Implement bus-silent binding and verified lifecycle",
+      "title": "Implement bus-silent binding and lifecycle state",
       "phase": "Portable device protocol, identity and trustworthy configuration",
       "kind": "software",
       "depends_on": [
@@ -195,7 +195,9 @@
         6,
         11,
         12,
-        13
+        13,
+        14,
+        15
       ]
     },
     {
@@ -226,6 +228,7 @@
         12,
         13,
         14,
+        16,
         17
       ]
     },
@@ -516,8 +519,7 @@
         27,
         28,
         30,
-        34,
-        35
+        33
       ]
     },
     {
@@ -557,8 +559,6 @@
       "phase": "Physical fixture qualification",
       "kind": "physical",
       "depends_on": [
-        34,
-        35,
         39
       ]
     },

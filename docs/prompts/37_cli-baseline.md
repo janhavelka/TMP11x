@@ -1,11 +1,11 @@
 # 37 — Create one shared bounded diagnostic CLI engine
 
 Apply [COMMON.md](COMMON.md) and root [AGENTS.md](../../AGENTS.md). Phase: **Firmware, CLI and runner integrations**. Type: **software**.
-Prerequisites: [27](27_sync-helpers-cache.md), [28](28_cooperative-admission.md), [30](30_cooperative-measurement.md), [34](34_arduino-examples.md), [35](35_idf-examples.md).
+Prerequisites: [27](27_sync-helpers-cache.md), [28](28_cooperative-admission.md), [30](30_cooperative-measurement.md), [33](33_native-suite.md).
 
 ## Objective and boundaries
 
-Unify Arduino, native IDF and compiled native CLI behavior through a single framework-neutral command processor.
+Unify Arduino, native IDF and compiled native CLI behavior through a single framework-neutral command processor. Attach the stage 34/35 adapters when their source inputs exist; an unavailable SDK must not block the host engine/runner. Keep unverified framework links open in their owning stages rather than claiming them from host tests.
 
 ## Source audit
 
@@ -14,10 +14,10 @@ Inspect TMP1x2 `examples/common/Tmp1x2Cli.cpp/.h`, CLI output and diagnostics so
 ## Complete implementation work
 
 - Build one reusable parser/dispatcher under `examples/common/`; neither firmware backend may create a second command parser. No `String`, uncontrolled heap allocations or unbounded line buffering.
-- Establish read-only commands `help`, `info`, `identity`, `temp`, `latest`, `fresh`, `status`, `caps`, `config`, `eeprom`, `dump` with explicit per-model capability and side-effect labels.
-- Define deterministic tagged records for runner correlation, bounded output, invalid/malformed input errors, no-echo/quiet behavior, and consistent status/operation names.
+- Implement the canonical observation commands from [CLI_CONTRACT](CLI_CONTRACT.md), including `read`, `latest` and `caps`; do not invent competing `temp`/`fresh` names. `read` observes TEMP without claiming a new conversion; cached `latest` and model capabilities are bus-silent. CONFIG/TEMP diagnostics disclose read-to-clear effects. One-shot triggering belongs to the explicit mutating route in stage 38.
+- Define deterministic tagged records for runner correlation, bounded output, invalid/malformed input errors, no-echo/quiet behavior, and consistent status/operation names. A line that overflows or loses bytes must be rejected through its next delimiter; never dispatch a valid-looking prefix or suffix of a truncated command. Output loss must be observable so the runner cannot accept a partial success record.
 - Keep console processing separate from the transport; application adapters own `Wire`, `Serial`, IDF USB/UART tasks and output flow control.
-- Add a host compiled CLI fixture driven by scripted fake transport, with parser tests and exact complete help matrix; `eeprom` commands must remain read-only.
+- Add a host compiled CLI fixture driven by scripted fake transport, with parser tests and exact complete help matrix; `eeprom` commands must remain read-only. Test bus-silent binding/startup and observation commands before initialization; opening the console must not silently configure the sensor. Tests of this host fixture do not require installed MCU SDKs or hardware.
 
 ## Verification and exit criteria
 

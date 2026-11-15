@@ -14,9 +14,9 @@ Inspect TMP1x2 `examples/esp_idf/basic` CMake/PlatformIO, modern ESP-IDF `driver
 ## Complete implementation work
 
 - Create native ESP-IDF CMake example for ESP32-S3 and S2 using app-owned `i2c_master_bus_handle_t` and per-device handles; driver only sees I2C callback table, never SDK headers or handles.
-- Ensure an atomic write-then-read action with clear timeout/error mapping. Validate actual API semantics and end-of-transfer lifetime against SDK implementation; do not pretend unsupported combined transaction or short-transfer status exists.
-- Implement nonblocking caller scheduling, monotonic time and a CLI transport shell that can share prompt-37's framework-neutral processor without including Arduino code.
-- Demonstrate one device/one bus owner and coexistence with a second I2C device. Add an explicit rule that GPIO and bus recovery/reset remain app-owned.
+- Use `i2c_master_transmit_receive` for the combined pointer-write/read, with terminal timeout/error mapping. Do not register asynchronous transfer callbacks on these handles: the SDK then returns before completion, violating the borrowed-buffer contract. Validate positive finite timeouts before conversion to the SDK's signed `int`; never map overflow/exhaustion to its `-1` infinite wait. Account for owner lock/route time, and document SDK tick quantization and timing limits. Do not invent a short-transfer count or NACK phase the SDK does not return.
+- Implement nonblocking caller scheduling, monotonic time and a CLI transport shell that can share prompt-37's framework-neutral processor without including Arduino code. Input/ISR callbacks may queue bounded input or GPIO observations; only the owner calls driver APIs. Preserve a register-write-free observation startup path for stage 40.
+- Demonstrate one device/one bus owner and coexistence with a second I2C device. GPIO and bus recovery/reset remain app-owned. Create handles only for intended sensor addresses; do not inherit TMP1x2's general-call/SMBus alert-response handles or commands.
 - Register clean native ESP-IDF app linking and component-only builds, not only header syntax tests. Keep IDF-only CMake source/target dependencies outside portable native `find_package` consumers.
 
 ## Verification and exit criteria

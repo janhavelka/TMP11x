@@ -9,15 +9,15 @@ Deliver one portable, endian-correct, externally serialized I2C transport bounda
 
 ## Source audit
 
-Adapt TMP1x2 callback signatures and physical read/write helpers, TMP1x2 `test/bus/test_bus.cpp` and ADS1115 transfer guards; verify datasheet word pointer MSB first and combined repeated START.
+Adapt TMP1x2 callback signatures and physical read/write helpers, its sensor transport tests in `test/test_core.cpp`, and ADS1115 transfer guards. `test/bus/test_bus.cpp` mainly covers excluded bus-wide helpers and is not the sensor-transport authority. Verify the one-byte register pointer and MSB-first two-byte data word against the TI serial-interface diagrams; use one combined repeated-START callback for reads.
 
 ## Complete implementation work
 
-- Implement one register pointer write+two-byte read and one pointer+two-byte write with borrowed terminal callbacks; reject unexpected size/invalid address/unbound context.
+- Implement one register pointer write+two-byte read and one pointer+two-byte write with borrowed terminal callbacks; reject invalid lengths/address or an unbound instance/missing callback. Do not reject a null opaque user context when callbacks are stateless.
 - Define checked read/write access against the per-model register ledger, including read-only registers and EEPROM/0x07 alias; keep safety gates separate from the low-level wire serializer.
 - Track exact physical callback counts; callback always bounded by timeout including lock acquisition. No retry, pin init, implicit bus reset or cross-device address changes.
-- Normalize callback `IN_PROGRESS`/incoherent return without mislabeling NACK phase. Preserve diagnostic `detail`, and do not publish output arguments after failed/incomplete reads.
-- Register native fake-bus tests for byte ordering, repeated START, short response, address vs data NACK, timeout, stale caller buffer and shared-bus ownership.
+- Normalize callback `IN_PROGRESS`/incoherent return without mislabeling NACK phase. Preserve diagnostic `detail`, and do not publish output arguments after failed/incomplete reads. If the frozen callback returns only Status, the adapter owns byte-count validation and must return an error on a short transfer; core cannot detect a dishonest OK with a short buffer fill. Do not use sentinel bytes as a substitute for transferred-length reporting.
+- Register native fake-bus tests for byte ordering, one combined-read callback, adapter-reported short-transfer failure, address vs data NACK, timeout, stale caller buffer and shared-bus ownership. Real repeated-START/electrical behavior is an adapter/HIL gate; a core fake cannot prove it on hardware.
 
 ## Verification and exit criteria
 

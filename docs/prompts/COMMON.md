@@ -2,8 +2,10 @@
 
 ## Enter
 
-For a preparation/review request, use prompts 1–3 as the evidence checklist
-and stop at the requested scope. Do not silently start the whole sequence.
+For reference preparation, use prompts 1–3 as the evidence checklist. For a
+promptset audit, review every requested prompt and its shared contracts without
+executing the implementation tasks. Stop at the requested scope; do not silently
+start the whole sequence.
 Preparatory evidence may be reused later after checking its hashes/revisions.
 
 1. Read root AGENTS, active prompt, its prerequisites/reports and relevant
@@ -36,6 +38,9 @@ Preparatory evidence may be reused later after checking its hashes/revisions.
 - Preserve bus and instance ownership. A bus callback completes one physical
   bounded transfer. No I2C outside the owner, no locks held during conversion
   waits, no hidden retry, no bus-wide commands, no EEPROM unlock/program.
+- A register-read-only session uses bus-silent binding and explicit diagnostics,
+  including at firmware boot; it must not implicitly call a writing initializer.
+  CONFIG/TEMP reads can still consume flags, so read-only is not side-effect-free.
 - A write that may have reached hardware leaves state potentially dirty.
   Retain trusted versus observed state, failure evidence and operation identity.
   No silent reset/rollback or software-fabricated freshness.

@@ -1,11 +1,11 @@
-# 14 — Implement bus-silent binding and verified lifecycle
+# 14 — Implement bus-silent binding and lifecycle state
 
 Apply [COMMON.md](COMMON.md) and root [AGENTS.md](../../AGENTS.md). Phase: **Portable device protocol, identity and trustworthy configuration**. Type: **software**.
 Prerequisites: [8](8_api-architecture.md), [9](9_owner-deadline-contract.md), [11](11_status-values.md), [12](12_i2c-register-transport.md), [13](13_identity-selection.md).
 
 ## Objective and boundaries
 
-Deliver real instance-local state and safe begin/end behavior without controlling the application's I2C bus.
+Deliver real instance-local binding/teardown state without controlling the application's I2C bus. Verified hardware initialization is implemented in prompt 18 after the temperature and CONFIG codecs exist; do not duplicate it here or substitute a successful placeholder.
 
 ## Source audit
 
@@ -14,13 +14,13 @@ Trace TMP1x2 `bind`, `unbind`, `begin`, `end` implementation and tests; compare 
 ## Complete implementation work
 
 - Implement bus-silent `bind(Config)`, `unbind()` and `end()`, with precise handling for active jobs/results, clock hooks, config reuse and caller callback lifetime.
-- Implement verified `begin(Config)`/`begin()` that validates the selected BOM profile, checks identity, EEPROM lock/busy and applies only permitted volatile settings. Do not write while startup EEPROM load is active.
+- Establish the state and guard interfaces required by prompt 18's real `begin(Config)`/`begin()`: bound versus initialized, selected profile, identity observations, startup state and verified configuration. No public initializer reports success before that implementation exists; identity-only probe remains a distinct prompt 13 operation.
 - Record initialized state separately from transport health, fresh-conversion evidence and dirty config state. `end` never sends physical shutdown implicitly; offer explicit shutdown later.
 - Define rebind semantics for model/address change or externally reset device, including invalidated old samples and operation tokens; maintain no heap and no task creation.
 
 ## Verification and exit criteria
 
-Test zero-I2C bind/unbind/end, rejection before binding, verified begin order, late/failed bind, mismatched ID, EEPROM-busy gating and independent instances at same address on distinct mux routes.
+Test zero-I2C bind/unbind/end, rejected/failed rebind preserving the prior state under the frozen policy, unbound-operation guards, and independent instances at the same address on distinct mux routes. Prompt 18 owns initialized-state success, verified write order, identity mismatch and startup/EEPROM gating integration tests.
 
 ## Documentation and delegation
 

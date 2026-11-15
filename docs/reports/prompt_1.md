@@ -1,4 +1,4 @@
-# Prompt 1 ? ecosystem audit
+# Prompt 1 — ecosystem audit
 
 **Status: COMPLETE.** Input: `6c5e4496d5c896af689228d4bee4382a53c20626`.
 Executed as part of the user's repository-preparation request, 2026-11-15.

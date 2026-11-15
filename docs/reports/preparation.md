@@ -1,9 +1,13 @@
-# Repository preparation ? 2026-11-15
+# Repository preparation — 2026-11-15
+
+Historical preparation checkpoint. The later [full promptset audit](promptset-audit.md)
+corrected stage 3's scope/status: optional secondary TI code is not an intake
+gate. The original access observations and tests below remain valid.
 
 The requested supporting archive and repository preparation are complete.
 Driver implementation has not started. Stages 1 and 2 are complete; stage 3
 retains specific unavailable-source evidence. This request did not invoke
-stages 4?44, freeze the API, or authorize hardware activity.
+stages 4–44, freeze the API, or authorize hardware activity.
 
 ## Input and ownership
 
@@ -60,7 +64,7 @@ handoff; this report records its immutable input SHA above.
 | `git diff --check` and staged diff check | PASS |
 | Native sensor tests, MCU full links, package consumers | NOT RUN: implementation/build definitions do not exist |
 | Remote CI | NOT RUN: no workflow; comprehensive checkpoint belongs to stage 43 |
-| Physical HIL | NOT RUN: fixture not established; stages 40?41 not invoked |
+| Physical HIL | NOT RUN: fixture not established; stages 40–41 not invoked |
 
 ## Remaining evidence and next scope
 
@@ -77,5 +81,5 @@ resolved by guessing or assigning TMP119 identity from a revision nibble.
 On the next explicit implementation request, verify the source manifest and
 relevant audit revisions. Close stage 3's outstanding official-code evidence
 when accessible; independent stage 4 work can use the acquired exact-part
-PDFs once its concrete source inputs are confirmed. Stages 4?9 still own the
+PDFs once its concrete source inputs are confirmed. Stages 4–9 still own the
 checked ledger, timing/safety and API contracts before stage 10 begins code.

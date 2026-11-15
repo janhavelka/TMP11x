@@ -19,7 +19,7 @@ Compare exact part datasheets' feature/pin/accuracy/address/ID sections; especia
 ## Complete implementation work
 
 - Create `docs/variants.md` with explicit `Model::{TMP116,TMP116N,TMP117,TMP117M,TMP117N,TMP119}` table: family, supported address, register/capability classes, EEPROM words, optional offset, power-range and accuracy-grade references.
-- Define model selection as BOM-supplied. Document what a device-ID read proves for TMP116 versus TMP117/TMP119: `0x1116` as specified for TMP116, low 12 bits `0x117` for TMP117/TMP119; do not treat revision nibble as guaranteed specific model identification. Preserve contradictory TI table wording.
+- Define model selection as BOM-supplied. Document the compatible response expected from TMP116 versus TMP117/TMP119: all 16 bits `0x1116` for TMP116 (SBOS740A p.31 Table 15), low 12 bits `0x117` for TMP117/TMP119 (SNOSD82D p.32 Table 7-15; SNIS236 p.39 Table 8-14). Only the latter documents define a revision nibble; do not invent one for TMP116 or promise acceptance of undocumented TMP116 IDs. No ID read proves an accuracy grade or unique physical part. Preserve contradictory TI table wording.
 - Design narrow capabilities (offset supported, EEPROM word count, identity mask, any reset differences); keep one implementation where binary behavior matches. No generic inheritance or unrelated TMP11x parts.
 - Document unsupported TMP114/TMP118/TMP112/TMP1075 reasons, addressing and safety of coexistence on a shared I2C bus.
 

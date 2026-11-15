@@ -13,15 +13,15 @@ Read original CONFIG table for each part, including mode[11:10], CONV[9:7], AVG[
 
 ## Complete implementation work
 
-- Implement `encodeConfiguration`, `decodeConfiguration`, validation of typed settings, stable writable masks and documented legal values. Preserve reserved bits and command-only bits; never RMW a destructive status flag as if persistent.
+- Implement `encodeConfiguration`, `decodeConfiguration`, validation of typed settings, stable writable masks and documented legal values. Emit the documented values for reserved bits (zero in these CONFIG tables), mask read-only status out of write values, and force Soft_Reset=0 for all ordinary settings writes. Never preserve/replay a command-only bit or copy read-to-clear status as persistent configuration.
 - Distinguish volatile hardware state from reset-loaded EEPROM defaults. Do not hardcode `0x0220` as proof of live configuration or assume a sensor has factory calibration.
-- Enumerate allowed conversion mode, 3-bit cycle selection, 2-bit averaging, thresholds, therm/alert, polarity and data-ready output. Explicitly handle model-specific soft-reset bit and reserved bits.
-- Create pure expected-register comparisons of only stable fields, and a configuration snapshot with raw observed status flags and explicit read-to-clear documentation.
+- Enumerate allowed conversion mode, 3-bit cycle selection, 2-bit averaging, therm/alert, polarity and data-ready output. Thresholds are separate registers using prompt 16 codecs. MOD=10 is legal continuous mode and reads back 00 (TMP116 p.26, TMP117 p.27, TMP119 p.34); normal encoders may canonicalize continuous to 00, but raw decoders must not call 10 reserved. Treat MOD=11 one-shot and Soft_Reset as operations, not replayable steady settings.
+- Create pure expected-register comparisons of stable settings with mode normalization and explicit exclusion of command/status transitions. A one-shot returning to shutdown is not ordinary configuration drift. A configuration snapshot retains raw observed flags and their mode-dependent read effects; raw CONFIG status is not an EEPROM lock proof (EUN is in 0x04).
 - Add independent literal bit/word vectors and invalid enum/reserved-bit tests for all supported families.
 
 ## Verification and exit criteria
 
-Check all emitted CONFIG writes against a manually reviewed mask ledger; run exhaustive combinations of legal mode/cycle/average settings and rejected reserved encodings.
+Check all emitted CONFIG writes against a manually reviewed mask ledger; run exhaustive legal mode/cycle/average combinations, documented alias normalization, invalid typed enums and forbidden command/reserved-bit writes. Verify POL=0 active low/POL=1 active high directly against TI rather than a secondary driver's helper name.
 
 ## Documentation and delegation
 

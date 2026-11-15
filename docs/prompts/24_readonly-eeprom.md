@@ -5,7 +5,9 @@ Prerequisites: [4](4_family-identity.md), [5](5_register-ledger.md), [7](7_eepro
 
 ## Objective and boundaries
 
-Provide useful read-only per-part nonvolatile diagnostics, with no way to program factory data through routine methods.
+Provide read-only observations of EEPROM-backed register shadows, with no way
+to program factory data through routine methods. These reads do not directly
+prove the underlying nonvolatile cell contents after an outside volatile write.
 
 ## Source audit
 
@@ -13,8 +15,8 @@ Read TI EEPROM1..4 layout, read side effects, unique ID/NIST text, and EEPROM_UL
 
 ## Complete implementation work
 
-- Expose `readEepromWord(index, out)` with checked index and explicit 3-word (TMP117/119) versus 4-word (TMP116) ranges; retain raw bytes/word order and provenance.
-- Add read-only snapshot for all included EEPROM words and lock/busy state. Do not assert that any word is a stable unique serial number unless TI documentation proves that exact mapping/grade.
+- Expose `readEepromWord(index, out)` with a documented index origin, checked 3-word (TMP117/119) versus 4-word (TMP116) ranges, raw bytes/word order and provenance. TMP116 pointers are 0x05/0x06/0x07/0x08; TMP117/119 pointers are 0x05/0x06/0x08, never a contiguous block including offset 0x07.
+- Add a non-atomic read-only snapshot of the included shadow words and lock/busy state. Do not assert a stable unique serial number, factory provenance or actual NVM readback merely from these words. Locked writes can alter the shadows without programming EEPROM (TMP116 p.29; TMP117 p.30; TMP119 p.37). No diagnostic reset is allowed to reload the shadows.
 - Make public `writeRegisterRaw` reject EEPROM_UL and all physical EEPROM word pointers; for TMP117/TMP119 `0x07` offset remains permitted only through guarded typed control.
 - Ensure tests prove that normal begin/read/CLI/dump cannot emit EUN unlock or general-call reset; even a disguised 0x07 write cannot reprogram TMP116 EEPROM3.
 - Document lock uncertainty and how application/user can collect read-only metadata without changing traceability.

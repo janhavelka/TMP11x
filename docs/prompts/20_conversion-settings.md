@@ -13,10 +13,10 @@ Compare TI cycle and averaging timing tables for TMP116/TMP117/TMP119; inspect O
 
 ## Complete implementation work
 
-- Implement exact per-model mode, conversion-cycle and averaging selectors, pure conversion-time estimators with documented worst-case/time-domain assumptions, and safe configuration application.
+- Implement exact per-model mode, conversion-cycle and averaging selectors, pure timing helpers and safe configuration application. Distinguish nominal cycle-table values, specified single-conversion limits, derived averaged bounds and application timeout margins; do not label nominal 125/500/1000-ms values guaranteed maxima.
 - Keep one-shot trigger separate from continuous mode and avoid implicit changes to averaging or cycle on read.
-- Maintain sample validity after configuration changes: a new averaging setting may require a full new conversion before a trustworthy updated sample.
-- Define reporting helpers for actual period/latency and selected settings without claiming hardware has a sample counter.
+- Invalidate current-generation sample evidence after conversion-affecting changes. Shutdown aborts an active conversion; changing settings does not relabel an existing TEMP value as a conversion under the new profile.
+- Report configured/estimated period and latency, not a measured actual update rate. There is no exposed sample counter. The CC cycle is active conversion plus standby; when averaging exceeds the selected cycle, standby is zero. OS has no standby and CONV does not affect its duration (TMP116 pp.12-14,27; TMP117 pp.14-15,28; TMP119 pp.16-17,35).
 - Ensure timing values reflect maximum needed for averaged result, not an optimistic single ADC sub-conversion.
 
 ## Verification and exit criteria

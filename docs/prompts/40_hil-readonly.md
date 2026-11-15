@@ -1,11 +1,15 @@
 # 40 — Qualify read-only TMP11x hardware identity and measurement
 
 Apply [COMMON.md](COMMON.md) and root [AGENTS.md](../../AGENTS.md). Phase: **Physical fixture qualification**. Type: **physical**.
-Prerequisites: [34](34_arduino-examples.md), [35](35_idf-examples.md), [39](39_python-hil-runner.md).
+Prerequisites: [39](39_python-hil-runner.md).
+
+Physical execution also requires one identified, fully linked compatible
+firmware from stage 34 **or** stage 35, its observation startup path, and an
+authorized fixture. The dependency list does not waive those runtime gates.
 
 ## Objective and boundaries
 
-Run nonmutating physical measurements only on a known authorized sensor fixture; otherwise deliver a complete executable qualification recipe and preserve BLOCKED/NOT RUN status.
+Run register-write-free physical observations only on a known authorized sensor fixture; otherwise deliver a complete executable qualification recipe and preserve BLOCKED/NOT RUN status. Reads are not side-effect-free: CONFIG and TEMP can acknowledge status flags.
 
 ## Source audit
 
@@ -14,14 +18,14 @@ Recheck exact actual PCB/BOM chip marking, board power/pullups/ADD0/ALERT/wiring
 ## Complete implementation work
 
 - Document physical setup, VDD, I2C lines/pullups, clock, GPIO, address, ambient probe/thermometer (if present), exact model/grade/lot, date, run command and firmware SHA.
-- On a user-authorized fixture, run identity, initial temperature/freshness, time/averaging observations, safe read-only EEPROM and status-flag read-to-clear checks. Keep a qualified temperature reference distinct from expected room-temperature plausibility.
+- On a user-authorized fixture, run identity, initial temperature/provenance, observations of the existing mode/averaging, safe EEPROM reads and status-flag read-to-clear checks. Use observation firmware that binds without `begin`, reset, configuration or one-shot writes, including after a serial-triggered reboot. A shutdown sensor or absent readiness evidence yields NOT READY/unknown freshness, not a request to trigger conversion. Keep calibrated accuracy testing distinct from room-temperature plausibility.
 - Capture raw transcript/JSON and per-part evidence rows; tests of one TMP117 do not qualify TMP116 or TMP119 or specific package/grade. No nonvolatile writes or bus-wide reset, even for troubleshooting.
 - On absent hardware, record stage as BLOCKED, store the ready commands/expected observations and resume only after fixture data becomes available.
-- Ensure a read-only campaign never configures a sensor, clears factory state or exercises stale raw data as fresh.
+- Ensure an observation campaign never writes register data, clears factory state or labels stale raw data fresh. Pointer-write/repeated-START/read is allowed. Record that CONFIG/TEMP reads consume flags; those events cannot be restored, and repeated equal readings neither prove nor disprove a new conversion.
 
 ## Verification and exit criteria
 
-Physical PASS only with identified hardware and actual unmodified runner transcripts. Review failed/mismatched IDs and unstable readings as evidence; keep host/software claims separate.
+Physical PASS only with identified hardware, one compatible fully linked firmware image and actual unmodified runner transcripts. Both Arduino and IDF builds are not needed to qualify one fixture run. Review failed/mismatched IDs and unstable readings as evidence; keep host/software claims separate. No absolute accuracy/traceability qualification follows merely from an ID or EEPROM read.
 
 ## Documentation and delegation
 

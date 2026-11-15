@@ -26,22 +26,33 @@ protocol authority. Stage 8 freezes any needed exact signatures in
   unnecessary inheritance hierarchy, external shared-core dependency, code
   generator or speculative generic temperature framework.
 - `Config` owns desired settings, selected BOM model, seven-bit address
-  (0x48–0x4B), callbacks, timeout, clock/yield hooks if required, optional
+  (0x48–0x4B), callbacks, timeout, clock required by deadline-bearing operations, optional
   ALERT GPIO callback. Core never configures pins or I2C.
+- A synchronous helper may use an explicitly bounded application yield hook
+  only if stage 8 defines it; cooperative `poll` always returns during waits.
+  Do not mix an entry timestamp with a clock from a different epoch.
 - A per-instance user callback context and selected I2C address may coexist
   with other TMP11x/TMP1x2 instances on a shared bus. Bus route selection,
   mutexes and TCA9548A channel selection belong to application owner.
 - Synchronous getters vs owner operations must have precise semantics;
   reading TEMP never by itself guarantees a fresh conversion.
-- `Status::OK` reports successful **call**, not that a new conversion occurred.
+- Stable desired mode is continuous or shutdown. One-shot/reset are explicit
+  commands and cannot be replayed by initialization or recovery. Bind-only
+  diagnostics can observe permitted registers without managed initialization;
+  report unknown startup/configuration/sample trust instead of writing settings.
+- `Err::OK` / `Status::Ok()` report a successful **call**, not a new conversion.
   Return `MEASUREMENT_NOT_READY` or explicit `freshConversion=false` as
   contract requires. `I2C_NACK_ADDR` only when transport knows the phase.
 - Health counts actual tracked physical transport attempts, not failed
   preconditions/unsupported feature/late logical operation deadline.
 - When nonvolatile lock uncertainty exists, mark `EEPROM_UNSAFE` (or an
   equivalently precise error) and refuse all mutating register writes.
-- External reset and diagnostic reads can alter knowledge; dirty evidence and
-  sample freshness must be invalidated by explicit methods.
+- External reset and diagnostic reads can alter knowledge. Reset invalidates
+  configuration and freshness; status reads consume/record flag evidence but
+  do not automatically mean that persistent configuration became dirty.
+- Reserved fields and command-only bits are not ordinary settings to preserve
+  or replay. CONFIG bit 1 is a reset command only on TMP117/TMP119; use a
+  dedicated guarded operation. MOD=10 is a legal continuous alias, not reserved.
 - Public headers Doxygen describe units, read effects, deadlines, validity,
   model applicability and output-argument behavior on failure.
 

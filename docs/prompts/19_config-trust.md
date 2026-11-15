@@ -15,9 +15,10 @@ Inspect TMP1x2 `src/TMP1x2Configuration.cpp` CONFIG/threshold comparisons, dirty
 
 - Add typed setters for supported stable settings and `readConfiguration`, `verifyConfiguration`, observed-versus-desired `SettingsSnapshot`, dirty reason and last successful verification time.
 - A failed write attempt may reach the sensor: mark hardware config dirty even when callback returns NACK/timeout unless the failure demonstrably proves no effect. Preserve the user's desired target for recovery.
-- A live read of changed stable fields or external reset invalidates cached assumptions; monitoring status flags alone is not a stable-config mismatch.
+- A live read of changed stable fields or an explicitly reported external reset invalidates cached assumptions; monitoring status flags alone is not a stable-config mismatch. The driver cannot detect an unannounced outside writer or reset from a cache. Document exclusive device ownership and the caller's invalidation duty.
 - Implement `invalidateDeviceState()` bus-silently and explicitly document effect on prior sample freshness and pending owner jobs.
-- Ensure diagnostic and raw CONFIG reads acknowledge status flags transparently; verification does not consume flags without recording that fact.
+- Centralize destructive-read bookkeeping for every CONFIG/TEMP path, including failed transfers that may already have cleared flags in hardware. CONFIG consumes DATA_READY and alert-mode flags, but therm-mode HIGH_Alert survives the read; TEMP consumes DATA_READY, not high/low alert flags. Verification must record these effects without treating them as configuration mismatches.
+- Compare canonical stable configuration: MOD=10 reads as continuous MOD=00; one-shot is an operation that returns to shutdown, and Soft_Reset always reads zero. Exclude status/command bits from stable readback. See TMP116 p.26 Table 6, TMP117 pp.27-28 Table 7-6 and TMP119 pp.34-35 Table 8-5.
 
 ## Verification and exit criteria
 

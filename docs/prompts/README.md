@@ -6,6 +6,8 @@ promptset contains **plans**, not a built or validated TMP11x driver. Start with
 The complete dependency manifest is [SEQUENCE.json](SEQUENCE.json). Resume from
 [PROGRESS.md](PROGRESS.md), verifying completed artifacts/tests rather than
 trusting status text alone.
+The [promptset audit](../reports/promptset-audit.md) records the review of all
+44 prompts and remaining source conflicts; it is not stage execution evidence.
 
 Each prompt is a bounded engineering work unit with evidence inputs, exact
 scope, concrete code/documentation, adversarial tests and a report/commit
@@ -45,11 +47,11 @@ invocation in START_HERE explicitly authorizes continuation.
 | 11 | [Implement portable Status, model and value types](11_status-values.md) | 8, 9, 10 | software |
 | 12 | [Implement bounded 16-bit I2C register transactions](12_i2c-register-transport.md) | 5, 8, 9, 10, 11 | software |
 | 13 | [Implement identity validation and explicit model capabilities](13_identity-selection.md) | 4, 5, 8, 11, 12 | software |
-| 14 | [Implement bus-silent binding and verified lifecycle](14_binding-lifecycle.md) | 8, 9, 11, 12, 13 | software |
+| 14 | [Implement bus-silent binding and lifecycle state](14_binding-lifecycle.md) | 8, 9, 11, 12, 13 | software |
 | 15 | [Implement tracked transport health and error observation](15_passive-health.md) | 8, 11, 12, 14 | software |
-| 16 | [Implement signed temperature and threshold codecs](16_temperature-codec.md) | 5, 6, 11, 12, 13 | software |
+| 16 | [Implement signed temperature and threshold codecs](16_temperature-codec.md) | 5, 6, 11, 12, 13, 14, 15 | software |
 | 17 | [Implement type-safe CONFIG codecs and validation](17_config-codecs.md) | 5, 6, 7, 8, 11, 12 | software |
-| 18 | [Implement EEPROM-safe initialization and configuration writes](18_safe-initialize.md) | 7, 8, 9, 12, 13, 14, 17 | software |
+| 18 | [Implement EEPROM-safe initialization and configuration writes](18_safe-initialize.md) | 7, 8, 9, 12, 13, 14, 16, 17 | software |
 | 19 | [Implement observed configuration, verification and dirty state](19_config-trust.md) | 7, 8, 15, 17, 18 | software |
 | 20 | [Implement continuous operation, averaging and cycle timing](20_conversion-settings.md) | 6, 8, 16, 17, 18, 19 | software |
 | 21 | [Implement fresh-conversion acquisition and one-shot behavior](21_fresh-one-shot.md) | 6, 9, 16, 18, 19, 20 | software |
@@ -68,10 +70,10 @@ invocation in START_HERE explicitly authorizes continuation.
 | 34 | [Implement Arduino/PlatformIO adapters and reusable example](34_arduino-examples.md) | 27, 30, 33 | software |
 | 35 | [Implement native ESP-IDF examples and framework adapter](35_idf-examples.md) | 27, 30, 33 | software |
 | 36 | [Qualify clean ESP32-P4 integration and shared-bus consumer](36_p4-consumer.md) | 33, 35 | software |
-| 37 | [Create one shared bounded diagnostic CLI engine](37_cli-baseline.md) | 27, 28, 30, 34, 35 | software |
+| 37 | [Create one shared bounded diagnostic CLI engine](37_cli-baseline.md) | 27, 28, 30, 33 | software |
 | 38 | [Add full safe configuration, job and diagnostic CLI routes](38_cli-device-operations.md) | 22, 23, 24, 25, 26, 28, 29, 30, 31, 37 | software |
 | 39 | [Implement correlated Python HIL runner and finite campaigns](39_python-hil-runner.md) | 37, 38 | software |
-| 40 | [Qualify read-only TMP11x hardware identity and measurement](40_hil-readonly.md) | 34, 35, 39 | physical |
+| 40 | [Qualify read-only TMP11x hardware identity and measurement](40_hil-readonly.md) | 39 | physical |
 | 41 | [Qualify volatile settings, recovery and finite hardware soak](41_hil-volatile-soak.md) | 31, 39, 40 | physical |
 | 42 | [Finish packaged consumers, public Doxygen and user documentation](42_package-docs.md) | 33, 34, 35, 38, 39 | software |
 | 43 | [Run one dedicated remote CI integration checkpoint](43_ci-checkpoint.md) | 33, 35, 42 | ci |
@@ -85,3 +87,6 @@ NOT RUN; do not change software evidence to PASS. Firmware builds similarly
 require actual installed target toolchains. Remote CI is reserved for prompt
 43. Final stage 44 reconciles every required software and physical scope
 without inventing completions or overwriting unresolved source conflicts.
+Stage 40 additionally requires one fully linked, matching observation firmware
+from stage 34 **or** 35 and an authorized fixture; it does not require both
+frameworks for one hardware run. Stage 37's host CLI tests do not require an SDK.

@@ -13,15 +13,19 @@ Inspect TMP1x2 `readSnapshot`, `readRegisterRaw`, `BusOperations`, OPT4001 clear
 
 ## Complete implementation work
 
+- Implement the stage 8 bound-only diagnostic route: validated binding permits allowed register reads without initialization or any implicit CONFIG write. Keep health-neutral diagnostics, observed raw state, unknown startup/sample validity and destructive-read effects explicit; do not claim managed configuration trust.
 - Implement checked read of documented registers with exact per-model address validation, read-to-clear disclosures, raw snapshots and optional tracked readback.
 - Diagnostic snapshots must record register read order and whether DATA_READY/alert events may have been consumed; no fake atomic multi-register snapshot or unbounded looping.
-- If a raw volatile write facility is retained, it must have a narrow explicit allowlist, EUN/busy guard, full dirty-state invalidation and outright rejection of EEPROM addresses. Reject attempts to write DEVICE_ID/TEMP.
-- Do not permit a user to select an unsupported family by raw pointer escaping. An `i2cAddress` scan is read-only and cannot identify grade.
+- If a raw volatile write facility is retained, require a narrow allowlist, startup/EUN/busy guard and dirty-state invalidation. Reject DEVICE_ID, TEMP, EEPROM_UL and EEPROM word writes. Keep 0x07 offset typed-only on TMP117/119 as required by stage 24. Raw CONFIG must reject Soft_Reset, one-shot commands and reserved-bit writes; it cannot bypass the typed operation and freshness contracts.
+- Do not permit unsupported-family access by raw pointer escaping. Core diagnostics operate only on the bound address; address scans belong to the application and do not prove family or grade. A live diagnostic read can acknowledge status even when it writes no data register.
 - Add a concise register dump format with unsigned hex, signed decoded units where known, source-model and status flag caveats.
 
 ## Verification and exit criteria
 
 Tests exercise every register address and model, skipped holes, alias 0x07, repeated clear-on-read reads, raw write denial, dirty evidence and no extra callbacks on forbidden operations.
+Include a freshly bound, uninitialized transcript of identity, CONFIG, TEMP
+and permitted EEPROM-shadow observations with zero data-register writes.
+Verify unknown validity/trust is reported and no hidden `begin` occurs.
 
 ## Documentation and delegation
 

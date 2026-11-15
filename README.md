@@ -12,6 +12,7 @@ sensor, MCU build, or physical qualification claims.
 
 - [Agent and execution guide](docs/prompts/START_HERE.md)
 - [Current progress](docs/prompts/PROGRESS.md) and [preparation report](docs/reports/preparation.md)
+- [Audit of all 44 prompts](docs/reports/promptset-audit.md)
 - [Library comparison](docs/library-comparison.md) and [source adoption](docs/source-adoption.md)
 - [Toolchain and package plan](docs/toolchain-and-package-plan.md)
 - [TI reference archive and provenance](docs/reference/README.md)

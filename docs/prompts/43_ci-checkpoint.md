@@ -13,9 +13,9 @@ Audit TMP1x2 and TCA9548A pinned current workflow actions/dependency rules, `scr
 
 ## Complete implementation work
 
-- Create `.github/workflows/ci.yml` with appropriate push/pull_request/optional workflow_dispatch triggers, minimal permissions, pinned actions, finite timeouts and cache keys matching actual dependencies.
+- Create or complete `.github/workflows/ci.yml` after inspecting stage 10's scaffolding. Preserve existing push/pull_request/optional workflow_dispatch triggers and required checks; use minimal permissions, pinned actions, finite timeouts and cache keys matching actual dependencies. Do not replace an existing workflow merely because this stage says to create one.
 - Register native GCC/Clang or installed toolchain checks, active Release assertions, registered tests, ledger/promptset/checker integrity, sanitizer if reliable, clean source/package/install consumer, documentation, plus feasible Arduino S2/S3 and native ESP-IDF full-link jobs.
-- Keep ESP32-P4 job only if exact supported SDK target is proven and buildable; report unsupported/unavailable target rather than fake skip-success. Hardware HIL remains a separate opt-in fixture job.
+- Keep an ESP32-P4 job when stage 36's source and a supported SDK/toolchain are available; no physical board is needed for linking. Report any missing target gate explicitly, without turning a skipped job into support evidence. Hardware HIL remains a separate opt-in fixture job and must never open a physical port in default hosted CI.
 - Run corresponding local checks, commit and safely push inputs first; identify exact GitHub workflow run associated with the tested commit, inspect completed required jobs, fix actual failures and rerun this single checkpoint as necessary to establish a green final tested SHA.
 - A subsequent report/README commit does not retroactively become the tested SHA. Keep original hooks/permissions intact, never use skip-ci to avoid failures and never label queued/pending jobs PASS.
 

@@ -1,7 +1,7 @@
 # 16 — Implement signed temperature and threshold codecs
 
 Apply [COMMON.md](COMMON.md) and root [AGENTS.md](../../AGENTS.md). Phase: **Portable device protocol, identity and trustworthy configuration**. Type: **software**.
-Prerequisites: [5](5_register-ledger.md), [6](6_timing-status.md), [11](11_status-values.md), [12](12_i2c-register-transport.md), [13](13_identity-selection.md).
+Prerequisites: [5](5_register-ledger.md), [6](6_timing-status.md), [11](11_status-values.md), [12](12_i2c-register-transport.md), [13](13_identity-selection.md), [14](14_binding-lifecycle.md), [15](15_passive-health.md).
 
 ## Objective and boundaries
 
@@ -13,9 +13,9 @@ Check TI TEMP/limit tables; examine TMP1x2 `src/TMP1x2Measurement.cpp` for publi
 
 ## Complete implementation work
 
-- Implement signed16 raw/count to degrees Celsius using `counts / 128.0` and inverse encoding with explicit rounding, finite input checking, representable limits and a stable error policy.
+- Implement raw/count to degrees Celsius using `counts / 128.0` and inverse encoding with explicit rounding, finite input checking, representable limits and a stable error policy. Decode two's-complement bits using representable signed arithmetic; C++17 conversion of out-of-range uint16_t to int16_t is implementation-defined. The exact arithmetic range is -256 to +255.9921875 degrees Celsius, distinct from the model's specified measurement/accuracy range. Check the rounded range before any potentially overflowing float-to-integer conversion.
 - Separate pure conversion from `Sample` trust: `0x8000` is physically reset sentinel until confirmed conversion, yet remains a valid signed 16-bit code arithmetic representation.
-- Implement `readLatestSample()`/`readTemperature()` or agreed names as distinct latest-register observations; do not populate `freshConversion=true` on a simple read.
+- Implement `readLatestSample()`/`readTemperature()` or agreed names as distinct latest-register observations; do not populate `freshConversion=true` on a simple read. Use prompt 14's real binding state and prompt 15's tracking policy; any normal API requiring initialization remains guarded until prompt 18 exists, with private transport/codec tests here rather than a fake initializer.
 - Add timestamp and last-sample cached copies only after successful read/decoding. Failed calls leave output arguments untouched or follow documented partial-output semantics.
 - Validate signed extremes, negative fractional values, NaN/Inf, out-of-range input, rounding tie conditions, and no clock availability.
 

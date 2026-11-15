@@ -16,7 +16,8 @@ Verify TI TMP117/TMP119 `Temp_Offset` register, saturation behavior and its EEPR
 - Implement `setTemperatureOffset`, `readTemperatureOffset`, desired offset snapshot and safe guarded 16-bit encoding for TMP117/M/N and TMP119.
 - For TMP116/TMP116N, return `UNSUPPORTED` without any I2C transfer; also prevent the same access through generic raw-write or CLI paths.
 - Distinguish offset applied by chip to sensor reading from an application software correction; do not reapply offset in software when reading TEMP.
-- Preserve write/readback/dirty-state behavior and quantization; test saturation at boundaries and a negative offset.
+- Preserve write/readback/dirty-state behavior and quantization. The offset register encodes -256 through +255.9921875 degrees C. Reject out-of-range/nonfinite API inputs under the codec policy; do not silently saturate the requested offset. Sensor saturation applies to the sum of conversion plus offset, as described in TMP117 p.31 section 7.6.9 and TMP119 p.38 section 8.5.9.
+- Offset changes invalidate the current profile's sample/freshness evidence. A read of an existing TEMP word is not proof that a new offset has been applied; require a subsequent confirmed conversion before publishing a sample attributed to the new offset.
 - Document that a calibration offset is a volatile setting in this library, not a request to rewrite EEPROM or claim certified accuracy.
 
 ## Verification and exit criteria

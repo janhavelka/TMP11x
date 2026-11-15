@@ -18,6 +18,7 @@ Check how TMP1x2 registers host test jobs and CMake/CTest checks (`test/`, `tool
 - Prove all public headers can compile separately without Arduino/ESP-IDF. Build with a second compiler where available and with warning flags, C++17 mode, and sanitizers when supported. Do not weaken tests to make an unsupported compiler appear passing.
 - Add deterministic property/negative tests for bad enums, timeout budgets, I2C callback failures, partial writes, token exhaustion, callback timing, dirty trust and unexpected register content.
 - Track time/call counts and prove the core performs no hidden heap allocations, bus resets, waits, logging or global I2C initialization. Keep fakes and test-only clocks outside runtime package.
+- Run a tests-OFF source/package consumer against the actual exported headers and library, including a checkout/archive with no sibling paths or reference PDFs. Record separately any install/export relocation gate deferred to stage 42; a native build-tree link is not installed-package qualification.
 
 ## Verification and exit criteria
 

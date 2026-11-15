@@ -15,8 +15,8 @@ Read TMP1x2 `src/TMP1x2.cpp`, `Status.h`, `HealthSnapshot` tests; compare OPT400
 
 - Implement `UNINIT/READY/DEGRADED/OFFLINE`, `HealthSnapshot`, last error/time validity, consecutive failure, saturating total failure/success and optional offlineThreshold.
 - Count only actual tracked physical I2C outcomes as transport failures/successes. Invalid parameters, unsupported model, not-ready, configuration mismatch and owner deadline are not fabricated physical transfers.
-- Keep `OFFLINE` passive, allowing future explicit probe/recovery; application owns backoff. Raw health-neutral diagnostic path must still surface transfer failure directly.
-- Test no counted preconditions, multi-callback transactions, device disappearance, first success, recovery from OFFLINE, count saturation, timestamp 0 validity, clock wrap and repeated errors.
+- Keep `OFFLINE` passive: it does not block an otherwise authorized normal tracked operation, probe or recovery. The application owns backoff; only tracked successes affect tracked health. A raw health-neutral diagnostic path must still surface transfer failure directly and must not repair health merely because it succeeds.
+- Test no counted preconditions, multi-transfer operations, device disappearance, first tracked success, an ordinary tracked success from OFFLINE, raw success leaving health unchanged, count saturation, timestamp 0 validity, clock wrap and repeated errors. Keep binding/initialized state separate; prompt 18 completes initialization-health integration without a fake successful begin here.
 
 ## Verification and exit criteria
 

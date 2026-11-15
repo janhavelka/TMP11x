@@ -15,9 +15,11 @@ Inspect TMP1x2 `src/TMP1x2Operations.cpp`, `docs/owner-operations.md`, timeout t
 
 - Add `docs/owner-operations.md`: `startInitialize`, `startConfigure`, `startRead`, `startRecover`, `poll(nowMs,maxTransfers)`, `cancel`, `takeResult` with single active slot and retained terminal identity.
 - Freeze callback timeout budget versus whole-job deadline, 32-bit wrap-safe timestamps, zero-transfer polls, unsupported operations and exactly-once result retention.
+- Require an authoritative monotonic clock callback for deadline-bearing operations so the owner can re-sample time after a blocking transfer. An entry-only `poll(nowMs)` value cannot detect a callback that finishes late. Reject such operations without the required clock before I2C; any caller-supplied poll time must share the clock's epoch. Clip each transfer timeout to remaining budget, test a successful physical transfer completed after the job deadline, and keep that success separate from the timed-out operation result.
+- Define wrap-safe duration bounds (at most INT32_MAX), expiry equality, deadline admission and token wrap/lifetime behavior. Use portable unsigned arithmetic rather than relying on out-of-range unsigned-to-signed conversion. Retained terminal results must not be silently lost through a subsequent admission or rebind; explicitly specify teardown's result policy.
 - Distinguish conversion trigger, ready observation, cached latest and confirmed fresh result; retain read-to-clear status in an owner-visible observation rather than throwing it away.
 - Define cancellation/timeout failure trust: no automatic hardware rollback, no duplicate job completion, no overwriting pending result, no reentrancy and no callback buffered past return.
-- Specify rules for external multiplexer route selection between polls and temporary I2C owner lock (one callback/transaction, never across sensor conversion wait).
+- Specify rules for external multiplexer route selection between polls and temporary I2C owner lock (one sensor callback/transaction, never across sensor conversion wait). Route selection plus the sensor transaction must be serialized as one application-owned critical section. State whether transfer budgets count sensor callbacks only; extra mux transactions belong to the application's bus budget and cannot be advertised as sensor-core work.
 
 ## Verification and exit criteria
 

@@ -13,11 +13,11 @@ Review current public API and tests, TMP1x2 shared CLI measured one-shots/owner-
 
 ## Complete implementation work
 
-- Add typed `mode`, `cycle`, `average`, `threshold`, `alert`, `polarity`, `ready`, `offset`, `verify`, `recover`, `invalidate`, `job`, `cancel`, `result`, `watch` and `stress` commands with help/mode/variant gates.
+- Add the typed mutation and owner-job routes in [CLI_CONTRACT](CLI_CONTRACT.md): use canonical `avg` and `limits`, with alert polarity/pin-function options and `job` subcommands defined once. Do not introduce competing `average`/`threshold` spellings or an uncontracted `stress` route. Gate every command by implemented capability and document bus-silent local commands separately from register writes.
 - Every device-mutating CLI route calls the library public API; **no CLI-only register writer** can open EEPROM_UL or ignore the busy/lock guard. Do not invent a reset command until stage25 source proof permits it.
 - Render raw/cached/observed values and timestamp validity distinctly, including readiness flag consumption and one-shot evidence. Do not show a newly completed measurement from a stale data-ready read.
-- Preserve one owner token/result, per-transfer budgets, cancellation and status diagnostics from library, not synthetic CLI state. Include error reasons and safe no-I/O refusals.
-- Register native CLI tests and shared grammar checks so Arduino and IDF use the same exact commands and help definitions.
+- Preserve one owner token/result, per-transfer budgets, cancellation and status diagnostics from library, not synthetic CLI state. Include error reasons and safe no-I/O refusals. Explicit setting commands leave the requested settings applied; only temporary diagnostic campaigns capture and restore a baseline. Restoration cannot replay raw status/self-clearing bits or guarantee reconstruction of consumed flags.
+- Register native CLI tests and shared grammar checks so Arduino and IDF use the same exact commands and help definitions. A finite `watch` observes existing conversions by default; any one-shot-triggering mode requires the explicit mutating option and its own deadline/cancellation behavior.
 
 ## Verification and exit criteria
 

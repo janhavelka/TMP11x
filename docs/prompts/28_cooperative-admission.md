@@ -13,15 +13,18 @@ Adapt audited TMP1x2 `src/TMP1x2Operations.cpp`, `OperationResult`, token API an
 
 ## Complete implementation work
 
-- Implement `startInitialize`, `startConfigure`, `startRecover`, `startRead` admission, one active request slot, typed `OperationKind`, stable `OperationToken` and copied staged target.
+- Implement the shared admission/result machinery, one active slot, typed `OperationKind`, stable `OperationToken` and copied staged target. Keep an operation's public start route unavailable until its real phase engine is connected in stages 29/30; a scaffold must not accept a job that can only hang or return fabricated success.
 - Admission performs **zero I2C** and does not overwrite output token on rejection. While active or terminal result pending, conflicting mutating operations/rebinds reject predictably.
-- Implement `poll` result skeleton with `maxTransfers` budget (including zero), no yield/sleep or callback beyond admitted budget, and `takeResult` exactly once with token match.
+- Implement and unit-test private poll/result transitions with `maxTransfers` budget (including zero), bounded CPU-only transitions, no yield/sleep and `takeResult` exactly once with token match. Public admitted operations must have real execution, cancellation and timeout terminal paths.
+- Apply stage 9's post-callback clock policy. Entry `nowMs` alone cannot measure time spent inside a callback or prove a timely completion. Do not present the selected peer's external-time approximation as an exact callback-completion timestamp.
 - Define and test cancel, end/unbind behavior for active operations/result slots; no operation state may become silently unreachable.
 - Owner budget counts physical transfer callbacks, not number of register bytes. No global transport queue or TCA mux state.
 
 ## Verification and exit criteria
 
-Native tests trace admission without I2C, zero-budget checks, foreign/stale tokens, retained outcome, rejected admission invariants and no dynamically growing allocations.
+Native tests trace admission without I2C, zero-budget checks, foreign/stale
+tokens, retained outcome, rejected admission invariants and no heap allocation.
+An unconnected operation kind must reject before I2C without occupying the slot.
 
 ## Documentation and delegation
 

@@ -13,9 +13,9 @@ Compare TI timing/data-ready/one-shot sections and TMP1x2 `startRead` job state 
 
 ## Complete implementation work
 
-- Implement owner `READ` for continuous latest versus shutdown one-shot (fresh), with caller-supplied time and exact transport budgets.
-- Stage trigger, wait, CONFIG status sampling and TEMP read as separate steps; capture DATA_READY before a read clears it. Handle equal successive raw values as distinct measurements only with real conversion evidence.
-- Record sample timestamp, freshness and read-to-clear history in the retained result. No sensor GPIO ISR can directly mutate the driver; owner may check application-supplied GPIO state.
+- Implement separate requested acquisition semantics: continuous latest, continuous try-fresh, and an owned shutdown one-shot. Use the stage 21 evidence model and expose these choices without silently changing mode or promising a new conversion for a latest read.
+- Stage stale-ready baseline, EUN/busy guard for a trigger write, trigger, wait, CONFIG observation and TEMP read as separately budgeted steps. Bind captured ready evidence to the request/profile and consume it once. Equal raw values can be distinct conversions; a CONFIG/TEMP read failure may still have consumed hardware evidence.
+- Record host observation timestamp validity, freshness evidence and possible read-to-clear effects in the retained result. Recheck completion time under stage 9's clock contract before publishing. No sensor GPIO ISR can directly mutate the driver; the owner may check application-supplied GPIO state.
 - Support other sensor instances using the same bus between polling turns, without holding locks or assuming pointer persistence.
 - Reject or preserve uncertain freshness after outside configuration reads, raw diagnostic interference, missed event or reset.
 

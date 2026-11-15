@@ -9,15 +9,15 @@ Demonstrate a real, minimal, application-owned I2C integration of the portable d
 
 ## Source audit
 
-Study TMP1x2 `examples/01_basic_bringup_cli/main.cpp`, `examples/common/{BoardConfig.h,I2cTransport.h}`, its `platformio.ini`, and `scripts/pio.cmd`; inspect TCA9548A for an optional multiple-device I2C multiplexing boundary.
+Study TMP1x2 `examples/01_basic_bringup_cli/main.cpp` (including its inline Wire callbacks), `examples/common/BoardConfig.h`, `platformio.ini`, and `scripts/pio.cmd`; the audited TMP1x2 revision has no `examples/common/I2cTransport.h`. Inspect TCA9548A for an optional multiple-device I2C multiplexing boundary. Verify the pinned Arduino-ESP32 Wire implementation, not only its API names.
 
 ## Complete implementation work
 
 - Implement ESP32-S2 and ESP32-S3 PlatformIO `arduino` example profiles using the existing managed PlatformIO installation. Keep examples self-contained and avoid vendor/factory pin defaults in core.
-- Implement `Wire` terminal callbacks for pointer+word reads and complete bounded writes; use ESP32 Arduino repeated START, explicit timeout support/limitations and correct status mapping (do not claim address/data NACK distinction where Wire does not prove it).
-- Examples demonstrate reading a TMP117, selecting expected model and address from the BOM, printing revision-aware identity, reading temperature and checking readiness without unsafe EEPROM writes.
-- Add an optional second sensor instance on the same shared bus to demonstrate external serialization; if a TCA9548A mux is used, establish route before and hold it for each transfer only, not an entire conversion wait.
-- Provide a read-only baseline diagnostic CLI endpoint (help/identity/temperature/status) as a thin harness; prompt 37 will add the shared authoritative CLI engine. Avoid a second production parser.
+- Implement `Wire` terminal callbacks for pointer+two-byte reads and pointer+two-byte writes. Verify repeated START and completion in the pinned Wire version; validate its `uint16_t` timeout range before narrowing. Budget application lock/route selection and transfer time explicitly, and never extend an exhausted caller deadline. Map short reads and errors without claiming an address/data NACK distinction that the backend cannot prove. Check TX-buffer acceptance before committing a write; an error cleanup must not transmit an unintended partial register value.
+- Examples demonstrate a BOM-selected TMP117/address, revision-aware identity and temperature/readiness provenance. Provide an observation startup path using bus-silent binding and approved diagnostics; no automatic `begin`, reset, one-shot or configuration write may precede a claimed read-only session. An explicit initialization demonstration may write safe volatile settings and must identify that behavior.
+- Add an optional second sensor instance on the same shared bus to demonstrate external serialization; if a TCA9548A mux is used, establish route before and hold it for each transfer only, not an entire conversion wait. Count mux-selection transfers separately in application scheduling; the driver's sensor-transfer budget does not bound external route traffic.
+- Keep any initial console harness minimal and use the canonical names in [CLI_CONTRACT](CLI_CONTRACT.md); prompt 37 owns the authoritative parser. Reading CONFIG/TEMP can acknowledge flags even when no data register is written. A fresh one-shot demonstration is an explicit mutating operation, not a read-only temperature query.
 
 ## Verification and exit criteria
 

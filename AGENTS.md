@@ -67,7 +67,11 @@ numbered prompt before stage work.
 - The **selected BOM model** determines features. Device ID does not prove
   TMP117 versus TMP119 if the documented distinguishing bits are revision bits.
 - Do not equate a temperature register read with fresh conversion. CONFIG and
-  TEMP reads can clear DATA_READY. Observe EEPROM lock/busy before writes.
+  TEMP reads can clear DATA_READY. Observe EEPROM lock/busy and startup/reset
+  timing before writes; TMP116's documented startup busy behavior is contradictory.
+- One-shot and reset are explicit operations, not persistent settings replayed
+  by initialization/recovery. Read-only firmware must use bind-only diagnostics
+  without initialization writes; it still reports destructive-read effects.
 - First-release nonvolatile behavior is read-only; no EEPROM unlocking,
   reprogramming, startup persistence or factory traceability modification.
 - Verify literal register addresses, mask/writes, conversion timing and exact

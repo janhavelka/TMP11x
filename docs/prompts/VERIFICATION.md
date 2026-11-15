@@ -19,7 +19,7 @@ interpretation or establish any of the implementation layers below.
 - **Core boundary:** include each public header in isolation; compile/link
   with no Arduino.h, Wire.h, FreeRTOS, Python requirement or sibling checkout.
 - **Fuzz/negative:** bit vectors, invalid fields/addresses/models, failed
-  callbacks, unexpected short transfers, read-to-clear flags, raw guard,
+  callbacks, adapter-detected short transfers, read-to-clear flags, raw guard,
   EEPROM unlocked/busy, clock wrap/deadline, cancellation and retained tokens.
 - **Firmware build:** full linked Arduino-ESP32 examples for supported boards;
   native ESP-IDF S2/S3, plus ESP32-P4 when matching SDK/toolchain is installed.

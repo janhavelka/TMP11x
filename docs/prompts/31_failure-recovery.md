@@ -13,10 +13,10 @@ Revisit TMP1x2 owner/dirty/health/timeout fault tests, ADS1115 indeterminate wri
 
 ## Complete implementation work
 
-- Inject transport I2C_NACK, TIMEOUT, BUS, malformed IN_PROGRESS and short transactions during every READ/CONFIG/RECOVER phase.
+- Inject I2C_NACK, TIMEOUT, BUS and malformed terminal-callback IN_PROGRESS during every READ/CONFIG/RECOVER phase. With Status-only callbacks, the adapter must map a short transfer to an error: a core cannot detect a callback that falsely reports success without exposing byte counts. Test that boundary in mock adapters now and real adapters at stages 34/35.
 - Distinguish tracked bus health, whole-operation timeout, failed precondition, unsupported variant, EEPROM unsafe, and configuration dirty status. Counter saturation and last error preservation must be deterministic.
 - Implement intentional recovery after outside reset and power interruption: require identity/locked-state proof before writes; preserve desired settings; do not automatically reset entire I2C bus.
-- Cancellation retains terminal result and uncertain mutating effect; no automatic replay of ambiguous writes or fake rollback.
+- Cancellation retains terminal result and uncertain write effects, plus possible destructive-read consumption. Failed CONFIG/TEMP reads can lose status evidence without altering settings. Keep those two uncertainties separate; no automatic retrigger, write replay or fake rollback.
 - Verify polling/reading does not silently consume an already retained terminal result; overflowed time domain and bad deadline are explicitly rejected.
 
 ## Verification and exit criteria

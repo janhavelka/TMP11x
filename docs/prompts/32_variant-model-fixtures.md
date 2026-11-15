@@ -5,7 +5,10 @@ Prerequisites: [13](13_identity-selection.md), [17](17_config-codecs.md), [18](1
 
 ## Objective and boundaries
 
-Exercise the *same installed production driver* against deliberately different TMP116, TMP117 and TMP119 fakes, including model-specific invalid requests.
+Exercise the same compiled production driver against deliberately different
+TMP116, TMP117 and TMP119 fakes, including model-specific invalid requests.
+Installed-package/relocation qualification remains an explicit consumer gate;
+do not assume an install/export implementation already exists at this stage.
 
 ## Source audit
 
@@ -13,7 +16,8 @@ Inspect the direct production code against original register/behavior ledger. Dr
 
 ## Complete implementation work
 
-- Build a deterministic scripted fake with per-model 0x07 layout, identity/revision, EEPROM count, lock/busy, startup result, DATA_READY/status clear, mode/cycle/average and ALERT flags.
+- Complete the incremental device fakes used by earlier stages, rather than postponing meaningful protocol tests until now. Model 0x07 aliases, identity/revision, EEPROM-backed shadows distinct from stored cells, lock/busy, ignored startup writes, startup result, DATA_READY/status effects and mode/cycle/average behavior.
+- Exercise both conflicting TMP116 reset-busy interpretations as adversarial fixtures; do not promote either to a confirmed silicon fact. Include canonical MOD=10 readback, TMP117/119 reset-bit behavior, therm flags unaffected by CONFIG reads, TEMP leaving high/low flags intact, and failed reads that nevertheless clear status.
 - Test BOM-selected `TMP116N`, `TMP117M`, `TMP117N` accuracy metadata without claiming electrical grade proof from I2C. TMP119 `0x2117` and alternate revision nibble must not cause invented exact identification.
 - Verify the public API returns unsupported **before I2C** for TMP116 offset, rejects EEPROM writes, maps THIGH/TLOW in correct order, and uses one shared conversion codec.
 - Introduce common operation fixtures run for all families plus model-specific tests. Test misleading same-address unrelated devices and mux-target context switching.

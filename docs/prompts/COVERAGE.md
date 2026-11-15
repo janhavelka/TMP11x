@@ -17,11 +17,13 @@ through stage 44. Record `documented`, `implemented`, `native tested`,
 | Conversion cycle, average, mode, one-shot | 6; 20–21; 30 | Correct register/timing and fresh samples |
 | Alert DATA_READY and destructive-read semantics | 6; 21–22; 26; 30 | Event-flag consumption and stale-negative tests |
 | TMP117/119 offset, not TMP116 offset | 4–5; 23; 32 | Capability refusal with zero I2C |
-| Safe read-only EEPROM identifiers | 7; 24; 32 | Variant word maps; write forbidden |
+| Safe EEPROM-backed shadow observations | 7; 24; 32 | Variant word maps; all shadow/NVM writes forbidden; no immutable-ID claim |
 | Verified config, dirty trust, recovery | 18–19; 28–31 | Injected ambiguous-failure tests |
 | Cooperative bounded jobs and retained results | 9; 28–31 | Exact callbacks, deadline and tokens |
 | Full native tested behavior | 32–33 | Registered strict CTest/native suite |
 | Arduino, IDF, P4 examples | 34–36 | Full target links; unavailable BLOCKED |
 | Shared CLI + Python HIL | 37–39 | Native CLI and runner negative tests |
 | Real exact-part hardware qualification | 40–41 | Raw fixture transcript, restoration evidence |
+| Register-write-free observation startup | 8; 14; 26; 34–40 | Bound-only diagnostics; no hidden init/reset; destructive reads disclosed |
+| Restorable campaign state | 7; 17; 39; 41 | Stable writable masks/canonical modes; no replay of flags or commands |
 | Packages, docs, one CI checkpoint, audit | 42–44 | Isolated consumers, exact CI SHA, final audit |

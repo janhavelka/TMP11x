@@ -8,9 +8,10 @@ containing commit without a self-referential hash inside that commit.
 | Scope | Status | Evidence | Remaining gate |
 |---|---|---|---|
 | [Repository preparation](preparation.md) | COMPLETE | 14 reference PDFs, audits, entry instructions, local tooling and 23 regressions | Driver stages not invoked |
-| [1 ? ecosystem audit](prompt_1.md) | COMPLETE | Source/API/test mapping, pinned siblings and adoption record | Recheck changed relevant sources at adoption |
-| [2 ? tooling audit](prompt_2.md) | COMPLETE | Build/package plan, tool inventory, strengthened prompt checker | Actual implementation builds belong to later stages |
-| [3 ? TI intake](prompt_3.md) | PARTIAL | All required datasheets, support guides, provenance, visual review, code catalog | Versioned TI code/license inspection unavailable |
+| [Full promptset audit](promptset-audit.md) | COMPLETE | Every prompt 1-44 reviewed; shared contracts and DAG reconciled | Vendor conflicts retained; implementation not executed |
+| [1 — ecosystem audit](prompt_1.md) | COMPLETE | Source/API/test mapping, pinned siblings and adoption record | Recheck changed relevant sources at adoption |
+| [2 — tooling audit](prompt_2.md) | COMPLETE | Build/package plan, tool inventory, strengthened prompt checker | Actual implementation builds belong to later stages |
+| [3 — TI intake](prompt_3.md) | COMPLETE after scope correction | Required datasheets, provenance, visual review and honest source catalog | Optional TI code/license access remains unavailable |
 
-No stage 4?44 completion is implied by preparation. Hardware qualification is
+No stage 4–44 completion is implied by preparation. Hardware qualification is
 NOT RUN and the physical fixture remains unconfirmed.

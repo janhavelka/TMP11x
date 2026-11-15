@@ -15,8 +15,8 @@ Inspect TMP1x2 `stepApply`, `poll`, `begin` synchronous state engine and tests. 
 
 - Connect owner `INITIALIZE`, `CONFIGURE` and `RECOVER` phases to identity, lock/busy, checked writes and stable readback; do not duplicate an independent algorithm that can drift from blocking semantics.
 - Track first mutating write attempt and commit staged desired settings then; cancellation before a write must preserve previous settings while cancellation after may require recovery.
-- Every `poll(nowMs,maxTransfers)` limits I2C physical callbacks, releases the bus on return and yields during EEPROM/startup waits without blocking.
-- Enforce callback timeouts against remaining whole-operation budget; record which steps may have taken effect when a deadline expires after callback.
+- Every `poll(nowMs,maxTransfers)` limits I2C callbacks and returns pending during EEPROM/startup waits; it does not call yield/sleep hooks. The application schedules the next turn. Reuse the TMP116 startup-conflict policy from stage 18 instead of equating busy-clear with reset-load completion.
+- Enforce callback timeouts against the remaining whole-operation budget and reobserve authoritative time after callbacks under stage 9's contract. Record possible effects even when a physically successful write completes after the operation deadline; logical timeout must not rewrite transport health.
 - Keep reset and EEPROM writes excluded from all normal job paths. A partially applied desired profile remains explicitly dirty until verified replay.
 
 ## Verification and exit criteria

@@ -5,19 +5,19 @@ Prerequisites: [33](33_native-suite.md), [35](35_idf-examples.md).
 
 ## Objective and boundaries
 
-Provide a practical native ESP32-P4 integration example for the user's new PCB, while preserving the independent reusable driver package.
+Provide a practical optional native ESP32-P4 integration example, while preserving the independent reusable driver package. An example target does not establish the actual PCB processor or wiring.
 
 ## Source audit
 
-Read the exact current `p4_mainboard` and `FieldCore-node` relevant I2C code read-only; inspect installed ESP-IDF P4 I2C master compatibility, SDK target support and power/boot constraints. Check TMP1x2's portable callback contract without changing its repository.
+Discover relevant current `FieldCore-node` I2C owner/consumer code read-only; inspect a `p4_mainboard` source only if its actual repository/path is identified. Do not assume that name exists. Record local/remote revision differences before treating a local consumer as current GitHub evidence. Inspect pinned ESP-IDF P4 master support and TMP1x2's callback contract without changing either reference repository.
 
 ## Complete implementation work
 
 - Add an ESP32-P4 ESP-IDF example or compile consumer with application-supplied pins, ADD0 address, bus initialization, mutex/ownership and optional TCA9548A routing. Do not invent the user's PCB pin mapping.
 - Demonstrate selected `TMP117` and optional `TMP1x2` driver instances using the same external bus transport, without making TMP1x2 a mandatory dependency of TMP11x.
-- Verify lifetime/cancel/mux behavior for interleaved measurement jobs and multiple sensors. Keep clock timing and temperature sample confidence explicit at the application boundary.
-- If ESP32-P4 SDK/board is unavailable, keep the executable no-board consumer and record precise blocked firmware commands/requirements. Avoid adding untested P4-only source files to mandatory core targets.
-- Document use in the new PCB without assuming the chip is powered or the prototype is assembled.
+- Verify lifetime/cancel/mux behavior for interleaved measurement jobs and multiple sensors. Keep clock timing and temperature sample confidence explicit at the application boundary. External mux-selection traffic has its own application budget; cancellation cannot undo a completed route or sensor write.
+- A physical P4 board is not required for a full firmware link. If the SDK/toolchain is unavailable, run the portable consumer and record blocked firmware commands/requirements separately from missing hardware. Avoid adding P4-only source files to mandatory core targets.
+- Document the board-supplied inputs needed for reuse, without inventing pin mapping, shared-address routing, processor identity or prototype availability.
 
 ## Verification and exit criteria
 

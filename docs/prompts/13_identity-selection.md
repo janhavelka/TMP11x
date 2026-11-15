@@ -14,10 +14,10 @@ Check exact TI ID sections, documented revision fields, TMP119 contradictory def
 ## Complete implementation work
 
 - Implement `readIdentity`, `probe` and selected-model validation that reads 0x0F with no configuration write. Retain raw ID, recognized group, revision field, selected BOM model and confidence/ambiguity.
-- TMP116 group expected documented ID 0x1116; TMP117 and TMP119 accept verified base DID[11:0] `0x117` with revision separately recorded. Never blindly reject future revisions or assert accuracy grade from an address ACK.
+- TMP116 group expects all 16 documented ID bits 0x1116; it has no separately documented revision field. TMP117 and TMP119 accept verified base DID[11:0] `0x117` with revision separately recorded; do not reject an otherwise compatible 117-family response solely for a different revision nibble. Do not extrapolate that policy to undocumented TMP116 IDs or assert accuracy grade from an address ACK.
 - Reject incompatible family IDs, malformed register reads, unsupported addresses and mismatched selected model/group. Distinguish transport errors from valid but unexpected identity.
 - Ensure `probe` is a diagnostics operation with explicit health side effects (or lack thereof) and that discovery never mutates hardware.
-- Provide tests for known 0x1116, 0x0117, 0x2117 examples, alternate possible revision nibble, wrong ID and same-bus unrelated responders.
+- Provide tests for known 0x1116, 0x0117, 0x2117 examples, alternate 117-family revision nibble, wrong full TMP116 ID and same-bus unrelated responders. The selected model gates capabilities after compatible-family validation; a compatible numeric response is not unique proof of physical part identity.
 
 ## Verification and exit criteria
 

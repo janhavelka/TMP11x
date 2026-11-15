@@ -68,3 +68,18 @@ that no errata exist. A [TI E2E DATA_READY race discussion](https://e2e.ti.com/s
 could not be read (HTTP 403). Treat its reported CONFIG-read/conversion race as
 an unresolved research lead for stage 6, not a verified silicon guarantee or
 an implemented workaround. Physical timing evidence remains NOT RUN.
+
+## Promptset audit additions
+
+On 2026-11-15, the full promptset audit visually rechecked TMP116 PDF pages
+17 and 29. Page 17 section 7.5.1.1 describes a cleared busy bit during reset
+load; page 29 Table 10 and page 26 Table 6 describe it asserted. Preserve the
+contradiction and do not use busy-clear alone as POR completion proof.
+
+TMP117 page 18 and TMP119 page 20 describe four general-purpose EEPROM words,
+while their detailed maps (pages 25 and 32) show three plus offset. The detailed
+map governs exposed pointers; retain the inconsistent prose for source review.
+Read values are volatile shadow observations, not independent NVM verification.
+See the [per-prompt audit](../../reports/promptset-audit.md) for timing, command,
+diagnostic and HIL corrections. The optional TI source-code access gaps above
+do not block completed datasheet intake.

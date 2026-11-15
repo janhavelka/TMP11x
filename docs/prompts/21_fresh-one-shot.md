@@ -13,15 +13,21 @@ Read TI data-ready clearing, one-shot trigger and timing sequences. Check OPT400
 
 ## Complete implementation work
 
-- Implement explicit one-shot trigger, readiness observation, latest sample read, `tryReadFresh` and bounded synchronous `readBlocking` as contracted. Where a flag was cleared by an intervening raw/diagnostic read, report uncertain freshness instead of guessing.
+- Implement explicit one-shot trigger, readiness observation, latest sample read, `tryReadFresh` and bounded synchronous `readBlocking` as contracted. Establish a shutdown baseline and consume stale readiness before the owned trigger; TMP116 documents OS from shutdown (p.14 section 7.4.1.5). Associate evidence with that trigger/profile generation, not with a preexisting DATA_READY bit.
+- Preserve a successfully captured ready event only while it still belongs to an unconsumed result of the same generation. Diagnostic TEMP reads, outside access, reset or ambiguous failed CONFIG/TEMP reads can consume evidence; invalidate it conservatively rather than duplicating a fresh sample. A lost one-shot ready event must not cause an automatic retrigger.
 - When reading CONFIG to check DATA_READY, capture status before it clears; handle DATA_READY and alert flags separately and avoid duplicating completion on a stale bit.
 - Disallow prematurely returning initial `0x8000` as fresh before completed conversion including averaging; support a read of raw reset value for diagnostics.
-- Avoid infinite loops: blocking helpers require a monotonic clock/yield or reject, and cooperative jobs later use owner-provided time. Do not hold I2C mutex while waiting.
+- Blocking helpers require a usable monotonic clock; a yield hook alone is not a clock. Clip each callback to the remaining operation deadline, check time again after it, and bound non-advancing-clock behavior. Yield is optional application cooperation and must not re-enter this instance. Do not hold an I2C mutex while waiting.
+- Distinguish a documented finite work/poll cap from the clock deadline; repeated reads of one millisecond tick are normal, not proof of a stalled clock. Exhausting the work cap is an explicit failure, never fabricated conversion completion.
 - Explicitly model simultaneous diagnostics, one-shot trigger, shutdown, averaging change and bus access failures.
 
 ## Verification and exit criteria
 
-Native fake-sensor tests exercise readiness cleared by CONFIG/TEMP, repeated same raw temperature with new conversion, missed ready event, initial reset value, clock timeout and no fresh fabrication.
+Native fake-sensor tests exercise pre-trigger stale ready, ready cleared by
+successful or ambiguous failed reads, repeated equal temperatures with new
+conversions, no duplicate consumption, missed one-shot events without retrigger,
+initial reset value, averaging completion, stopped clocks and late callback
+completion. Timing estimates alone must never manufacture freshness.
 
 ## Documentation and delegation
 

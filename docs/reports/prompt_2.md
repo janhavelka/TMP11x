@@ -1,4 +1,4 @@
-# Prompt 2 ? tooling and promptset audit
+# Prompt 2 — tooling and promptset audit
 
 **Status: COMPLETE.** Prerequisite: [prompt 1](prompt_1.md).
 Input: `6c5e4496d5c896af689228d4bee4382a53c20626`; reviewed 2026-11-15.

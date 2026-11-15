@@ -21,7 +21,7 @@ extracts. Search current TI errata/support and primary examples.
 
 - Save original PDFs in `docs/reference/source/` with stable names; record document IDs, revisions, source URLs, retrieval date, SHA-256 and licenses/notices in `docs/reference/manifest.json`. If remote revision changed, retain what was acquired and record new facts explicitly.
 - Create concise original notes in `docs/reference/extracted/` with document/page pointers for each reviewed section; all interpreted tables must be traceable to the PDF, not just a scrape. Avoid committing full copyrighted text extracts alongside the original documents.
-- Create `docs/reference/public-code-catalog.md` including relevant TI official code, Linux `drivers/iio/temperature/tmp117.c`, Adafruit drivers or vendor examples as reference with commit/license, identifying observed defects and independent comparisons.
+- Create `docs/reference/public-code-catalog.md` for available TI examples, Linux `drivers/iio/temperature/tmp117.c`, Adafruit drivers or other useful comparisons. Pin inspected code to its commit/release and license; record timeouts, access gates and uninspected licenses explicitly. Secondary driver/GUI code is optional comparison evidence, not a prerequisite for a datasheet-based implementation or closure of this source-intake stage.
 - Do not paste GPL Linux code, copyrighted vendor snippets or large external text into the production MIT driver. Attribute adapted MIT source. Vendor PDFs must be excluded from runtime package exports.
 
 ## Verification and exit criteria
@@ -29,7 +29,11 @@ extracts. Search current TI errata/support and primary examples.
 Run `python scripts/check_references.py` for hashes and path existence; also
 check that cited sections are found at correct PDF pages. Hash verification
 proves archive integrity, not a register review. Check original source version
-and variants. No device/source similarity is assumed purely from a shared prefix.
+and variants. Complete this stage when required exact-part PDFs, provenance,
+reviewed-page notes and an honest available/unavailable source catalog exist.
+An unresolved silicon question remains owned by its field/timing/safety stage;
+an inaccessible optional code example alone does not block the archive.
+No device/source similarity is assumed purely from a shared prefix.
 
 ## Documentation and delegation
 

@@ -1,9 +1,11 @@
-# Silicon family facts — initial verified comparison
+# Silicon family facts and retained source conflicts
 
 This is a **seeded source map**, not the full checked ledger. Prompt 3 downloads
 and pins the original exact-part PDFs; prompts 4–7 independently validate
 all fields and ambiguities. The datasheet, with exact revision/footnotes,
 prevails over this secondary note.
+The [promptset audit](../reports/promptset-audit.md) records corrections to
+these seeds. Page numbers here refer to the pinned manifest revisions.
 
 ## Included and excluded parts
 
@@ -20,6 +22,9 @@ Product grades must be selected from the **BOM**. Identity reads prove at
 most the hardware family documented below; they do not prove an advertised
 accuracy grade. No auto-detect that silently picks TMP117 or TMP119 from
 revision bits.
+TMP119's electrical table also mentions TMP119M. This is an unresolved
+orderable/grade scope question for stage 4, not permission to silently add a
+new supported model.
 
 ## Register map seed — verified against TI register map pages
 
@@ -51,6 +56,10 @@ TMP116/TMP117/TMP119 documented layout: `[15] high alert`, `[14] low alert`,
 `[6:5] averaging`, `[4] therm/alert`, `[3] alert polarity`, `[2] ALERT/data-ready
 pin function`, `[1:0] part-specific/reserved/reset behavior`. Datasheets show
 `0x0220` as factory CONFIG default, **not a guarantee after EEPROM programming**.
+MOD=10 is a legal continuous-mode encoding and reads back MOD=00; it is not
+reserved. TMP116 bits 1:0 are reserved. TMP117/TMP119 bit 1 commands software
+reset and always reads zero; ordinary setting writes must never set it.
+Sources: TMP116 p.26; TMP117 pp.27–28; TMP119 pp.34–35.
 
 TEMP is signed 16-bit, 1/128 °C per LSB, MSB first. `0x0C80` = +25 °C,
 `0xF380` = -25 °C, `0xFF80` = -1 °C, `0xFFFF` = -0.0078125 °C.
@@ -59,8 +68,9 @@ averaging** completes; do not blindly interpret it as a valid initial sample.
 The raw signed representation remains valid arithmetic; freshness/validity is
 separate from raw bit pattern.
 
-CONFIG and TEMP reads clear DATA_READY; reading CONFIG may also acknowledge
-alert status according to mode. Do not allow a diagnostic dump to falsely
+CONFIG and TEMP reads clear DATA_READY. CONFIG reads clear HIGH/LOW in alert
+mode; in therm mode HIGH follows threshold/hysteresis and LOW remains zero.
+TEMP does not clear comparator flags. Do not allow a diagnostic dump to falsely
 prove freshness or erase evidence without surfacing the side effect.
 
 ## EEPROM and identity constraints
@@ -77,6 +87,20 @@ prove freshness or erase evidence without surfacing the side effect.
 - Power-on may take a finite EEPROM load interval; no configuration writes
   until ready. A default configuration may have been customized by prior
   EEPROM writes.
+- TMP116 p.17 section 7.5.1.1 says EEPROM_Busy is cleared during reset load,
+  but p.26 Table 6 and p.29 Table 10 say it is asserted during power-up/load.
+  Retain both statements. A cleared busy flag alone cannot establish startup
+  completion; document the startup timing/owner assumptions and bounded
+  readback. The approximately 1.5 ms load time is not a specified maximum.
+- TMP117 p.18 and TMP119 p.20 prose mention four general-purpose EEPROM words,
+  contradicting their three-word register maps (pp.25 and 32). Detailed maps
+  assign 0x07 to offset and 0x05/0x06/0x08 to EEPROM; do not invent EEPROM4.
+- Reads at EEPROM addresses access volatile shadows. Earlier locked writes
+  could have changed those values without changing NVM. They do not prove an
+  immutable factory serial or physical nonvolatile contents.
+- TMP117 p.28 Table 7-6 and TMP119 p.35 Table 8-5 define a 2 ms per-device
+  software reset. TMP116 has no documented equivalent CONFIG reset command;
+  its general-call reset remains intentionally excluded.
 
 Authoritative documents:
 https://www.ti.com/lit/ds/symlink/tmp116.pdf

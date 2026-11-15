@@ -14,10 +14,10 @@ Read TI EEPROM unlock, programming, busy, factory data and general-call reset se
 ## Complete implementation work
 
 - Create `docs/eeprom-and-reset-policy.md`: default locked state, unlocked/unknown fail-closed condition, busy timing, EEPROM/offset alias at 0x07, protected read-only regions, actual factory unique-data claims.
-- Freeze first-release scope: read EEPROM words by checked model, never offer EEPROM write/unlock or a generic raw-write escape that can program them. All mutable device state is treated as volatile.
-- Document when a guarded configuration/threshold/offset write must first verify EEPROM lock and ready state, how uncertain I2C failure affects trust, and how a consumer recovers without programming.
+- Freeze first-release scope: read EEPROM register words by checked model, never offer EEPROM write/unlock or a generic raw-write escape. Deny writes to EEPROM data addresses even when EUN=0 would only modify their volatile shadow registers. Reads observe those register shadows, not guaranteed untouched nonvolatile/factory contents if another writer previously changed them.
+- Document when a guarded configuration/threshold/offset write must first verify EEPROM lock and ready state, how uncertain I2C failure affects trust, and how a consumer recovers without programming. Include prompt 6's independent startup guard; busy=0 is insufficient POR proof for TMP116's contradictory source. Require one application authority for sensor mutation during the operation: a lock read cannot protect against an uncoordinated second master unlocking EEPROM before the write.
 - Separate optional individually addressed soft reset from forbidden general-call reset. An unresolved RESET register semantics creates a specific blocked reset capability rather than an invented API.
-- Define explicit `UNSUPPORTED`/`EEPROM_UNSAFE` or equivalent errors for incompatible requests; hardware destructive tests are opt-in only on authorized sacrificial fixtures.
+- Define explicit `UNSUPPORTED`/`EEPROM_UNSAFE` or equivalent errors for incompatible requests. This sequence contains no EEPROM-programming or destructive hardware campaign, including on sacrificial fixtures; such future maintenance work needs a separate user request and policy.
 
 ## Verification and exit criteria
 
