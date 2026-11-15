@@ -21,6 +21,8 @@ Inspect TMP1x2 `src/TMP1x2Operations.cpp`, `docs/owner-operations.md`, timeout t
 - Define cancellation/timeout failure trust: no automatic hardware rollback, no duplicate job completion, no overwriting pending result, no reentrancy and no callback buffered past return.
 - Specify rules for external multiplexer route selection between polls and temporary I2C owner lock (one sensor callback/transaction, never across sensor conversion wait). Route selection plus the sensor transaction must be serialized as one application-owned critical section. State whether transfer budgets count sensor callbacks only; extra mux transactions belong to the application's bus budget and cannot be advertised as sensor-core work.
 
+- State that the sensor's 20–40 ms serial-interface timeout concerns its documented line-held/no-clock condition, not the application clock or job deadline. A long operation can span many short transfers; an adapter must neither rely on the sensor timeout as its software bound nor deliberately stretch a transaction to wait for conversion. Timing/electrical enforcement belongs to the bus owner.
+
 ## Verification and exit criteria
 
 Use small native pseudocode/fake transfer traces to demonstrate one-read/one-write budget and no I2C on admission/cancel. Independent review checks ambiguous partial writes and operation-result lifetime.

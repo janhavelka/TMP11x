@@ -19,6 +19,8 @@ Read original CONFIG table for each part, including mode[11:10], CONV[9:7], AVG[
 - Create pure expected-register comparisons of stable settings with mode normalization and explicit exclusion of command/status transitions. A one-shot returning to shutdown is not ordinary configuration drift. A configuration snapshot retains raw observed flags and their mode-dependent read effects; raw CONFIG status is not an EEPROM lock proof (EUN is in 0x04).
 - Add independent literal bit/word vectors and invalid enum/reserved-bit tests for all supported families.
 
+- Keep field-level persistence separate from ordinary write masks: MOD1 is not EEPROM-stored, and a legal command encoding is not a replayable desired setting. Include reset fixtures with nonfactory stable fields; neither a whole-word EEPROM image nor factory 0x0220 may be assumed to describe current CONFIG.
+
 ## Verification and exit criteria
 
 Check all emitted CONFIG writes against a manually reviewed mask ledger; run exhaustive legal mode/cycle/average combinations, documented alias normalization, invalid typed enums and forbidden command/reserved-bit writes. Verify POL=0 active low/POL=1 active high directly against TI rather than a secondary driver's helper name.

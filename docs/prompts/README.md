@@ -8,6 +8,9 @@ The complete dependency manifest is [SEQUENCE.json](SEQUENCE.json). Resume from
 trusting status text alone.
 The [promptset audit](../reports/promptset-audit.md) records the review of all
 44 prompts and remaining source conflicts; it is not stage execution evidence.
+The subsequent [feature-gap audit](../reports/feature-gap-audit.md) covers
+all five pinned datasheets and fills register, behavior and integration gaps.
+Its mandatory R/F/X requirements are in [FULL_COVERAGE](FULL_COVERAGE.md).
 
 Each prompt is a bounded engineering work unit with evidence inputs, exact
 scope, concrete code/documentation, adversarial tests and a report/commit
@@ -58,7 +61,7 @@ invocation in START_HERE explicitly authorizes continuation.
 | 22 | [Implement temperature limits, therm/alert and ALERT pin](22_limits-alert.md) | 5, 6, 7, 16, 17, 19, 21 | software |
 | 23 | [Implement hardware offset for TMP117/TMP119 only](23_offset-feature.md) | 4, 5, 7, 11, 12, 16, 17, 19 | software |
 | 24 | [Implement safe EEPROM reads and traceability metadata](24_readonly-eeprom.md) | 4, 5, 7, 11, 12, 13, 19 | software |
-| 25 | [Implement supported per-device reset and invalidation safely](25_per-device-reset.md) | 5, 7, 9, 14, 18, 19, 21 | software |
+| 25 | [Implement supported per-device reset and invalidation safely](25_per-device-reset.md) | 5, 7, 9, 14, 18, 19, 21, 23 | software |
 | 26 | [Implement read-only register snapshots and guarded raw access](26_diagnostic-access.md) | 5, 7, 12, 13, 19, 21, 22, 23, 24 | software |
 | 27 | [Complete synchronous API, samples and snapshots](27_sync-helpers-cache.md) | 16, 19, 20, 21, 22, 23, 24, 25, 26 | software |
 | 28 | [Implement bus-silent jobs and exactly-once results](28_cooperative-admission.md) | 9, 14, 15, 27 | software |

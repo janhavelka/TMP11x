@@ -20,6 +20,11 @@ Use TI TMP116 printed p.24-31, TMP117 p.25-32, TMP119 p.32-39; check CONFIG/EEPR
 - Preserve source conflicts explicitly: TMP116 p.17 says busy is cleared during reset-load, while p.26 Table 6/p.29 Table 10 say it indicates power-up; TMP119 p.20 says four EEPROM words, while its p.32 map exposes three plus offset; TMP119 ID defaults also disagree. Do not silently resolve contradictory prose by copying another model.
 - Create `docs/feature-coverage.md` seeded with source-backed documented capability, planned implementation stage, test owner, CLI and qualification evidence columns. No entry is implemented merely because it is listed.
 
+- Carry every R/F/X identifier from [FULL_COVERAGE](FULL_COVERAGE.md) into the coverage artifact with per-model disposition and source/test owners. Enumerate every field, reserved pointer 0x09–0x0E and invalid upper pointer bits; do not silently mask an invalid selector to a valid address.
+- Record field-level reset/NVM domains: CONFIG MOD1 (bit11) is explicitly not EEPROM-stored, whereas MOD0 and bits9:2 are. Include THIGH/TLOW/OFFSET factory defaults versus prior programmed values, and arbitrary EEPROM-shadow contents.
+- Preserve the additional conflicts in the three coverage audits: TMP116 EEPROM reset map versus detailed tables; TMP117/TMP119 EEPROM2 reset heading versus map/field table; range/current/accuracy-summary contradictions. Each conflict needs paired citations and a bounded implementation policy, not an unqualified selected default.
+- Add pointer retention, no documented auto-increment, serial framing, ADD0 mapping, electrical timing and the hardware interface timeout as sourced non-register requirements with application/adapter ownership.
+
 ## Verification and exit criteria
 
 Test schema rejection of same-profile overlap, duplicate keys, out-of-range masks, missing provenance, incompatible variant semantics, and marked-resolved conflicts without evidence. Verify duplicate JSON keys are caught while parsing rather than discarded by a default dictionary parser. Independent literal masks come from PDF, not from the driver's future code.

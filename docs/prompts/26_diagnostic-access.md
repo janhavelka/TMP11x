@@ -20,6 +20,8 @@ Inspect TMP1x2 `readSnapshot`, `readRegisterRaw`, `BusOperations`, OPT4001 clear
 - Do not permit unsupported-family access by raw pointer escaping. Core diagnostics operate only on the bound address; address scans belong to the application and do not prove family or grade. A live diagnostic read can acknowledge status even when it writes no data register.
 - Add a concise register dump format with unsigned hex, signed decoded units where known, source-model and status flag caveats.
 
+- A dump reads only explicit documented pointers. Reject 0x09–0x0E and nonzero upper pointer bits instead of masking aliases or probing alternate-family IDs. Never use a burst through 0x07 or skip model checks. Include each R row's exact read effects and report unavailable fields rather than fabricating zero defaults.
+
 ## Verification and exit criteria
 
 Tests exercise every register address and model, skipped holes, alias 0x07, repeated clear-on-read reads, raw write denial, dirty evidence and no extra callbacks on forbidden operations.

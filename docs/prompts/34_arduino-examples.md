@@ -19,6 +19,9 @@ Study TMP1x2 `examples/01_basic_bringup_cli/main.cpp` (including its inline Wire
 - Add an optional second sensor instance on the same shared bus to demonstrate external serialization; if a TCA9548A mux is used, establish route before and hold it for each transfer only, not an entire conversion wait. Count mux-selection transfers separately in application scheduling; the driver's sensor-transfer budget does not bound external route traffic.
 - Keep any initial console harness minimal and use the canonical names in [CLI_CONTRACT](CLI_CONTRACT.md); prompt 37 owns the authoritative parser. Reading CONFIG/TEMP can acknowledge flags even when no data register is written. A fresh one-shot demonstration is an explicit mutating operation, not a read-only temperature query.
 
+- Enforce the example-owned bus configuration within 1–400 kHz; document hardware 20–40 ms line-held/no-clock timeout separately from Wire's timeout. Show actual ADD0 mapping, package pins, supply/logic compatibility, external SDA/ALERT pullups and 100 nF bypass; active-high ALERT remains open-drain.
+- Link a shared board/precision guide covering exact-grade accuracy conditions, self-heating from I2C/averaging, thermal coupling/settling and package-specific pad/strain guidance. Default example setup is not proof of calibrated accuracy. Preserve the TMP116 ALERT-to-ground wording conflict; do not ground a used ALERT signal.
+
 ## Verification and exit criteria
 
 Run real PlatformIO builds for S2 and S3, or record exact unavailable framework versions. Native host CLI tests do not establish full MCU linking; no physical sensor reading is claimed before hardware qualification.

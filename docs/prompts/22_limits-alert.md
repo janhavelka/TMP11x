@@ -21,6 +21,10 @@ Compare TMP116/TMP117/TMP119 limit representations, alert vs therm behavior, pol
 - TMP117 p.15 and TMP119 p.17 mention an ALERT flag at one-shot completion. Do not interpret this as unconditional HIGH_Alert/LOW_Alert assertion: their detailed flag tables and selected DR/Alert routing determine comparator flags and pin behavior. Retain the prose ambiguity in the ledger.
 - Verify no unsupported TMP1x2 fault queue, interrupt queue or extended temperature mode leaks into API.
 
+- Test latch re-arm explicitly: out-of-range then in-range before CONFIG acknowledgement retains an alert; acknowledgement clears it; a later still-out-of-range conversion reasserts. Exercise all eight T/nA×POL×DR/Alert combinations, independently observing logical status and pin interpretation. Active-high open-drain means released/pulled high, not driven high.
+- Extend full-profile apply/readback/recovery to both limits. Document separate-write intermediate states and partial failures; no atomic or glitch-free limit-pair promise. Preserve any API ordering restriction as policy.
+- Retain the unresolved offset/comparator ordering on supporting models and mode-specific effects of an outside ARA. Addressed CONFIG reads are the included acknowledgement path; no ARA transaction is emitted.
+
 ## Verification and exit criteria
 
 Register tests: high/low positive and negative exact words, strict threshold

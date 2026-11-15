@@ -20,6 +20,10 @@ Verify TI TMP117/TMP119 `Temp_Offset` register, saturation behavior and its EEPR
 - Offset changes invalidate the current profile's sample/freshness evidence. A read of an existing TEMP word is not proof that a new offset has been applied; require a subsequent confirmed conversion before publishing a sample attributed to the new offset.
 - Document that a calibration offset is a volatile setting in this library, not a request to rewrite EEPROM or claim certified accuracy.
 
+- Extend the shared desired/observed/trusted profile and synchronous apply/recovery engine with OFFSET, including nonfactory EEPROM-loaded offset after reset. Restore and verify it on supporting models only; stage 29 carries this complete engine into cooperative replay when that engine exists.
+- Add independent positive/negative saturation observations: a +255 °C result plus +2 °C offset reaches 0x7FFF; −255 °C plus −2 °C reaches 0x8000, not wrapped arithmetic. Prove the driver does not add offset twice and accepts a confirmed saturated 0x8000 as numeric data. A simulator exercises driver handling, not physical proof of the chip's arithmetic.
+- Keep offset-input rejection, result saturation and the unresolved offset/limit-comparator ordering separate. Do not infer comparator behavior solely from the TEMP offset description.
+
 ## Verification and exit criteria
 
 Test 0x07 writes for TMP117/TMP119 only, TMP116 rejected with **zero I2C**, correct sign/rounding, ambiguous failed write and verified recovery.

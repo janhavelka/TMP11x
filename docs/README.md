@@ -6,6 +6,8 @@ The project is in preparation; driver implementation has not started.
   and [current progress](prompts/PROGRESS.md)
 - [Preparation evidence](reports/preparation.md) and [report index](reports/index.md)
 - [Full promptset audit and remaining source conflicts](reports/promptset-audit.md)
+- [Datasheet/functionality gap audit](reports/feature-gap-audit.md) and
+  [complete register/feature requirements](prompts/FULL_COVERAGE.md)
 - [Library comparison](library-comparison.md), [source adoption](source-adoption.md),
   and [toolchain/package plan](toolchain-and-package-plan.md)
 - [Reference archive](reference/README.md) and [provenance manifest](reference/manifest.json)

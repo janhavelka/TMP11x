@@ -20,6 +20,9 @@ Check how TMP1x2 registers host test jobs and CMake/CTest checks (`test/`, `tool
 - Track time/call counts and prove the core performs no hidden heap allocations, bus resets, waits, logging or global I2C initialization. Keep fakes and test-only clocks outside runtime package.
 - Run a tests-OFF source/package consumer against the actual exported headers and library, including a checkout/archive with no sibling paths or reference PDFs. Record separately any install/export relocation gate deferred to stage 42; a native build-tree link is not installed-package qualification.
 
+- Reconcile every R/F/X row in [FULL_COVERAGE](FULL_COVERAGE.md) with a registered test, documentation/adapter/hardware evidence gate, or justified exclusion. Check feature/variant coverage, not only a line-coverage percentage. Explicitly cover full-profile recovery after each partial-write phase, all model capability refusals and named incompatible families.
+- Assert no existing core/harness path emits general-call 0x00, ARA 0x0C, EEPROM_UL writes or EEPROM-shadow writes, including unsupported raw encodings. Stage 38 adds the corresponding CLI assertions after the parser exists. Tests must distinguish deliberate exclusions from actual silicon capability and avoid claiming electrical/thermal or unspecified timing facts from a simulator.
+
 ## Verification and exit criteria
 
 Capture actual `cmake`, `ctest`, compiler, sanitizer, public-header and native consumer commands, count, duration/exit outcomes and unresolved failures in the stage report. All required executing cases must pass to call this stage Complete.

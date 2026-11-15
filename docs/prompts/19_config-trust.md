@@ -20,6 +20,8 @@ Inspect TMP1x2 `src/TMP1x2Configuration.cpp` CONFIG/threshold comparisons, dirty
 - Centralize destructive-read bookkeeping for every CONFIG/TEMP path, including failed transfers that may already have cleared flags in hardware. CONFIG consumes DATA_READY and alert-mode flags, but therm-mode HIGH_Alert survives the read; TEMP consumes DATA_READY, not high/low alert flags. Verification must record these effects without treating them as configuration mismatches.
 - Compare canonical stable configuration: MOD=10 reads as continuous MOD=00; one-shot is an operation that returns to shutdown, and Soft_Reset always reads zero. Exclude status/command bits from stable readback. See TMP116 p.26 Table 6, TMP117 pp.27-28 Table 7-6 and TMP119 pp.34-35 Table 8-5.
 
+- Trust covers the entire desired profile, not only CONFIG. Observe/compare both limits and, once stage 23 lands, the supported offset; preserve per-field validity when only part was read. An unobserved field is unknown, and detecting a mismatch must not silently adopt it or overwrite the desired replay target. The coverage row F11 closes only when replay/readback includes every owned field.
+
 ## Verification and exit criteria
 
 Test readback disagreement, external mutation, failure after first/middle write, no stale sample publication, and state recovery after verified replay. Readback must not blindly compare read-to-clear bits.

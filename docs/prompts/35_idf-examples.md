@@ -19,6 +19,9 @@ Inspect TMP1x2 `examples/esp_idf/basic` CMake/PlatformIO, modern ESP-IDF `driver
 - Demonstrate one device/one bus owner and coexistence with a second I2C device. GPIO and bus recovery/reset remain app-owned. Create handles only for intended sensor addresses; do not inherit TMP1x2's general-call/SMBus alert-response handles or commands.
 - Register clean native ESP-IDF app linking and component-only builds, not only header syntax tests. Keep IDF-only CMake source/target dependencies outside portable native `find_package` consumers.
 
+- Validate the application-owned device clock against1–400 kHz and document the chip's20–40 ms held-line/no-clock timeout separately from IDF software deadlines. Verify explicit pointer, repeated START and terminal ACK/NACK/STOP via backend evidence; no sensor clock-stretch feature is assumed.
+- Reuse the board/precision guide: ADD0 straps, exact package/supply/temp constraints, external pullups,100 nF decoupling, open-drain active-high ALERT and thermal/strain conditions. Internal MCU pullups or a successful link alone do not qualify electrical timing or accuracy.
+
 ## Verification and exit criteria
 
 Build/verify real IDF firmware images for S2/S3 where toolchain exists, with exact IDF version and command. Record BLOCKED where unavailable, not a fake CI success.

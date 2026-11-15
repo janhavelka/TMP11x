@@ -25,6 +25,8 @@ all describe writes ignored during the initial load interval.
 - Separate partial write uncertainty from physical transfer status; preserve staged desired profile for later explicit recover.
 - Verify that initialization, even if repeated on a factory-configured sensor, does not read a destructive status and then misrepresent its freshness.
 
+- Make apply order and intermediate states explicit for CONFIG and both limits, with a defined extension for the supported offset when stage 23 lands. Separate register writes are not atomic; do not promise glitch-free paired limits, suppressed intermediate alerts or rollback. Validate the entire candidate before the first write, record partial application, and require readback of all owned fields.
+
 ## Verification and exit criteria
 
 Native scripted tests assert zero mutating traffic when busy/unlocked or startup

@@ -23,6 +23,9 @@ Recheck exact actual PCB/BOM chip marking, board power/pullups/ADD0/ALERT/wiring
 - On absent hardware, record stage as BLOCKED, store the ready commands/expected observations and resume only after fixture data becomes available.
 - Ensure an observation campaign never writes register data, clears factory state or labels stale raw data fresh. Pointer-write/repeated-START/read is allowed. Record that CONFIG/TEMP reads consume flags; those events cannot be restored, and repeated equal readings neither prove nor disprove a new conversion.
 
+- Record the electrical/accuracy conditions from F02–F04/F16–F17: exact ADD0 strap/pinout, supply vs grade/temperature, bus rate, pullups, bypass and thermal fixture. Optional logic-analyzer evidence may qualify ACK/NACK/repeated START and timing; a printed clock setting does not.
+- Observe arbitrary EEPROM-shadow values without a zero/nonzero serial acceptance rule. State which grade/measurement-condition claims remain untested; read-only room-temperature plausibility does not close full-range accuracy, thermal settling or byte-coherence questions.
+
 ## Verification and exit criteria
 
 Physical PASS only with identified hardware, one compatible fully linked firmware image and actual unmodified runner transcripts. Both Arduino and IDF builds are not needed to qualify one fixture run. Review failed/mismatched IDs and unstable readings as evidence; keep host/software claims separate. No absolute accuracy/traceability qualification follows merely from an ID or EEPROM read.

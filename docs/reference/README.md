@@ -27,6 +27,16 @@ notes, not full text extracts or the stage 5 register ledger.
 [Public code catalog](public-code-catalog.md) distinguishes comparison sources
 from code eligible for later adoption.
 
+The completeness audit includes full per-chip register/function inventories:
+[TMP116/N](extracted/tmp116-coverage-audit.md),
+[TMP117/M/N](extracted/tmp117-coverage-audit.md),
+[TMP119](extracted/tmp119-coverage-audit.md), and
+[excluded TMP114/TMP118](extracted/excluded-families-audit.md).
+They preserve electrical/grade conditions, deliberate exclusions, source
+contradictions and undocumented behavior. The
+[gap report](../reports/feature-gap-audit.md) maps the findings into future
+implementation stages; these notes do not replace the original PDFs.
+
 From the repository root, using Python 3.10 or newer:
 
 ```text

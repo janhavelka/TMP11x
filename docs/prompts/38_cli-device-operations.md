@@ -14,10 +14,14 @@ Review current public API and tests, TMP1x2 shared CLI measured one-shots/owner-
 ## Complete implementation work
 
 - Add the typed mutation and owner-job routes in [CLI_CONTRACT](CLI_CONTRACT.md): use canonical `avg` and `limits`, with alert polarity/pin-function options and `job` subcommands defined once. Do not introduce competing `average`/`threshold` spellings or an uncontracted `stress` route. Gate every command by implemented capability and document bus-silent local commands separately from register writes.
-- Every device-mutating CLI route calls the library public API; **no CLI-only register writer** can open EEPROM_UL or ignore the busy/lock guard. Do not invent a reset command until stage25 source proof permits it.
+- Every device-mutating CLI route calls the library public API; **no CLI-only register writer** can open EEPROM_UL or ignore the busy/lock guard. Do not invent a reset command until stage 25 source proof permits it.
 - Render raw/cached/observed values and timestamp validity distinctly, including readiness flag consumption and one-shot evidence. Do not show a newly completed measurement from a stale data-ready read.
 - Preserve one owner token/result, per-transfer budgets, cancellation and status diagnostics from library, not synthetic CLI state. Include error reasons and safe no-I/O refusals. Explicit setting commands leave the requested settings applied; only temporary diagnostic campaigns capture and restore a baseline. Restoration cannot replay raw status/self-clearing bits or guarantee reconstruction of consumed flags.
 - Register native CLI tests and shared grammar checks so Arduino and IDF use the same exact commands and help definitions. A finite `watch` observes existing conversions by default; any one-shot-triggering mode requires the explicit mutating option and its own deadline/cancellation behavior.
+
+- Reconcile R/F/X coverage against canonical commands and output fields: all stable settings, both limits, supported offset, all permitted shadow words, identity, status and profile trust need a route. Excluded ARA/broadcast/persistence/alternate-family UID procedures must have no command/raw escape. Report unsupported/unknown explicitly; do not infer electrical grade or factory serial validity.
+
+- Register CLI forbidden-pattern tests for general-call 0x00, ARA 0x0C, EEPROM_UL writes, EEPROM-shadow writes and alternate-family UID procedures. Exercise malformed/raw inputs and verify that no route bypasses typed capability or safe-write guards.
 
 ## Verification and exit criteria
 

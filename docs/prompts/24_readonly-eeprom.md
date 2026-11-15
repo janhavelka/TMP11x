@@ -21,6 +21,8 @@ Read TI EEPROM1..4 layout, read side effects, unique ID/NIST text, and EEPROM_UL
 - Ensure tests prove that normal begin/read/CLI/dump cannot emit EUN unlock or general-call reset; even a disguised 0x07 write cannot reprogram TMP116 EEPROM3.
 - Document lock uncertainty and how application/user can collect read-only metadata without changing traceability.
 
+- Accept arbitrary shadow words, including all-zero values, as observations rather than rejecting them as an invalid serial number. Record TMP116's map/detailed-reset discrepancy and TMP117/119's EEPROM2 heading discrepancy; never seed identity or traceability checks from those conflicting defaults. Enumerate word/byte order without treating the snapshot as atomic or immutable.
+
 ## Verification and exit criteria
 
 Test range bounds, per-model pointer map, repeated reads, busy state, prohibited write fuzz and absence of factory-identification modification.

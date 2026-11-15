@@ -20,6 +20,9 @@ Ask an independent reviewer to trace original TI PDF register fields and side ef
 - If fixes change inputs covered by the completed CI checkpoint, reopen prompt 43 for the resulting SHA. This is a correction to that checkpoint, not permission to claim an older green run validates changed source.
 - Produce `docs/reports/final-audit.md`, exact reproducible build/consumer instructions, git SHA/upstream verification and a prioritized finite list of residual obligations. Do not create a fictitious release tag or claim that TMP119 was electrically tested because TMP117 passed.
 
+- Reconcile every R/F/X identifier and stage 5 split row against code, executing tests or its explicit integration/evidence disposition. Check every register bit/reset domain, pointer hole, full-profile replay, all timing/routing combinations, exact-grade conditions and excluded-family negative cases.
+- Independently challenge source-unknown behaviors: no fake-derived proof of byte latching, conversion restart, atomic multi-register updates or offset/comparator ordering. Audit both sides of retained vendor conflicts and bound all claims to applicable source/fixture evidence. An intentional exclusion is visible scope, not a missing row or silent successful no-op.
+
 ## Verification and exit criteria
 
 Run final focused/integrated software tests and docs/package checks affected by findings; distinguish host tested, ESP builds, CI tested SHA and physical trials. Overall status remains PARTIAL if required physical/model evidence remains unavailable.

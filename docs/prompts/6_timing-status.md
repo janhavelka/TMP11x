@@ -25,6 +25,11 @@ Inspect TMP116/TMP117/TMP119 conversion/averaging tables, start-up EEPROM latenc
 - Define startup invalidity `0x8000` until first completed conversion and what information proves completion. Preserve raw numeric representation independent of valid sample state.
 - Create independent temperature/count, threshold and timing test vectors with negative limits, sign/rounding, reset state and repeated reads.
 
+- Specify block accumulation, not a moving average: TEMP/DATA_READY update only when the full block completes. Test nonoverlapping blocks and shutdown during a partial block; do not invent the chip's internal rounding if not specified. Preserve all 32 CONV×AVG table entries separately from derived timing bounds.
+- Maintain an explicit UNKNOWN list for same-value CONFIG writes, AVG/CONV changes mid-block, shutdown status retention, exact read-clear edge and TEMP byte latching during a conversion update. A two-byte transaction does not prove an undocumented latch. Define conservative profile/freshness policy and an evidence gate for stronger continuous-read coherence claims; do not invent a double-read workaround.
+- Document non-atomic multi-register application and the unresolved offset-to-limit-comparator ordering on TMP117/119. Use the per-chip coverage notes; a self-authored fake cannot settle either question.
+- Separate the 20–40 ms hardware serial-interface timeout (35 ms typical prose, line-held/no-clock condition) from conversion duration, callback timeout and whole-operation deadline. It is not a universal maximum total transfer length.
+
 ## Verification and exit criteria
 
 Review timing/wait start events with a second agent where possible. Validate each literal against TI source; no assumptions from old TMP1x2 conversion-rate enums.

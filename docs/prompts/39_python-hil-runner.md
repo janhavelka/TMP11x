@@ -19,6 +19,8 @@ Study TMP1x2 `tools/hil_tmp1x2_runner.py` and parser/unit tests, OPT4001 and LDC
 - Record exact raw transcript, structured JSON summary, input environment/firmware git identity, document revision, suite counts, PASS/FAIL/SKIP/NOT RUN and restoration outcome; no synthetic serial printout may be marked physical PASS. Persist the baseline before the first trial write, distinguish primary and restoration outcomes, and report a reboot or transport loss as loss of session continuity. Never blindly replay a saved baseline to an unconfirmed replacement device.
 - Provide a dry-run plan that opens no port, unit tests for runner parser/record integrity, and a compiled fake CLI integration harness for full protocol exercise.
 
+- Make campaigns identify the exact model/package/firmware and applicable R/F evidence rows. Record bus speed, supply, ADD0 and ALERT wiring, actual AVG/cycle/offset/limits and restoration scope. Recipes for new latch/re-arm, averaging and saturation/coherence questions must separate observed results from unresolved silicon claims and never silently enable excluded operations.
+
 ## Verification and exit criteria
 
 Test interrupted sessions, nonce mismatch, malformed values, missing verification, restore failure, false-positive PASS string, bounded soak termination and no fixture behavior. Mark actual hardware NOT RUN when absent.

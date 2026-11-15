@@ -19,6 +19,9 @@ Recheck TMP1x2 `CMakeLists.txt`, `library.json`, `idf_component.yml`, version ge
 - Add strict meaningful public Doxygen, user/architecture/variant/config/freshness/EEPROM/CLI/HIL/IDF/Arduino integration, troubleshooting and test documentation. Separate documented/implemented/native-tested/MCU-built/physical-verified capability rows.
 - Prove a sample application can simultaneously use TMP1x2 and TMP11x from independent pinned packages; it may fetch/install the explicitly declared TMP1x2 dependency but must not require the local sibling checkout. Demonstrate each typed model separately from physical qualification. Keep TMP1x2 optional and absent from TMP11x's exported dependency graph.
 
+- Publish the board/precision guide and exact-grade/package matrix required by F01–F04/F16–F17. Include voltage/temperature/accuracy-test conditions, bus timing/timeout/pulls, ADD0, decoupling, thermal response/strain/self-heating and part-specific thermal-pad recommendations. Distinguish typical current curves from guaranteed operating limits.
+- Document all included R/F and excluded X rows, reset-content conflicts and source-unknown semantics. Headline sensor accuracy, NIST words and a hardware offset never establish system certification or calibrated application accuracy.
+
 ## Verification and exit criteria
 
 Run clean install/extract and relocation consumers, core tests ON/OFF, Doxygen check, version freshness, package inventory/notice validation and full firmware links where available; record command and exact evidence.

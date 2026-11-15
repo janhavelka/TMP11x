@@ -19,6 +19,9 @@ Compare TI cycle and averaging timing tables for TMP116/TMP117/TMP119; inspect O
 - Report configured/estimated period and latency, not a measured actual update rate. There is no exposed sample counter. The CC cycle is active conversion plus standby; when averaging exceeds the selected cycle, standby is zero. OS has no standby and CONV does not affect its duration (TMP116 pp.12-14,27; TMP117 pp.14-15,28; TMP119 pp.16-17,35).
 - Ensure timing values reflect maximum needed for averaged result, not an optimistic single ADC sub-conversion.
 
+- Exercise all 32 CONV×AVG pairs using independent nominal table literals and separately labelled derived bounds. Model nonoverlapping accumulation blocks; intermediate ADC sub-conversions do not publish TEMP or DATA_READY, and shutdown abort does not manufacture a final averaged sample.
+- Reuse stage 6's explicit unknowns for same-value and in-flight CONFIG changes. A conservative new-profile acquisition policy is library behavior, not a claim that silicon always restarts or preserves averaging on those writes. Document current/noise/latency tradeoffs without promising the headline accuracy/current under every setting.
+
 ## Verification and exit criteria
 
 Test all legal mode/cycle/average combinations and bounds, false early readiness, correct mode after changing settings and unchanged bus state on invalid requests.

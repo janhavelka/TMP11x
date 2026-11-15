@@ -47,6 +47,11 @@ Preparatory evidence may be reused later after checking its hashes/revisions.
 - Apply the selected model's capability gates on all paths, including raw,
   diagnostic, CLI and cooperative routes; TMP116 `0x07` is EEPROM3, while
   TMP117/TMP119 `0x07` is temperature offset.
+- Reconcile affected R/F/X rows in FULL_COVERAGE, including deliberate
+  exclusions and application-owned electrical/thermal requirements. Unknown
+  silicon behavior is an evidence obligation, not permission to invent a
+  simulator rule. Full profile trust/recovery includes limits and supported
+  offset as well as stable CONFIG fields.
 - Use meaningful public Doxygen and readable source comments. Keep README,
   CHANGELOG, feature matrix, architecture, example guides and tests current.
 

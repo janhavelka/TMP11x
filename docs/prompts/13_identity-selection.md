@@ -19,6 +19,8 @@ Check exact TI ID sections, documented revision fields, TMP119 contradictory def
 - Ensure `probe` is a diagnostics operation with explicit health side effects (or lack thereof) and that discovery never mutates hardware.
 - Provide tests for known 0x1116, 0x0117, 0x2117 examples, alternate 117-family revision nibble, wrong full TMP116 ID and same-bus unrelated responders. The selected model gates capabilities after compatible-family validation; a compatible numeric response is not unique proof of physical part identity.
 
+- Add named TMP114 and TMP118 negative responders from the [exclusion audit](../reference/extracted/excluded-families-audit.md). A mismatch at 0x0F terminates validation without data writes, alternate ID scans or the TMP118 UID unlock-like write procedure. Their different ID pointers/bit layouts must not be accepted as related revisions. If unrelated hardware happens to return compatible data, retain the documented family-confidence limitation.
+
 ## Verification and exit criteria
 
 A strong independent reviewer challenges any claim that raw 0x2117 proves actual TMP119; source contradiction is retained in docs.

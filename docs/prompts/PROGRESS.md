@@ -6,7 +6,8 @@
 **Preparation input HEAD:** `6c5e4496d5c896af689228d4bee4382a53c20626` (clean and synchronized at entry).
 **Hardware:** Physical TMP11x board and test wiring NOT CONFIRMED.
 **Last completed stage:** 3 (intake scope clarified by the full promptset audit).
-**Last update:** 2026-11-15; see [full promptset audit](../reports/promptset-audit.md).
+**Last update:** 2026-11-15; see [full promptset audit](../reports/promptset-audit.md)
+and [datasheet/functionality gap audit](../reports/feature-gap-audit.md).
 
 | Stage range | Objective | Current state and evidence |
 |---|---|---|
@@ -27,6 +28,11 @@ integrity and relevant source revisions. Optional inaccessible TI source code
 does not gate datasheet research. Stage 6 retains the unreadable E2E DATA_READY
 race lead and stage 4 the exact-grade scope question. Do not infer implemented
 chip support or physical qualification from this audit.
+The subsequent completeness audit adds full per-chip source inventories and
+46 mandatory register/behavior/exclusion rows, with focused additions to
+32 prompts. These are stronger future stage obligations, not completion of
+stages 4–7 or a sensor implementation. Stage 25 now explicitly depends on
+stage 23 for nonfactory offset reset/recovery tests.
 
 The [report index](../reports/index.md) separates completed preparation from
 stage-owned evidence. Final commit/upstream synchronization is recorded in the

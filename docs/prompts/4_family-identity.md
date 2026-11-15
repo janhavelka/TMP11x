@@ -23,6 +23,10 @@ Compare exact part datasheets' feature/pin/accuracy/address/ID sections; especia
 - Design narrow capabilities (offset supported, EEPROM word count, identity mask, any reset differences); keep one implementation where binary behavior matches. No generic inheritance or unrelated TMP11x parts.
 - Document unsupported TMP114/TMP118/TMP112/TMP1075 reasons, addressing and safety of coexistence on a shared I2C bus.
 
+- Close the source/documentation portion of F01/F02/F16/F17 in [FULL_COVERAGE](FULL_COVERAGE.md), leaving later implementation/adapter/HIL evidence open: a concrete exact-grade/package matrix must separate code range, recommended conditions, specified accuracy range, orderable operating range, supply limits and accuracy test conditions. In particular, retain TMP116's +150 versus +125 °C source conflict and TMP117M's pinned 0–85 °C orderable range. Check current ordering sources if making a current availability claim; dated addenda are not live inventory.
+- Record ADD0 GND/V+/SDA/SCL → 0x48/49/4A/4B, package pinouts and open-drain ALERT. Include supply/temperature restrictions, averaging/cycle and near-rail input conditions where specified, plus package-specific thermal-pad guidance. Accuracy grades remain BOM metadata.
+- Use the [excluded-family inventory](../reference/extracted/excluded-families-audit.md) to record TMP114's different map/CRC/auto-increment and TMP118's reversed limits, CONFIG fields, ID and mutating UID procedure. No probing another family's UID or configuration to disambiguate a 0x0F response.
+
 ## Verification and exit criteria
 
 Cross-check each capability/ID row against exact PDF tables. A small variant-identity decision table and invalid/ambiguous observation examples must exist before implementation.

@@ -19,6 +19,8 @@ Compare TI timing/data-ready/one-shot sections and TMP1x2 `startRead` job state 
 - Support other sensor instances using the same bus between polling turns, without holding locks or assuming pointer persistence.
 - Reject or preserve uncertain freshness after outside configuration reads, raw diagnostic interference, missed event or reset.
 
+- Carry stage 6/21's accumulated-average, aborted-partial-block and TEMP coherence qualifications into cooperative results. Changes to limits/offset/settings use the shared profile-generation policy; no accepted job may relabel an earlier sample under a new profile or resolve unknown silicon semantics via a fake.
+
 ## Verification and exit criteria
 
 Test interleaved two-sensor fake transport, one transfer per poll, 32-bit wrap, invalid/no clock, same temperature consecutive one-shots, missed ready and late successful read not published as timely result.

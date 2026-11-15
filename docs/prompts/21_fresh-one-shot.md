@@ -21,6 +21,9 @@ Read TI data-ready clearing, one-shot trigger and timing sequences. Check OPT400
 - Distinguish a documented finite work/poll cap from the clock deadline; repeated reads of one millisecond tick are normal, not proof of a stalled clock. Exhausting the work cap is an explicit failure, never fabricated conversion completion.
 - Explicitly model simultaneous diagnostics, one-shot trigger, shutdown, averaging change and bus access failures.
 
+- State the TEMP-word coherence evidence boundary from F08: combined word transfer is required, but continuous-update byte latching is not explicitly documented. Assess a completed owned one-shot's stable shutdown result separately. Tests may explore update/read interleavings, but must not certify an invented latch or silently add rereads/retries.
+- Cover aborted partial averages and stale retained TEMP after shutdown or profile change. Do not assume shutdown clears all old status; the owned acquisition sequence must establish its own baseline.
+
 ## Verification and exit criteria
 
 Native fake-sensor tests exercise pre-trigger stale ready, ready cleared by

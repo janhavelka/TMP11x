@@ -13,6 +13,13 @@ must detect short transfers and map them to errors. The core cannot detect a
 short transfer falsely reported as success. An opaque user context may be null
 when the callback does not need it; required callback pointers may not be null.
 
+Selected devices specify 1–400 kHz I2C, no sensor SCL drive, and a 20–40 ms
+hardware serial timeout (35 ms typical prose) under documented line-held/no-clock
+conditions. This is separate from callback/operation deadlines and does not
+limit total multi-transfer job duration. The application configures the bus;
+the core cannot infer electrical compliance. Always write an explicit valid
+pointer and read one word; no assumed auto-increment, pointer sharing or CRC.
+
 One application task serializes all stateful driver API access; for multiple
 instances on a mux, establish target route before every physical callback.
 The library does not save a mux channel or global I2C owner. The application
@@ -35,6 +42,10 @@ Distinguish desired settings, observed settings, hardware trust, physical I2C
 outcome and fresh measurement. A failed mutating transfer may have committed
 fully or partly. Latch dirty state until verified reapplication after checking
 EEPROM lock/busy. A successful transport callback does not imply config match.
+The desired profile contains stable CONFIG fields, both limits and supported
+offset. Replay/readback must cover every owned field. Separate register writes
+are not atomic; describe intermediate comparator states and partial failures,
+and do not promise glitch-free paired limits or rollback.
 
 ## Conversion and freshness
 
@@ -58,12 +69,25 @@ after TEMP transfer is an observation time, not the exact conversion instant.
 DATA_READY is one bit, not a conversion counter: missed updates cannot be counted
 from that bit or repeated temperatures.
 
+Averaging is accumulated in nonoverlapping blocks, not a moving average.
+The pinned datasheets do not explicitly define same-value CONFIG restart,
+mid-average setting changes, shutdown flag retention or TEMP latching across
+a simultaneous two-byte read/update. Preserve these unknowns and distinguish
+conservative invalidation/acquisition policy from silicon claims. Combined
+transfers do not prove an undocumented word latch; a stable owned one-shot
+result has different evidence from a continuously updating register.
+
 Alert high/low flags and temperature window/therm behavior are documented
 mode-specifically: CONFIG reads clear latched alert-mode HIGH/LOW flags;
 therm-mode HIGH follows the high-limit/hysteresis conditions and LOW is zero.
 TEMP reads clear DATA_READY, not comparator flags. ALERT pin state only
 reflects application-owned GPIO observation and is not equivalent to a
 latched driver event. Raw diagnostics must mark possible loss of status history.
+An alert-mode flag remains latched when temperature returns in range; after
+CONFIG acknowledgement the next out-of-range conversion can reassert it.
+Active-high ALERT still uses an open-drain pin. Offset affects the reported
+TEMP result with saturation, but the exact offset/comparator ordering requires
+further evidence; do not certify it through a self-authored simulator.
 
 ## EEPROM safety and reset
 

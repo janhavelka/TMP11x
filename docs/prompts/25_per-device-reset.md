@@ -1,7 +1,7 @@
 # 25 — Implement supported per-device reset and invalidation safely
 
 Apply [COMMON.md](COMMON.md) and root [AGENTS.md](../../AGENTS.md). Phase: **Features, safe measurements and diagnostics**. Type: **software**.
-Prerequisites: [5](5_register-ledger.md), [7](7_eeprom-reset-policy.md), [9](9_owner-deadline-contract.md), [14](14_binding-lifecycle.md), [18](18_safe-initialize.md), [19](19_config-trust.md), [21](21_fresh-one-shot.md).
+Prerequisites: [5](5_register-ledger.md), [7](7_eeprom-reset-policy.md), [9](9_owner-deadline-contract.md), [14](14_binding-lifecycle.md), [18](18_safe-initialize.md), [19](19_config-trust.md), [21](21_fresh-one-shot.md), [23](23_offset-feature.md).
 
 ## Objective and boundaries
 
@@ -23,6 +23,8 @@ handling, not its bus-wide reset implementation.
 - The sensor reloads its EEPROM-backed state; software must not assume factory defaults or write them back as reset proof. Honor the documented 2-ms reset interval before readiness/readback checks, using stage 6's explicit timing policy. A cleared Soft_Reset bit is not completion evidence because it always reads zero. Reapply desired volatile settings only when the caller explicitly selected that behavior.
 - Never use I2C general-call address 0x00, global reset from TMP1x2 or TCA9548A RESET as a shortcut. No reset in begin()/recover() without explicit caller request.
 - Include reset decision in device ledger and per-variant capability matrix.
+
+- Test reset/recovery with nonfactory EEPROM-loaded CONFIG, limits and supported offset/shadows. Reload only the documented persistent CONFIG subset, never MOD1/one-shot or status flags as stored settings. A reset reload is not a factory erase; verify recovery reapplies the whole desired volatile profile.
 
 ## Verification and exit criteria
 

@@ -19,6 +19,9 @@ Read TI EEPROM unlock, programming, busy, factory data and general-call reset se
 - Separate optional individually addressed soft reset from forbidden general-call reset. An unresolved RESET register semantics creates a specific blocked reset capability rather than an invented API.
 - Define explicit `UNSUPPORTED`/`EEPROM_UNSAFE` or equivalent errors for incompatible requests. This sequence contains no EEPROM-programming or destructive hardware campaign, including on sacrificial fixtures; such future maintenance work needs a separate user request and policy.
 
+- Give every excluded hardware function an explicit disposition using X01–X08 in [FULL_COVERAGE](FULL_COVERAGE.md). Include ARA arbitration/acknowledgement and synchronized conversions via programmed startup plus general-call reset; neither becomes an API or CLI operation.
+- Describe externally initiated ARA, general-call reset, power cycle and writes as interference with status/configuration assumptions. Invalidate affected evidence when such interference is known; do not promise detection of every outside action. NVM endurance/program timing and factory traceability remain documented hardware facts, not delivered library functionality.
+
 ## Verification and exit criteria
 
 Adversarial review checks every path capable of a mutating I2C transaction; confirm no normal path reaches EUN or general-call address `0x00`. Record any incompatible TI source footnotes.

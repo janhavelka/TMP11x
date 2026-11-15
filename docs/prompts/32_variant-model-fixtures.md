@@ -23,6 +23,10 @@ Inspect the direct production code against original register/behavior ledger. Dr
 - Introduce common operation fixtures run for all families plus model-specific tests. Test misleading same-address unrelated devices and mux-target context switching.
 - Keep the simulator separate from production paths and document the constraints it cannot prove about real silicon.
 
+- Add independent block-average stimuli, partial-average abort, all 32 timing pairs, all eight alert routing combinations, latch re-arm and positive/negative offset-saturation observations. Use integral-average stimuli when chip rounding is unspecified. Test nonfactory persisted CONFIG/limits/offset and MOD1's nonpersistent reset behavior.
+- Add named TMP114/TMP118 mismatch fixtures from the exclusion audit, with no fallback ID/UID probe or data write. Exercise holes and invalid pointer upper bits without aliasing.
+- Treat undocumented same-write restart, partial-word commit, shutdown flags, byte coherence and offset/comparator ordering as uncertainty cases, not a fixed simulator truth. Use adverse possible outcomes where meaningful and record assumptions; stronger hardware claims require independent evidence.
+
 ## Verification and exit criteria
 
 Verify model fixtures are not near-copies of implementation codecs; use manually derived literal bytes/masks and deliberately wrong vectors as negative controls.

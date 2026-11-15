@@ -6,6 +6,9 @@ all fields and ambiguities. The datasheet, with exact revision/footnotes,
 prevails over this secondary note.
 The [promptset audit](../reports/promptset-audit.md) records corrections to
 these seeds. Page numbers here refer to the pinned manifest revisions.
+The subsequent [feature-gap audit](../reports/feature-gap-audit.md) and
+[coverage inventory](FULL_COVERAGE.md) add complete register/function
+dispositions, source unknowns and electrical/grade requirements.
 
 ## Included and excluded parts
 
@@ -59,6 +62,10 @@ pin function`, `[1:0] part-specific/reserved/reset behavior`. Datasheets show
 MOD=10 is a legal continuous-mode encoding and reads back MOD=00; it is not
 reserved. TMP116 bits 1:0 are reserved. TMP117/TMP119 bit 1 commands software
 reset and always reads zero; ordinary setting writes must never set it.
+CONFIG bit11 MOD1 is explicitly not EEPROM-stored; bit10 MOD0 and bits9:2
+are persistent-capable hardware fields. First-release software does not
+program any of them into NVM. Factory CONFIG is not a whole-word persisted
+image of status, commands and settings.
 Sources: TMP116 p.26; TMP117 pp.27–28; TMP119 pp.34–35.
 
 TEMP is signed 16-bit, 1/128 °C per LSB, MSB first. `0x0C80` = +25 °C,
@@ -101,6 +108,36 @@ prove freshness or erase evidence without surfacing the side effect.
 - TMP117 p.28 Table 7-6 and TMP119 p.35 Table 8-5 define a 2 ms per-device
   software reset. TMP116 has no documented equivalent CONFIG reset command;
   its general-call reset remains intentionally excluded.
+
+## Additional completeness-audit findings
+
+The per-chip coverage notes linked from FULL_COVERAGE retain detailed pages,
+grade tables and full hardware inventories. These are mandatory inputs to
+stages 4–7, not new implemented capabilities:
+
+| Finding | Source and bounded interpretation |
+|---|---|
+| TMP116 temperature-range discrepancy | SBOS740A p.4 recommended conditions say −55..150 °C; p.5 electrical conditions, p.10 specified operation and pinned orderables p.43 say −55..125 °C. Preserve both; do not advertise +150 °C accuracy. |
+| TMP117M exact grade range | SNOSD82D p.46 pinned orderables specify 0..85 °C. Other grades' wider ranges and shared encoding do not extend this grade's guarantee. |
+| Supply and accuracy conditions | TMP117 pp.5–6 / TMP119 pp.6–7 qualify 1.7 V through 70 °C and 1.8 V for the wider range; accuracy conditions include eight averages, 1-Hz cycle and near-rail digital inputs. TMP117 DRV accuracy additionally specifies an unsoldered thermal pad. TMP116 has its own supply/grade/assembly conditions. |
+| TMP116 EEPROM defaults | p.24 map says all four words 0000; detailed pp.29–31 say EEPROM1/2/4 unknown, EEPROM3 zero, while factory-data prose describes unique contents. No zero/nonzero serial validity rule is justified. |
+| TMP117/TMP119 EEPROM2 reset | TMP117 p.31 / TMP119 p.38 heading says 0000, but their field tables and maps say unknown. Preserve arbitrary observed contents. |
+| TMP119 accuracy summary | p.4 comparison table disagrees with exact §6.5 p.7 (e.g. 85 °C and −40 °C limits). Use exact applicable electrical conditions and retain the summary discrepancy. |
+| Current and speed summaries | TMP117 p.14 / TMP119 p.17 say 250 nA shutdown versus electrical rows 150 nA typical under stated conditions. TMP119 p.11's 1-MHz characterization curve does not override its 400-kHz protocol specification. |
+| TMP116 ALERT wiring | p.32 functional circuit uses pullup/MCU input, but final prose recommends grounding without an unused qualifier; p.36 unused ALERT is unconnected. Do not ground a used interrupt pin or conceal the ambiguity. |
+
+All included devices specify I2C 1–400 kHz, a 20–40 ms hardware serial timeout
+(35 ms typical under documented held-line/no-clock conditions), and no slave
+SCL drive. The timeout resets the interface, not the complete sensor or desired
+profile; software deadlines remain independent. ADD0 maps GND/V+/SDA/SCL to
+0x48/49/4A/4B. Use explicit one-word pointers and no assumed auto-increment.
+
+The datasheets do not explicitly settle same-value CONFIG restarts, mid-block
+AVG/CONV updates, shutdown flag retention, partial-word commits or TEMP
+byte-latching during updates. TMP117/119's offset/comparator order is also
+not explicitly proven by the offset-register text. Record conservative library
+policy, uncertain claims and required evidence separately. Do not invent a
+simulator behavior or repeated-read workaround and label it a datasheet fact.
 
 Authoritative documents:
 https://www.ti.com/lit/ds/symlink/tmp116.pdf

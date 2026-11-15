@@ -19,6 +19,8 @@ Discover relevant current `FieldCore-node` I2C owner/consumer code read-only; in
 - A physical P4 board is not required for a full firmware link. If the SDK/toolchain is unavailable, run the portable consumer and record blocked firmware commands/requirements separately from missing hardware. Avoid adding P4-only source files to mandatory core targets.
 - Document the board-supplied inputs needed for reuse, without inventing pin mapping, shared-address routing, processor identity or prototype availability.
 
+- Verify the shared-bus owner preserves each selected sensor's1–400 kHz and electrical/timeout constraints across mux routes and other device transfers. Document address/strap collisions and per-device limits; sequential one-shots do not prove broadcast-synchronized sampling, whose general-call/EEPROM recipe remains excluded.
+
 ## Verification and exit criteria
 
 Run actual P4 firmware full link when supported; compare build artifacts and exact target. Independently run portable shared-I2C consumer. Hardware remains NOT RUN unless an actual authorized P4 fixture is present.

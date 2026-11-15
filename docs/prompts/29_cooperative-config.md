@@ -19,6 +19,8 @@ Inspect TMP1x2 `stepApply`, `poll`, `begin` synchronous state engine and tests. 
 - Enforce callback timeouts against the remaining whole-operation budget and reobserve authoritative time after callbacks under stage 9's contract. Record possible effects even when a physically successful write completes after the operation deadline; logical timeout must not rewrite transport health.
 - Keep reset and EEPROM writes excluded from all normal job paths. A partially applied desired profile remains explicitly dirty until verified replay.
 
+- Apply and verify the full profile: stable CONFIG, THIGH, TLOW and supported OFFSET. Preserve TMP116's 0x07 refusal. Inject cancellation/error after each write/readback with nondefault limits/offset; recovery must not silently restore only CONFIG or forget the staged target. Apply ordering and possible intermediate comparator states match the synchronous contract.
+
 ## Verification and exit criteria
 
 Fault-injection tests cover every phase, late/failed writes, unchanged clock, `maxTransfers=0/1/large`, cancellation timing, CPU-only step transitions and exact callback upper bounds.

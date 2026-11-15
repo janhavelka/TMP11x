@@ -19,6 +19,8 @@ Audit TMP1x2 `readTemperature`, `readBlocking`, getters/cached sample, settings 
 - Test initialization, limits, offset and read through public API on TMP117, TMP116 and TMP119 fixtures. Offset on TMP116 must reject before I2C. Setting an offset is not a complete calibration procedure or certified accuracy evidence; do not add an unplanned calibration API.
 - Provide a minimal framework-neutral C++ consumer file that uses injected callbacks; no CLI/Arduino dependencies.
 
+- Reconcile every included register/feature row in [FULL_COVERAGE](FULL_COVERAGE.md) against the actual public API and snapshots. Verify full-profile settings/limits/offset replay, explicit readback validity and absence of accidental raw-only features. Record the later job/CLI owner for each appropriate operation and justified not-applicable routes.
+
 ## Verification and exit criteria
 
 Run native public API and compile consumers with all supported models, no callback/clock cases, and complete test registration. Update Doxygen for all public entry points.

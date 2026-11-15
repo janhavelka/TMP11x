@@ -19,6 +19,10 @@ Adapt TMP1x2 callback signatures and physical read/write helpers, its sensor tra
 - Normalize callback `IN_PROGRESS`/incoherent return without mislabeling NACK phase. Preserve diagnostic `detail`, and do not publish output arguments after failed/incomplete reads. If the frozen callback returns only Status, the adapter owns byte-count validation and must return an error on a short transfer; core cannot detect a dishonest OK with a short buffer fill. Do not use sentinel bytes as a substitute for transferred-length reporting.
 - Register native fake-bus tests for byte ordering, one combined-read callback, adapter-reported short-transfer failure, address vs data NACK, timeout, stale caller buffer and shared-bus ownership. Real repeated-START/electrical behavior is an adapter/HIL gate; a core fake cannot prove it on hardware.
 
+- Implement F02–F04/R18 from [FULL_COVERAGE](FULL_COVERAGE.md): validate all four 7-bit addresses and reject shifted 8-bit forms, holes and nonzero pointer upper bits without aliasing. Supply an explicit pointer on every access even though the chip retains it; do not assume auto-increment or burst across EEPROM words.
+- Document physical read framing: ACK the first data byte, NACK the last, then STOP; the chip never drives SCL. All selected parts specify 1–400 kHz and a 20–40 ms held-line/no-clock interface timeout (35 ms typical). STOP resets interface state, not an assumed register-pointer reset. Core byte tests and adapter/electrical proof remain distinct.
+- Test all address/pointer boundary cases and terminal adapter errors after partial transfer. Unknown partial-word commit/byte-latching behavior must not turn an ambiguous error into a known unchanged sensor state.
+
 ## Verification and exit criteria
 
 Run focused register transport suite and framework-free source consumer. Inspect captured expected I2C bytes, not merely converted temperature values.
