@@ -1,6 +1,6 @@
 # TMP116 / TMP116N complete coverage audit
 
-Reviewed 2026-11-15 against the pinned [TMP116 PDF](../source/tmp116.pdf),
+Reviewed 2026-11-15 against the pinned [TMP116 PDF](../source/TMP116-Digital-Temperature-Sensor-Datasheet-SBOS740A.pdf),
 SBOS740A (May 2019 body), SHA-256
 `93cd03c207c2871918ef9341a4baf189e2c0ea9a795673a7011e367c4e75c1c0`.
 Page numbers are one-based PDF pages. All 47 pages were inspected as text;

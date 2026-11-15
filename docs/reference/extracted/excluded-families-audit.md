@@ -1,8 +1,8 @@
 # TMP114 and TMP118 exclusion coverage
 
 Audit date: 2026-11-15; promptset baseline `8d2ffe3`. Sources are pinned
-[TMP114 SNIS214E, July 2023](../source/tmp114.pdf), manifest ID `tmp114`,
-and [TMP118 SNIS237A, April 2025](../source/tmp118.pdf), ID `tmp118`.
+[TMP114 SNIS214E, July 2023](../source/TMP114-Digital-Temperature-Sensor-Datasheet-SNIS214E.pdf), manifest ID `tmp114`,
+and [TMP118 SNIS237A, April 2025](../source/TMP118-Digital-Temperature-Sensor-Datasheet-SNIS237A.pdf), ID `tmp118`.
 Page numbers are one-based PDF pages and match printed body pages.
 Register/protocol/feature sections were read; original map/CONFIG table
 images were checked on TMP114 pp.29,32 and TMP118 pp.26–27. These families

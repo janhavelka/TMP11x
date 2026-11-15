@@ -1,7 +1,7 @@
 # TMP119 datasheet coverage audit
 
 Audit date: 2026-11-15. Baseline: promptset commit `8d2ffe3`.
-Source: pinned [TMP119 SNIS236, January 2024](../source/tmp119.pdf),
+Source: pinned [TMP119 SNIS236, January 2024](../source/TMP119-Digital-Temperature-Sensor-Datasheet-SNIS236.pdf),
 manifest ID `tmp119`, SHA-256
 `7eabaeda3a51298768e188bfefafbdb8e8ae1f20200019c5fbb654d977adaa30`.
 Page numbers below are one-based PDF pages; body pages match printed pages.

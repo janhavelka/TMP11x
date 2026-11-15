@@ -1,13 +1,13 @@
 # TMP117/M/N complete source coverage audit
 
 Audit scope: promptset coverage only; no driver or physical qualification is
-claimed. All 50 pages of the pinned `tmp117.pdf` were read, including revision
+claimed. All 50 pages of the pinned `TMP117-Digital-Temperature-Sensor-Datasheet-SNOSD82D.pdf` were read, including revision
 history, electrical footnotes, interface diagrams, register descriptions,
 applications, packaging and notices. Compared prompts 4–7 and 11–33, shared
 SILICON/FULL_COVERAGE/EVIDENCE contracts, and integration/qualification prompts
 34–35 and 40–42. Baseline: `8d2ffe385f061575f4fa5402060ef63d2deaa579`.
 
-Source: [TI SNOSD82D](../source/tmp117.pdf), June 2018, revised September 2022,
+Source: [TI SNOSD82D](../source/TMP117-Digital-Temperature-Sensor-Datasheet-SNOSD82D.pdf), June 2018, revised September 2022,
 SHA-256 `78212e91e478035a91165397a8de8a90bfc776759dc445243c033537f0c4b789`.
 The pinned PDF additionally contains a package-option addendum dated
 30 September 2026 and packing data dated 23 October 2026; these are distinct

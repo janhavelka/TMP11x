@@ -4,21 +4,27 @@ Acquired from Texas Instruments on **2026-11-15**. The archive contains five
 exact-part datasheets and nine supporting application/EVM documents. It is
 development evidence, not implemented sensor support or hardware qualification.
 
+PDF filenames start with the chip or subject, state the document type, and end
+with the TI document number including its revision. For example,
+`TMP117-Digital-Temperature-Sensor-Datasheet-SNOSD82D.pdf` is distinct from
+`TMP117-Evaluation-Module-Quick-Start-Guide-SNOU163.pdf`. Manifest IDs used by
+the fetcher, such as `tmp117`, remain stable when a local filename changes.
+
 | Source | Document revision | Purpose |
 |---|---|---|
-| [TMP117](source/tmp117.pdf) | SNOSD82D, September 2022 | First implementation and intended PCB model; includes M/N grades |
-| [TMP116](source/tmp116.pdf) | SBOS740A, May 2019 | TMP116/TMP116N capability comparison |
-| [TMP119](source/tmp119.pdf) | SNIS236, January 2024 | TMP119 capability comparison |
-| [TMP114](source/tmp114.pdf) | SNIS214E, July 2023 | Excluded family comparison |
-| [TMP118](source/tmp118.pdf) | SNIS237A, April 2025 | Excluded family comparison |
-| [TMP116 EVM guide](source/snou145a-tmp116evm.pdf) | SNOU145A | Fixture wiring and board reference |
-| [TMP117 EVM guide](source/snou161-tmp117evm.pdf), [quick start](source/snou163-tmp117evm-quickstart.pdf) | SNOU161 / SNOU163 | Fixture wiring and evaluation workflow |
-| [TMP119 EVM guide](source/snou199-tmp119evm.pdf) | SNOU199 | Fixture wiring and board reference |
-| [Precise measurements](source/snoa986a-precise-temperature.pdf) | SNOA986A | Measurement setup |
-| [Output data](source/sbaa588a-output-data.pdf) | SBAA588A | Digital output interpretation |
-| [PCB thermal resistance](source/snoaa47a-pcb-thermal-resistance.pdf) | SNOAA47A | Thermal design context |
-| [NIST traceability](source/sbat024-nist-traceability.pdf) | SBAT024 | Traceability context |
-| [Alert systems](source/sdaa311-alert-systems.pdf) | SDAA311, June 2026 | Alert design context |
+| [TMP117](source/TMP117-Digital-Temperature-Sensor-Datasheet-SNOSD82D.pdf) | SNOSD82D, September 2022 | First implementation and intended PCB model; includes M/N grades |
+| [TMP116](source/TMP116-Digital-Temperature-Sensor-Datasheet-SBOS740A.pdf) | SBOS740A, May 2019 | TMP116/TMP116N capability comparison |
+| [TMP119](source/TMP119-Digital-Temperature-Sensor-Datasheet-SNIS236.pdf) | SNIS236, January 2024 | TMP119 capability comparison |
+| [TMP114](source/TMP114-Digital-Temperature-Sensor-Datasheet-SNIS214E.pdf) | SNIS214E, July 2023 | Excluded family comparison |
+| [TMP118](source/TMP118-Digital-Temperature-Sensor-Datasheet-SNIS237A.pdf) | SNIS237A, April 2025 | Excluded family comparison |
+| [TMP116 EVM guide](source/TMP116-Evaluation-Module-User-Guide-SNOU145A.pdf) | SNOU145A | Fixture wiring and board reference |
+| [TMP117 EVM guide](source/TMP117-Evaluation-Module-User-Guide-SNOU161.pdf), [quick start](source/TMP117-Evaluation-Module-Quick-Start-Guide-SNOU163.pdf) | SNOU161 / SNOU163 | Fixture wiring and evaluation workflow |
+| [TMP119 EVM guide](source/TMP119-Evaluation-Module-User-Guide-SNOU199.pdf) | SNOU199 | Fixture wiring and board reference |
+| [Precise measurements](source/TMP116-TMP117-Precise-Temperature-Measurements-Application-Note-SNOA986A.pdf) | SNOA986A | Measurement setup |
+| [Output data](source/Digital-Temperature-Sensor-Output-Data-Interpretation-Application-Note-SBAA588A.pdf) | SBAA588A | Digital output interpretation |
+| [PCB thermal resistance](source/PCB-Thermal-Resistance-for-High-Accuracy-Temperature-Sensors-Application-Note-SNOAA47A.pdf) | SNOAA47A | Thermal design context |
+| [NIST traceability](source/NIST-Traceability-for-Temperature-and-Humidity-Sensors-Overview-SBAT024.pdf) | SBAT024 | Traceability context |
+| [Alert systems](source/Overtemperature-and-Undertemperature-Alert-System-Design-Application-Note-SDAA311.pdf) | SDAA311, June 2026 | Alert design context |
 
 [manifest.json](manifest.json) records URLs, acquired bytes, SHA-256, revisions,
 page counts and visually reviewed pages. [Intake notes](extracted/intake-notes.md)

@@ -44,9 +44,9 @@ the listed commits, not inferred from an unpinned default branch.
 | Official source | Version/evidence | Availability and boundary |
 |---|---|---|
 | [TMP117 ASC Studio](https://dev.ti.com/sysconfig/index.html?module=%2Fti%2Fsensors%2Ftempsensor%2FTMP117&product=ascstudio) | Linked by the [TI product page](https://www.ti.com/product/TMP117); no immutable generated-code revision acquired | The app request timed out. Generated code and its license were not inspected; no adoption claim. |
-| [TMP117EVM software](https://www.ti.com/tool/TMP117EVM) | Product page lists GUI release August 23, 2024; [SNOU161](source/snou161-tmp117evm.pdf) documents evaluation | GUI is an evaluation reference; firmware source/commit/license not acquired. Downloaded the guide and quick start, not executable installers. |
-| [TMP116EVM TIDCDE4](https://www.ti.com/tool/download/TIDCDE4) | Product page lists `01.00.00.0B`, August 1, 2017; [SNOU145A](source/snou145a-tmp116evm.pdf) | TI download is export-approval gated. Not downloaded; license/source inspection remains open. |
-| [TMP119EVM](https://www.ti.com/tool/TMP119EVM) | [SNOU199](source/snou199-tmp119evm.pdf), December 2023 | Guide acquired. Firmware source/commit/license not acquired. |
+| [TMP117EVM software](https://www.ti.com/tool/TMP117EVM) | Product page lists GUI release August 23, 2024; [SNOU161](source/TMP117-Evaluation-Module-User-Guide-SNOU161.pdf) documents evaluation | GUI is an evaluation reference; firmware source/commit/license not acquired. Downloaded the guide and quick start, not executable installers. |
+| [TMP116EVM TIDCDE4](https://www.ti.com/tool/download/TIDCDE4) | Product page lists `01.00.00.0B`, August 1, 2017; [SNOU145A](source/TMP116-Evaluation-Module-User-Guide-SNOU145A.pdf) | TI download is export-approval gated. Not downloaded; license/source inspection remains open. |
+| [TMP119EVM](https://www.ti.com/tool/TMP119EVM) | [SNOU199](source/TMP119-Evaluation-Module-User-Guide-SNOU199.pdf), December 2023 | Guide acquired. Firmware source/commit/license not acquired. |
 
 Availability of a TI GUI or code generator is not permission to relicense its
 output. If later research needs TI software, record the exact release, original
