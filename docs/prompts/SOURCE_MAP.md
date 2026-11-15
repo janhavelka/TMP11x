@@ -1,8 +1,10 @@
 # Sibling source map — read-only GitHub references
 
 These are **review targets**, not downloaded files or claims of identical
-behavior. At execution, fetch current HEAD, compare with these paths and
-inspect implementations/callers/tests. For source ports, preserve LICENSE and
+behavior. The preparation [comparison](../library-comparison.md) and
+[toolchain audit](../toolchain-and-package-plan.md) record reviewed revisions.
+At execution, check remote HEAD and compare with the pinned source paths and
+implementations/callers/tests. For source ports, preserve LICENSE and
 attribution. A copy of a driver file without its semantics is not reuse.
 
 | Priority | GitHub repository and exact source locations | Adopt / adapt / reject |
@@ -37,7 +39,10 @@ HEAD state and working-tree changes cannot be inferred from an old hash.
 - `git ls-remote https://github.com/janhavelka/TMP1x2.git HEAD` checks public read;
   authenticated GitHub connector may be needed for private repositories.
 - Clone sibling repositories to a **temporary external directory**, never
-  inside `src/` or the published package. `git -C <sibling> rev-parse HEAD`.
+  inside `src/` or the published package, only if the needed revision is not
+  already available. Existing sibling worktrees remain read-only, including
+  their Git metadata: no fetch, checkout or pull there. Use `git ls-remote`
+  for the remote and `git -C <sibling> rev-parse HEAD`/`status` locally.
 - For borrowed MIT code: inspect the source LICENSE and header attribution,
   copy selected code only, adapt thoroughly, preserve original copyright,
   add local provenance in `docs/source-adoption.md` and test new behavior.

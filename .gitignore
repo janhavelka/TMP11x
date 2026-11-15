@@ -1,0 +1,17 @@
+.pio/
+.vscode/
+build*/
+__pycache__/
+*.py[cod]
+*.elf
+*.bin
+*.map
+sdkconfig
+sdkconfig.old
+sdkconfig.esp32*
+dependencies.lock
+managed_components/
+compile_commands.json
+hil_logs/
+# Local rendered review images; original PDFs and provenance are tracked.
+docs/reference/.review/

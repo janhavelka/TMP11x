@@ -1,5 +1,19 @@
 # Verification layers and required evidence
 
+Preparation checks available now (Python 3.10+):
+
+```sh
+python scripts/check_promptset.py
+python scripts/test_check_promptset.py
+python scripts/check_references.py
+python scripts/test_check_references.py
+git diff --check
+```
+
+These prove navigation/dependency consistency and pinned archive integrity,
+including corruption/no-overwrite behavior. They do not validate register
+interpretation or establish any of the implementation layers below.
+
 - **Native unit:** standalone CMake C++17 build and CTest with real registered
   assertions, fake I2C device model and fault injections. No Arduino/SDK.
 - **Core boundary:** include each public header in isolation; compile/link

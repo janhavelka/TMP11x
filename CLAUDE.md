@@ -1,6 +1,7 @@
-# Agent entry
+# CLAUDE.md
 
-Follow [AGENTS.md](AGENTS.md), [docs/prompts/START_HERE.md](docs/prompts/START_HERE.md),
-[docs/prompts/COMMON.md](docs/prompts/COMMON.md) and the active numbered prompt.
-The entire set can be executed in numeric order; do not mark a stage complete
-without its tests, documentation, report and actual Git sync state.
+[AGENTS.md](AGENTS.md) is the single source of project instructions; maintain
+them there. Use [the execution guide](docs/prompts/START_HERE.md) for the
+requested preparation, stage, or whole-sequence scope.
+
+@AGENTS.md

@@ -1,11 +1,11 @@
 # 1 — Audit current sensor-driver ownership and APIs
 
 Apply [COMMON.md](COMMON.md) and root [AGENTS.md](../../AGENTS.md). Phase: **Ecosystem inspection**. Type: **software**.
-Prerequisites: None — first implementation stage..
+Prerequisites: None — first evidence stage.
 
 ## Objective and boundaries
 
-Establish a source-verified map of the I2C driver conventions in my GitHub repositories before making new public declarations. This stage is read-only research except its navigation/report files; the new repository starts with this promptset only.
+Establish a source-verified map of the I2C driver conventions in my GitHub repositories before making new public declarations. This stage is read-only research except its navigation/report files. Reuse preparation audits after verifying their revisions and remaining obligations.
 
 ## Source audit
 

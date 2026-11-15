@@ -1,0 +1,6 @@
+* text=auto eol=lf
+*.cmd text eol=crlf
+*.pdf binary
+*.zip binary
+# Preserve acquired source bytes so manifest hashes survive checkout.
+docs/reference/source/** -text -diff

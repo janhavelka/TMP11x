@@ -9,6 +9,11 @@ Establish precise conversion scheduling and read-to-clear rules for all supporte
 
 ## Source audit
 
+Revisit the inaccessible TI E2E DATA_READY race lead recorded in the
+[intake notes](../reference/extracted/intake-notes.md). The thread title is
+not verified silicon behavior. Resolve any relevant race using accessible
+primary evidence and record remaining uncertainty before defining freshness.
+
 Inspect TMP116/TMP117/TMP119 conversion/averaging tables, start-up EEPROM latency, DATA_READY and ALERT mode descriptions. Compare TMP1x2 `docs/owner-operations.md`, OPT4001 ready/counter behavior and their test clocks; no TMP1x2 35-ms EM wait is reusable.
 
 ## Complete implementation work

@@ -9,6 +9,11 @@ Establish which devices can share one driver without conflating model names, sil
 
 ## Source audit
 
+Review the pinned [intake notes](../reference/extracted/intake-notes.md),
+including TMP119 page 7's TMP119M rows. Establish actual orderable grades and
+record any proposed scope change explicitly; do not silently add a model or
+infer an accuracy grade from revision bits.
+
 Compare exact part datasheets' feature/pin/accuracy/address/ID sections; especially TMP116 `0x1116`, TMP117 `0x0117` example, TMP119 `0x2117` device-ID section versus its register-map `0x0117` entry. Inspect Linux TMP116/TMP117/TMP119 support and confirm the upper nibble's revision semantics. Inspect TMP114 and TMP118 maps to establish exclusion.
 
 ## Complete implementation work

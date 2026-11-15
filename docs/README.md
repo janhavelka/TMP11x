@@ -1,7 +1,14 @@
 # TMP11x engineering documentation
 
-Start with [the executable promptset](prompts/README.md) and its
-[VS Code entry instructions](prompts/START_HERE.md). Exact source discovery
-and register research are owned by prompts 1–7; architecture, field notes,
-code reports and verified validation evidence are generated during later
-stages. This planning archive is not itself a TMP11x implementation.
+The project is in preparation; driver implementation has not started.
+
+- [Execution guide](prompts/START_HERE.md), [44-stage index](prompts/README.md),
+  and [current progress](prompts/PROGRESS.md)
+- [Preparation evidence](reports/preparation.md) and [report index](reports/index.md)
+- [Library comparison](library-comparison.md), [source adoption](source-adoption.md),
+  and [toolchain/package plan](toolchain-and-package-plan.md)
+- [Reference archive](reference/README.md) and [provenance manifest](reference/manifest.json)
+
+Stages 4?9 will establish the checked silicon ledger, timing and safety policy,
+and exact API contracts before production code begins in stage 10. Existing
+source downloads and audits are inputs, not proof of implemented chip support.

@@ -2,6 +2,10 @@
 
 ## Enter
 
+For a preparation/review request, use prompts 1–3 as the evidence checklist
+and stop at the requested scope. Do not silently start the whole sequence.
+Preparatory evidence may be reused later after checking its hashes/revisions.
+
 1. Read root AGENTS, active prompt, its prerequisites/reports and relevant
    [CONVENTIONS](CONVENTIONS.md), [ENGINEERING](ENGINEERING.md),
    [EVIDENCE](EVIDENCE.md), [SILICON](SILICON.md),
@@ -11,9 +15,13 @@
    verify actual prerequisite artifacts/tests. `NOT_STARTED`, `PARTIAL`,
    `BLOCKED`, `COMPLETE` refer to stage ownership, not product qualification.
 3. Recheck relevant `janhavelka` sibling repository HEAD/selected code and
-   the exact-part TI source. Record whether it changed since last stage;
-   do not repetitively read unrelated files. A secondary library's API name
-   alone does not establish semantic equivalence.
+   the exact-part TI source. Prefer existing clean local checkouts read-only;
+   inspect remote HEAD without fetching into sibling repositories. Use an
+   external clone if a different revision is needed. Record changed revisions
+   and dirty files; never cite uncommitted code as an immutable commit.
+   Verify acquired PDFs with `python scripts/check_references.py`; do not
+   overwrite pinned bytes when a TI symlink publishes a newer revision.
+   A secondary library's API name alone does not establish semantic equivalence.
 4. At entry identify owned files, exact source evidence, tests, hardware
    availability and this stage's only delivered outcome.
 
@@ -50,14 +58,23 @@ Do not require a specific model or paid account feature to do the work.
 Run stage-specific focused tests, `python scripts/check_promptset.py`,
 `git diff --check`, and other affected test/build/packaging checks. Report
 actual command, tool version, working tree/commit and PASS/FAIL/NOT RUN/BLOCKED
-rather than generic success claims. Native simulator results do not prove
+rather than generic success claims. Changes to checker behavior also require
+`python scripts/test_check_promptset.py`; reference changes require the offline
+reference verifier; reference tooling changes also require
+`python scripts/test_check_references.py`. Do not run implementation-dependent
+commands before the relevant sources exist. Native simulator results do not prove
 hardware or ESP-IDF linking; no hardware is *not* a software failure.
 
 Update `docs/reports/prompt_N.md` with: input revisions and selected source
 pages, exact work, accepted/rejected sibling patterns, tests/commands/results,
 known gaps, current commit and upstream sync status. Update PROGRESS and
-coverage at this checkpoint. Commit/sync completed work using existing current
-branch. On sync failure retain work and report unsynced SHA; do not force-push.
+coverage at this checkpoint. A preparation report may be separate from stage
+reports; distinguish complete intake from still-open stage obligations.
+Record the input/base SHA before committing; identify the resulting commit
+in the handoff or a later checkpoint rather than inventing a self-referential
+commit hash in a file being committed. Commit/sync completed work using the
+existing current branch. On sync failure retain work and report the unsynced
+SHA; do not force-push.
 
 ## Blocked tasks and the final verdict
 
@@ -72,4 +89,6 @@ review/report can complete while reporting a PARTIAL overall qualification.
 Remote CI: for the first sequence, only prompt 43 deliberately triggers/checks
 the comprehensive remote CI checkpoint, unless required automated triggers
 already run on push. Existing automation triggers and protection remain intact;
-do not dispatch or poll them after each minor prompt.
+do not dispatch or poll them after each minor prompt. If final-audit fixes
+change CI-covered inputs, reopen checkpoint 43 for the new SHA rather than
+claiming the earlier run covers those changes.

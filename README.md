@@ -1,58 +1,59 @@
-# TMP11x — implementation promptset (planning-only checkout)
+# TMP11x
 
-A staged, evidence-led implementation plan for an independent, framework-neutral
-C++17 driver supporting TI TMP116 / TMP116N, TMP117 / TMP117M / TMP117N and
-TMP119. The user's primary installed sensor is TMP117.
+A new, framework-neutral C++17 driver project for TI TMP116 / TMP116N,
+TMP117 / TMP117M / TMP117N, and TMP119. TMP117 is the primary intended sensor.
 
-**This archive is a promptset, not an implemented library.** No chip support,
-builds, hardware tests, CI results or GitHub repository are claimed by the
-presence of these files.
+**The sensor driver is not implemented yet.** This
+repository contains the 44-stage implementation plan, source audits, pinned
+TI reference documents, and local preparation tools. There are no completed
+sensor, MCU build, or physical qualification claims.
 
-Start at [docs/prompts/START_HERE.md](docs/prompts/START_HERE.md). The
-machine-readable sequence is [SEQUENCE.json](docs/prompts/SEQUENCE.json).
-The promptset checker is `python scripts/check_promptset.py`.
+## Start here
 
-## Product boundaries
+- [Agent and execution guide](docs/prompts/START_HERE.md)
+- [Current progress](docs/prompts/PROGRESS.md) and [preparation report](docs/reports/preparation.md)
+- [Library comparison](docs/library-comparison.md) and [source adoption](docs/source-adoption.md)
+- [Toolchain and package plan](docs/toolchain-and-package-plan.md)
+- [TI reference archive and provenance](docs/reference/README.md)
+- [Ordered stages](docs/prompts/README.md) and [dependency manifest](docs/prompts/SEQUENCE.json)
 
-- Repository/package: `TMP11x`; namespace: `TMP11x`; main header:
-  `<TMP11x/TMP11x.h>`; class: `TMP11x::TMP11x`.
-- Supported programming family: **TMP116, TMP116N, TMP117, TMP117M, TMP117N,
-  TMP119**, with explicit user-selected BOM model and capability checks.
-- **Not automatically supported:** TMP102, TMP112, TMP114, TMP118, TMP1075,
-  TMP110 or other parts merely sharing some name digits or bus addresses.
-- MCU/framework-neutral C++17 sensor core; portable application-owned I2C
-  callbacks; thin Arduino and native ESP-IDF examples (S2/S3, P4 where tooling permits).
-- Volatile sensor settings and *read-only* EEPROM diagnostics only in the first
-  library release. No ordinary-operation EEPROM unlock/program, general-call
-  reset, bus initialization, hidden retry or bus-wide side effect.
-- Explicit read-to-clear status semantics, genuine freshness evidence,
-  bounded owner operations, retained results and failure/recovery visibility.
+## Planned product boundaries
 
-## Original sources
+- Repository/package: `TMP11x`; namespace/class: `TMP11x::TMP11x`;
+  main header: `<TMP11x/TMP11x.h>`.
+- Explicit BOM model selection for TMP116, TMP116N, TMP117, TMP117M, TMP117N,
+  and TMP119. Device revision bits do not prove exact model or accuracy grade.
+- TMP114, TMP118, TMP102, TMP112 and other similarly named devices are excluded.
+- Portable C++17 core with application-owned I2C callbacks; thin Arduino and
+  native ESP-IDF examples for ESP32-S2/S3, plus P4 where tooling permits.
+- Volatile settings and read-only EEPROM diagnostics in the first release.
+  No EEPROM programming, general-call reset, bus ownership or hidden retries.
+- Explicit destructive-read effects, evidence of fresh conversions, bounded
+  owner operations, retained results, and visible failure/recovery state.
 
-The agent must consult the exact-part datasheets, not trust this README as a
-replacement for them:
+## Local preparation checks
 
-- TMP116/TMP116N: https://www.ti.com/lit/ds/symlink/tmp116.pdf (SBOS740A, May 2019)
-- TMP117/TMP117M/TMP117N: https://www.ti.com/lit/ds/symlink/tmp117.pdf (SNOSD82D, Sep 2022)
-- TMP119: https://www.ti.com/lit/ds/symlink/tmp119.pdf (SNIS236, Jan 2024)
-- Exclusion comparison: https://www.ti.com/lit/ds/symlink/tmp114.pdf and
-  https://www.ti.com/lit/ds/symlink/tmp118.pdf
+```sh
+python scripts/check_promptset.py
+python scripts/test_check_promptset.py
+python scripts/check_references.py
+python scripts/test_check_references.py
+git diff --check
+```
 
-Read [SOURCE_MAP](docs/prompts/SOURCE_MAP.md), [SILICON](docs/prompts/SILICON.md)
-and [EVIDENCE](docs/prompts/EVIDENCE.md). Original vendor PDFs and any
-reference code acquired during execution retain original authorship/terms;
-they must not silently enter the MIT production code or exported package.
+On Windows, `scripts\pio.cmd --version` uses the existing VS Code-managed
+PlatformIO installation. It does not install tools. C++/firmware commands will
+be added with the corresponding implementation stages.
 
-## Quick orientation
+## Sources and licenses
 
-1. Extract this promptset into a fresh local Git checkout (normally `main`).
-   If `origin` exists, confirm it is the intended **new** TMP11x repository.
-2. In VS Code, give the coding agent the whole-sequence instruction in
-   `docs/prompts/START_HERE.md`; alternatively execute one numbered file per turn.
-3. Let the agent inspect and selectively adapt the existing `janhavelka` GitHub
-   repositories, download TI reference PDFs, record provenance and implement.
-4. Agent records actual results under `docs/reports/prompt_N.md` and updates
-   `docs/prompts/PROGRESS.md`. Hardware results require real identified hardware.
+Original TI PDFs are pinned by revision, URL and SHA-256 in
+[the reference manifest](docs/reference/manifest.json). Use the original PDF
+and its page references when interpreting registers; the promptset's seed
+notes are not a replacement. See [SOURCE_MAP](docs/prompts/SOURCE_MAP.md) for
+sibling repositories and [EVIDENCE](docs/prompts/EVIDENCE.md) for source rules.
 
-Promptset source/review history is separate from any code or hardware evidence.
+Repository-authored code and adapted MIT support files use [LICENSE](LICENSE).
+Vendor documents and external reference code retain their own copyrights
+and terms; the root MIT license does not relicense them. Reference artifacts
+must be excluded from library package exports.

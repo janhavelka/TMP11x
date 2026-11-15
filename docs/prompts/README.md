@@ -26,7 +26,7 @@ invocation in START_HERE explicitly authorizes continuation.
 | [VERIFICATION.md](VERIFICATION.md) | Native, firmware, HIL, package, docs and CI evidence gates |
 | [CLI_CONTRACT.md](CLI_CONTRACT.md) | Bounded shared console commands and HIL record format |
 | [DELEGATION.md](DELEGATION.md) | Disjoint subagent delegation with lead integration |
-| [PROGRESS.md](PROGRESS.md) | Execution status; initially all stages planned |
+| [PROGRESS.md](PROGRESS.md) | Actual stage status, preparation evidence and remaining gates |
 
 ## Ordered prompts
 

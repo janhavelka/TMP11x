@@ -17,6 +17,7 @@ Ask an independent reviewer to trace original TI PDF register fields and side ef
 - Reconcile documented/implemented/native/firmware/CI/hardware coverage row-by-row for TMP116/TMP116N, TMP117/M/N and TMP119. Software/hardware suffix grades are not equivalent to individually measured accuracy qualifications.
 - Independently test failed/ambiguous I2C writes, late one-shot, staged config cancellation, simultaneous sensor instances, fresh sample claims, unsupported operation early refusal and exported package independence. Review actual API/CLI/Python parity.
 - Fix confirmed defects in their owner module with tests/docs, not by weakening error checks. Keep unresolved silicon contradictions and missing hardware/SDK/CI evidence explicit.
+- If fixes change inputs covered by the completed CI checkpoint, reopen prompt 43 for the resulting SHA. This is a correction to that checkpoint, not permission to claim an older green run validates changed source.
 - Produce `docs/reports/final-audit.md`, exact reproducible build/consumer instructions, git SHA/upstream verification and a prioritized finite list of residual obligations. Do not create a fictitious release tag or claim that TMP119 was electrically tested because TMP117 passed.
 
 ## Verification and exit criteria

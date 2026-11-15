@@ -1,17 +1,31 @@
 # Start here — VS Code / Codex / Claude coding agent
 
-This repository starts with **only planning files**. The user's new PCB fits
-TMP117. Build a general `TMP11x` driver for TMP116/TMP116N,
-TMP117/TMP117M/TMP117N and TMP119, without assuming support for TMP114/TMP118.
+This repository contains a promptset and preparation evidence; production code
+starts at stage 10. Check [PROGRESS.md](PROGRESS.md) and actual artifacts before
+resuming. The intended PCB uses TMP117. The planned `TMP11x` driver also covers
+TMP116/TMP116N, TMP117M/TMP117N and TMP119; TMP114/TMP118 remain excluded.
+
+## Copy/paste: prepare or refresh this repository
+
+```text
+Read AGENTS.md, docs/prompts/COMMON.md, PROGRESS.md and prompts 1–3.
+Inspect the current repository and read-only sibling implementations. Acquire
+or verify official TI references and their provenance. Improve the entry
+instructions, promptset, source/toolchain audits and supporting scripts using
+verified sibling precedents. Reuse pinned documents and clean local sibling
+checkouts; do not download or copy unrelated archives. Run the preparation
+checks and record remaining evidence gates. Stop before driver implementation
+or API freeze. Preparation is not permission to execute the full sequence.
+```
 
 ## Copy/paste: execute the complete promptset
 
 ```text
-You are the lead coding agent in my NEW, otherwise empty TMP11x repository.
+You are the lead coding agent in my new TMP11x repository.
 Read root AGENTS.md, README.md, docs/prompts/START_HERE.md,
 docs/prompts/README.md, docs/prompts/COMMON.md, SEQUENCE.json, and relevant
-shared contracts before changing implementation. This checkout contains the
-promptset, not library code. Follow prompts 1–44 in ascending numeric order,
+shared contracts before changing implementation. Verify existing preparation
+and implementation artifacts. Follow prompts 1–44 in ascending numeric order,
 resuming from PROGRESS.md if prior work exists. Do not run later prompts if
 specific required inputs are unavailable; preserve exact blocked obligations
 and proceed with independent eligible work. Do not ask for routine approval.
@@ -19,13 +33,15 @@ and proceed with independent eligible work. Do not ask for routine approval.
 First inspect my GitHub repositories (especially janhavelka/TMP1x2,
 OPT4001, ADS1115, 24Cxx, esp32-platformio-library-template, and selected
 FieldCore-node consumer code). You have permission to READ these repositories.
-Fetch or clone them into temporary/reference locations, not into production
-source. Audit real headers, implementations, callers, tests, build scripts,
+Reuse clean local checkouts read-only, or clone into temporary external
+locations. Do not fetch into or change sibling working copies. Audit real
+headers, implementations, callers, tests, build scripts,
 CI and licenses. Bring only genuinely applicable, correctly attributed MIT
 code and infrastructure into this new repo; update namespace, API, tests,
 errors, docs and all assumptions for TMP116/TMP117/TMP119 silicon.
 
-Get the official exact-part TI datasheets, preserve originals/provenance,
+Verify the pinned TI reference manifest; acquire missing official documents
+and record revision changes explicitly. Preserve originals/provenance,
 and build an independently checked register/field/side-effect ledger before
 writing a driver. Use TMP117 as the first implemented and physically intended
 model. Extend the same driver with explicit TMP116 and TMP119 capability

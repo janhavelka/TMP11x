@@ -13,7 +13,7 @@ Inspect TMP1x2 and OPT4001 CMake, metadata, tests-OFF consumer, generated Versio
 
 ## Complete implementation work
 
-- Create `include/TMP11x/`, `src/`, `test/`, `examples/`, `tools/`, `scripts/`, `docs/reports/`, `CMakeLists.txt`, `library.json`, `idf_component.yml`, `.gitignore`, MIT LICENSE and minimal `CHANGELOG.md`. Use `0.1.0` prerelease development metadata; do not claim an actual GitHub release.
+- Create `include/TMP11x/`, `src/`, `test/`, `examples/`, `tools/`, `scripts/`, `docs/reports/`, `CMakeLists.txt`, `library.json`, `idf_component.yml` and minimal `CHANGELOG.md`. Reuse reviewed preparation files (`.gitignore`, `.gitattributes`, MIT LICENSE, `scripts/pio.cmd`) without replacing provenance. Use `0.1.0` prerelease development metadata; do not claim an actual GitHub release.
 - Adapt selected MIT version generator, checked-in `Version.h`, CMake target and framework-free test registration; pin and document exact source attribution. Do not bring old sensor implementation or TI reference binaries into `src/`.
 - Provide a native tests-OFF compile/link consumer using one actual public type. Keep later ESP-IDF platform files optional, not empty fake drivers.
 - Set up test/CI scaffolding necessary for locally executing each subsequent stage, without remote-CI dispatch until stage 43.

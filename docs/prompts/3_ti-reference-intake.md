@@ -9,18 +9,27 @@ Establish a reproducible exact-part reference archive and no-copy license bounda
 
 ## Source audit
 
-Download exact current official TMP116/TMP116N SBOS740A, TMP117/M/N SNOSD82D and TMP119 SNIS236 datasheets from TI; download TMP114/TMP118 for exclusion comparison. Inspect original PDFs visually for non-text register tables and footnotes, not only extracts. Search current TI errata/support and primary examples.
+Verify any existing reference manifest and original bytes before downloading.
+Acquire missing exact-part TI TMP116/TMP116N, TMP117/M/N and TMP119 datasheets,
+plus TMP114/TMP118 for exclusion comparison. SBOS740A, SNOSD82D and SNIS236 are
+seed revisions, not a command to reject newer official revisions. Record the
+revision actually acquired; preserve pinned originals when updating. Inspect
+original PDFs visually for non-text register tables and footnotes, not only
+extracts. Search current TI errata/support and primary examples.
 
 ## Complete implementation work
 
 - Save original PDFs in `docs/reference/source/` with stable names; record document IDs, revisions, source URLs, retrieval date, SHA-256 and licenses/notices in `docs/reference/manifest.json`. If remote revision changed, retain what was acquired and record new facts explicitly.
-- Create `docs/reference/extracted/` text/Markdown notes with original document/page pointers for each reviewed section; all interpreted tables must be traceable to the PDF, not just a scrape.
+- Create concise original notes in `docs/reference/extracted/` with document/page pointers for each reviewed section; all interpreted tables must be traceable to the PDF, not just a scrape. Avoid committing full copyrighted text extracts alongside the original documents.
 - Create `docs/reference/public-code-catalog.md` including relevant TI official code, Linux `drivers/iio/temperature/tmp117.c`, Adafruit drivers or vendor examples as reference with commit/license, identifying observed defects and independent comparisons.
 - Do not paste GPL Linux code, copyrighted vendor snippets or large external text into the production MIT driver. Attribute adapted MIT source. Vendor PDFs must be excluded from runtime package exports.
 
 ## Verification and exit criteria
 
-Check hash recomputation, path existence and that cited sections are found at correct PDF pages. Check original source version and variants. No device/source similarity is assumed purely from a shared part prefix.
+Run `python scripts/check_references.py` for hashes and path existence; also
+check that cited sections are found at correct PDF pages. Hash verification
+proves archive integrity, not a register review. Check original source version
+and variants. No device/source similarity is assumed purely from a shared prefix.
 
 ## Documentation and delegation
 

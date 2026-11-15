@@ -1,7 +1,25 @@
 # TMP11x agent instructions
 
-Applies to the full repository including prompt execution. Read
-`docs/prompts/COMMON.md` and the selected numbered prompt before work.
+Applies to the full repository including prompt execution. This is the single
+source of project instructions for Codex and Claude; keep `CLAUDE.md` as an
+import, not a second rulebook. Read `docs/prompts/COMMON.md` and the selected
+numbered prompt before stage work.
+
+## Scope and source authority
+
+- Determine whether the user requested preparation, one stage, or the whole
+  sequence. Repository review/reference intake does not authorize implementing
+  all 44 stages. Resume from actual artifacts and `docs/prompts/PROGRESS.md`.
+- `docs/prompts/START_HERE.md` is the canonical execution guide;
+  `docs/prompts/SEQUENCE.json` owns stage ordering and dependencies.
+- Exact-part TI PDFs pinned in `docs/reference/manifest.json` own silicon
+  facts. Sibling implementations establish reusable conventions, not register
+  behavior. Seed notes and public drivers must be checked against the PDFs.
+- Use clean, pinned sibling sources or record local modifications separately.
+  Reuse an existing local checkout read-only; check its remote HEAD without
+  changing it. Put any new clone outside this repository.
+- Preparation can supply evidence for stages 1–3. Mark a stage COMPLETE only
+  when all its exit criteria are met; record partial work and the next gate.
 
 ## Git / teamwork
 
@@ -29,7 +47,12 @@ Applies to the full repository including prompt execution. Read
 - Treat host tests, full linked MCU builds, remote CI and physical HIL as
   **different** evidence layers. Mark unavailable checks `NOT RUN` or `BLOCKED`.
 - On Windows reuse VS Code-managed PlatformIO via `scripts/pio.cmd` once
-  established from sibling precedent. Do not install a second PlatformIO Core.
+  established from sibling precedent. Do not use an unrelated `pio` on PATH
+  or install a second PlatformIO Core.
+- Available preparation checks: `python scripts/check_promptset.py`,
+  `python scripts/test_check_promptset.py`, `python scripts/check_references.py`,
+  `python scripts/test_check_references.py` and `git diff --check`.
+  Firmware/C++ gates start when their sources exist.
 
 ## Engineering boundaries
 
@@ -51,5 +74,11 @@ Applies to the full repository including prompt execution. Read
   variant differences against the applicable TI datasheet. No guesswork.
 - Prefer small, direct code over speculative frameworks. New public behavior
   must have tests and meaningful Doxygen on the same stage.
+- Keep framework/board code in examples/adapters. A shared CLI belongs in
+  `examples/common/`; native ESP-IDF must not compile an Arduino facade.
+- Once created at stage 10, `library.json` owns versioning. Generate checked-in
+  `Version.h`; do not copy a sibling's package identity or hand-edit the version.
 - Use short, precise, understandable engineering language. Preserve source
-  attribution and license notices for adapted MIT code.
+  attribution and license notices for adapted MIT code. Vendor documents and
+  incompatible reference code retain their own terms; exclude references from
+  runtime packages, and never copy GPL code into the MIT core.
