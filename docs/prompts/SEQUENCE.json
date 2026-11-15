@@ -1,0 +1,619 @@
+{
+  "version": 1,
+  "scope": "New standalone TMP11x C++17 library: TMP116/TMP116N, TMP117/TMP117M/TMP117N, TMP119",
+  "execution_order": "Ascending numeric order among ready prompts. Blocked physical/SDK evidence remains open; proceed with independent work.",
+  "state": "PLANNED; no implementation or hardware evidence shipped by this promptset",
+  "prompts": [
+    {
+      "id": 1,
+      "file": "1_ecosystem-core-audit.md",
+      "title": "Audit current sensor-driver ownership and APIs",
+      "phase": "Ecosystem inspection",
+      "kind": "software",
+      "depends_on": []
+    },
+    {
+      "id": 2,
+      "file": "2_tooling-peer-audit.md",
+      "title": "Audit build, examples, prompt and test infrastructure",
+      "phase": "Ecosystem inspection",
+      "kind": "software",
+      "depends_on": [
+        1
+      ]
+    },
+    {
+      "id": 3,
+      "file": "3_ti-reference-intake.md",
+      "title": "Acquire and pin official TI source documents",
+      "phase": "Exact silicon source and feature evidence",
+      "kind": "software",
+      "depends_on": [
+        1,
+        2
+      ]
+    },
+    {
+      "id": 4,
+      "file": "4_family-identity.md",
+      "title": "Freeze included models, IDs and capability classes",
+      "phase": "Exact silicon source and feature evidence",
+      "kind": "software",
+      "depends_on": [
+        3
+      ]
+    },
+    {
+      "id": 5,
+      "file": "5_register-ledger.md",
+      "title": "Create exhaustive per-variant register and bitfield ledger",
+      "phase": "Exact silicon source and feature evidence",
+      "kind": "software",
+      "depends_on": [
+        3,
+        4
+      ]
+    },
+    {
+      "id": 6,
+      "file": "6_timing-status.md",
+      "title": "Verify conversion, averaging, freshness and alert timing",
+      "phase": "Exact silicon source and feature evidence",
+      "kind": "software",
+      "depends_on": [
+        3,
+        5
+      ]
+    },
+    {
+      "id": 7,
+      "file": "7_eeprom-reset-policy.md",
+      "title": "Set nonvolatile, identity and reset safety policy",
+      "phase": "Exact silicon source and feature evidence",
+      "kind": "software",
+      "depends_on": [
+        3,
+        4,
+        5,
+        6
+      ]
+    },
+    {
+      "id": 8,
+      "file": "8_api-architecture.md",
+      "title": "Freeze public API and variant architecture",
+      "phase": "Architecture and package foundation",
+      "kind": "software",
+      "depends_on": [
+        1,
+        2,
+        4,
+        5,
+        6,
+        7
+      ]
+    },
+    {
+      "id": 9,
+      "file": "9_owner-deadline-contract.md",
+      "title": "Freeze cooperative ownership, timing and result contract",
+      "phase": "Architecture and package foundation",
+      "kind": "software",
+      "depends_on": [
+        8,
+        6,
+        7
+      ]
+    },
+    {
+      "id": 10,
+      "file": "10_package-foundation.md",
+      "title": "Create the independent buildable library skeleton",
+      "phase": "Architecture and package foundation",
+      "kind": "software",
+      "depends_on": [
+        2,
+        8,
+        9
+      ]
+    },
+    {
+      "id": 11,
+      "file": "11_status-values.md",
+      "title": "Implement portable Status, model and value types",
+      "phase": "Portable device protocol, identity and trustworthy configuration",
+      "kind": "software",
+      "depends_on": [
+        8,
+        9,
+        10
+      ]
+    },
+    {
+      "id": 12,
+      "file": "12_i2c-register-transport.md",
+      "title": "Implement bounded 16-bit I2C register transactions",
+      "phase": "Portable device protocol, identity and trustworthy configuration",
+      "kind": "software",
+      "depends_on": [
+        5,
+        8,
+        9,
+        10,
+        11
+      ]
+    },
+    {
+      "id": 13,
+      "file": "13_identity-selection.md",
+      "title": "Implement identity validation and explicit model capabilities",
+      "phase": "Portable device protocol, identity and trustworthy configuration",
+      "kind": "software",
+      "depends_on": [
+        4,
+        5,
+        8,
+        11,
+        12
+      ]
+    },
+    {
+      "id": 14,
+      "file": "14_binding-lifecycle.md",
+      "title": "Implement bus-silent binding and verified lifecycle",
+      "phase": "Portable device protocol, identity and trustworthy configuration",
+      "kind": "software",
+      "depends_on": [
+        8,
+        9,
+        11,
+        12,
+        13
+      ]
+    },
+    {
+      "id": 15,
+      "file": "15_passive-health.md",
+      "title": "Implement tracked transport health and error observation",
+      "phase": "Portable device protocol, identity and trustworthy configuration",
+      "kind": "software",
+      "depends_on": [
+        8,
+        11,
+        12,
+        14
+      ]
+    },
+    {
+      "id": 16,
+      "file": "16_temperature-codec.md",
+      "title": "Implement signed temperature and threshold codecs",
+      "phase": "Portable device protocol, identity and trustworthy configuration",
+      "kind": "software",
+      "depends_on": [
+        5,
+        6,
+        11,
+        12,
+        13
+      ]
+    },
+    {
+      "id": 17,
+      "file": "17_config-codecs.md",
+      "title": "Implement type-safe CONFIG codecs and validation",
+      "phase": "Portable device protocol, identity and trustworthy configuration",
+      "kind": "software",
+      "depends_on": [
+        5,
+        6,
+        7,
+        8,
+        11,
+        12
+      ]
+    },
+    {
+      "id": 18,
+      "file": "18_safe-initialize.md",
+      "title": "Implement EEPROM-safe initialization and configuration writes",
+      "phase": "Portable device protocol, identity and trustworthy configuration",
+      "kind": "software",
+      "depends_on": [
+        7,
+        8,
+        9,
+        12,
+        13,
+        14,
+        17
+      ]
+    },
+    {
+      "id": 19,
+      "file": "19_config-trust.md",
+      "title": "Implement observed configuration, verification and dirty state",
+      "phase": "Portable device protocol, identity and trustworthy configuration",
+      "kind": "software",
+      "depends_on": [
+        7,
+        8,
+        15,
+        17,
+        18
+      ]
+    },
+    {
+      "id": 20,
+      "file": "20_conversion-settings.md",
+      "title": "Implement continuous operation, averaging and cycle timing",
+      "phase": "Features, safe measurements and diagnostics",
+      "kind": "software",
+      "depends_on": [
+        6,
+        8,
+        16,
+        17,
+        18,
+        19
+      ]
+    },
+    {
+      "id": 21,
+      "file": "21_fresh-one-shot.md",
+      "title": "Implement fresh-conversion acquisition and one-shot behavior",
+      "phase": "Features, safe measurements and diagnostics",
+      "kind": "software",
+      "depends_on": [
+        6,
+        9,
+        16,
+        18,
+        19,
+        20
+      ]
+    },
+    {
+      "id": 22,
+      "file": "22_limits-alert.md",
+      "title": "Implement temperature limits, therm/alert and ALERT pin",
+      "phase": "Features, safe measurements and diagnostics",
+      "kind": "software",
+      "depends_on": [
+        5,
+        6,
+        7,
+        16,
+        17,
+        19,
+        21
+      ]
+    },
+    {
+      "id": 23,
+      "file": "23_offset-feature.md",
+      "title": "Implement hardware offset for TMP117/TMP119 only",
+      "phase": "Features, safe measurements and diagnostics",
+      "kind": "software",
+      "depends_on": [
+        4,
+        5,
+        7,
+        11,
+        12,
+        16,
+        17,
+        19
+      ]
+    },
+    {
+      "id": 24,
+      "file": "24_readonly-eeprom.md",
+      "title": "Implement safe EEPROM reads and traceability metadata",
+      "phase": "Features, safe measurements and diagnostics",
+      "kind": "software",
+      "depends_on": [
+        4,
+        5,
+        7,
+        11,
+        12,
+        13,
+        19
+      ]
+    },
+    {
+      "id": 25,
+      "file": "25_per-device-reset.md",
+      "title": "Implement supported per-device reset and invalidation safely",
+      "phase": "Features, safe measurements and diagnostics",
+      "kind": "software",
+      "depends_on": [
+        5,
+        7,
+        9,
+        14,
+        18,
+        19,
+        21
+      ]
+    },
+    {
+      "id": 26,
+      "file": "26_diagnostic-access.md",
+      "title": "Implement read-only register snapshots and guarded raw access",
+      "phase": "Features, safe measurements and diagnostics",
+      "kind": "software",
+      "depends_on": [
+        5,
+        7,
+        12,
+        13,
+        19,
+        21,
+        22,
+        23,
+        24
+      ]
+    },
+    {
+      "id": 27,
+      "file": "27_sync-helpers-cache.md",
+      "title": "Complete synchronous API, samples and snapshots",
+      "phase": "Features, safe measurements and diagnostics",
+      "kind": "software",
+      "depends_on": [
+        16,
+        19,
+        20,
+        21,
+        22,
+        23,
+        24,
+        25,
+        26
+      ]
+    },
+    {
+      "id": 28,
+      "file": "28_cooperative-admission.md",
+      "title": "Implement bus-silent jobs and exactly-once results",
+      "phase": "Cooperative operation and exhaustive native qualification",
+      "kind": "software",
+      "depends_on": [
+        9,
+        14,
+        15,
+        27
+      ]
+    },
+    {
+      "id": 29,
+      "file": "29_cooperative-config.md",
+      "title": "Implement cooperative initialization, settings and recovery",
+      "phase": "Cooperative operation and exhaustive native qualification",
+      "kind": "software",
+      "depends_on": [
+        18,
+        19,
+        25,
+        28
+      ]
+    },
+    {
+      "id": 30,
+      "file": "30_cooperative-measurement.md",
+      "title": "Implement owner-driven fresh measurement and one-shot jobs",
+      "phase": "Cooperative operation and exhaustive native qualification",
+      "kind": "software",
+      "depends_on": [
+        20,
+        21,
+        22,
+        28,
+        29
+      ]
+    },
+    {
+      "id": 31,
+      "file": "31_failure-recovery.md",
+      "title": "Harden cancellation, ambiguous effects, timeout and health",
+      "phase": "Cooperative operation and exhaustive native qualification",
+      "kind": "software",
+      "depends_on": [
+        15,
+        19,
+        25,
+        28,
+        29,
+        30
+      ]
+    },
+    {
+      "id": 32,
+      "file": "32_variant-model-fixtures.md",
+      "title": "Complete independent multi-model device register simulators",
+      "phase": "Cooperative operation and exhaustive native qualification",
+      "kind": "software",
+      "depends_on": [
+        13,
+        17,
+        18,
+        21,
+        23,
+        24,
+        29,
+        30,
+        31
+      ]
+    },
+    {
+      "id": 33,
+      "file": "33_native-suite.md",
+      "title": "Close independent native correctness and packaging gates",
+      "phase": "Cooperative operation and exhaustive native qualification",
+      "kind": "software",
+      "depends_on": [
+        16,
+        17,
+        18,
+        21,
+        22,
+        23,
+        24,
+        25,
+        26,
+        27,
+        28,
+        29,
+        30,
+        31,
+        32
+      ]
+    },
+    {
+      "id": 34,
+      "file": "34_arduino-examples.md",
+      "title": "Implement Arduino/PlatformIO adapters and reusable example",
+      "phase": "Firmware, CLI and runner integrations",
+      "kind": "software",
+      "depends_on": [
+        27,
+        30,
+        33
+      ]
+    },
+    {
+      "id": 35,
+      "file": "35_idf-examples.md",
+      "title": "Implement native ESP-IDF examples and framework adapter",
+      "phase": "Firmware, CLI and runner integrations",
+      "kind": "software",
+      "depends_on": [
+        27,
+        30,
+        33
+      ]
+    },
+    {
+      "id": 36,
+      "file": "36_p4-consumer.md",
+      "title": "Qualify clean ESP32-P4 integration and shared-bus consumer",
+      "phase": "Firmware, CLI and runner integrations",
+      "kind": "software",
+      "depends_on": [
+        33,
+        35
+      ]
+    },
+    {
+      "id": 37,
+      "file": "37_cli-baseline.md",
+      "title": "Create one shared bounded diagnostic CLI engine",
+      "phase": "Firmware, CLI and runner integrations",
+      "kind": "software",
+      "depends_on": [
+        27,
+        28,
+        30,
+        34,
+        35
+      ]
+    },
+    {
+      "id": 38,
+      "file": "38_cli-device-operations.md",
+      "title": "Add full safe configuration, job and diagnostic CLI routes",
+      "phase": "Firmware, CLI and runner integrations",
+      "kind": "software",
+      "depends_on": [
+        22,
+        23,
+        24,
+        25,
+        26,
+        28,
+        29,
+        30,
+        31,
+        37
+      ]
+    },
+    {
+      "id": 39,
+      "file": "39_python-hil-runner.md",
+      "title": "Implement correlated Python HIL runner and finite campaigns",
+      "phase": "Firmware, CLI and runner integrations",
+      "kind": "software",
+      "depends_on": [
+        37,
+        38
+      ]
+    },
+    {
+      "id": 40,
+      "file": "40_hil-readonly.md",
+      "title": "Qualify read-only TMP11x hardware identity and measurement",
+      "phase": "Physical fixture qualification",
+      "kind": "physical",
+      "depends_on": [
+        34,
+        35,
+        39
+      ]
+    },
+    {
+      "id": 41,
+      "file": "41_hil-volatile-soak.md",
+      "title": "Qualify volatile settings, recovery and finite hardware soak",
+      "phase": "Physical fixture qualification",
+      "kind": "physical",
+      "depends_on": [
+        31,
+        39,
+        40
+      ]
+    },
+    {
+      "id": 42,
+      "file": "42_package-docs.md",
+      "title": "Finish packaged consumers, public Doxygen and user documentation",
+      "phase": "Package, CI and final review",
+      "kind": "software",
+      "depends_on": [
+        33,
+        34,
+        35,
+        38,
+        39
+      ]
+    },
+    {
+      "id": 43,
+      "file": "43_ci-checkpoint.md",
+      "title": "Run one dedicated remote CI integration checkpoint",
+      "phase": "Package, CI and final review",
+      "kind": "ci",
+      "depends_on": [
+        33,
+        35,
+        42
+      ]
+    },
+    {
+      "id": 44,
+      "file": "44_final-independent-audit.md",
+      "title": "Perform independent silicon/API/safety/consumer closure",
+      "phase": "Package, CI and final review",
+      "kind": "software",
+      "depends_on": [
+        31,
+        32,
+        33,
+        38,
+        39,
+        42
+      ]
+    }
+  ]
+}

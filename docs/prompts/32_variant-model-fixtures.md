@@ -1,0 +1,45 @@
+# 32 — Complete independent multi-model device register simulators
+
+Apply [COMMON.md](COMMON.md) and root [AGENTS.md](../../AGENTS.md). Phase: **Cooperative operation and exhaustive native qualification**. Type: **software**.
+Prerequisites: [13](13_identity-selection.md), [17](17_config-codecs.md), [18](18_safe-initialize.md), [21](21_fresh-one-shot.md), [23](23_offset-feature.md), [24](24_readonly-eeprom.md), [29](29_cooperative-config.md), [30](30_cooperative-measurement.md), [31](31_failure-recovery.md).
+
+## Objective and boundaries
+
+Exercise the *same installed production driver* against deliberately different TMP116, TMP117 and TMP119 fakes, including model-specific invalid requests.
+
+## Source audit
+
+Inspect the direct production code against original register/behavior ledger. Draw inspiration from TMP1x2 `test/variants`, ADS1115 fake register model and OPT4001 result-ready tests, not from copied expected values.
+
+## Complete implementation work
+
+- Build a deterministic scripted fake with per-model 0x07 layout, identity/revision, EEPROM count, lock/busy, startup result, DATA_READY/status clear, mode/cycle/average and ALERT flags.
+- Test BOM-selected `TMP116N`, `TMP117M`, `TMP117N` accuracy metadata without claiming electrical grade proof from I2C. TMP119 `0x2117` and alternate revision nibble must not cause invented exact identification.
+- Verify the public API returns unsupported **before I2C** for TMP116 offset, rejects EEPROM writes, maps THIGH/TLOW in correct order, and uses one shared conversion codec.
+- Introduce common operation fixtures run for all families plus model-specific tests. Test misleading same-address unrelated devices and mux-target context switching.
+- Keep the simulator separate from production paths and document the constraints it cannot prove about real silicon.
+
+## Verification and exit criteria
+
+Verify model fixtures are not near-copies of implementation codecs; use manually derived literal bytes/masks and deliberately wrong vectors as negative controls.
+
+## Documentation and delegation
+
+Follow [COMMON.md](COMMON.md), [CONVENTIONS.md](CONVENTIONS.md),
+[ENGINEERING.md](ENGINEERING.md), [EVIDENCE.md](EVIDENCE.md),
+[VERIFICATION.md](VERIFICATION.md), [DELEGATION.md](DELEGATION.md) and
+[SOURCE_MAP.md](SOURCE_MAP.md) for the relevant code and sources. The lead owns
+shared API/architecture, integration, progress and Git; delegate only disjoint
+read-only audits, feature tests or implementation under frozen interfaces.
+Update public Doxygen and affected guides in the same stage as source changes.
+Do not run unrelated sibling suites or remote CI (except stage 43).
+
+## Checkpoint and report
+
+For each closed software unit, run appropriate focused local checks; inspect
+both working and staged diffs; record actual commands, versions, commit and
+PASS/FAIL/NOT RUN/BLOCKED. Write `docs/reports/prompt_32.md` with sources,
+owned artifacts, named test cases and open evidence gates. Update
+`docs/prompts/PROGRESS.md`, commit and sync verified meaningful work on `main`
+when authenticated upstream is configured, and verify synchronization. Keep
+missing physical/SDK evidence explicit; never claim tests not run.

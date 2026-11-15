@@ -1,0 +1,45 @@
+# 13 — Implement identity validation and explicit model capabilities
+
+Apply [COMMON.md](COMMON.md) and root [AGENTS.md](../../AGENTS.md). Phase: **Portable device protocol, identity and trustworthy configuration**. Type: **software**.
+Prerequisites: [4](4_family-identity.md), [5](5_register-ledger.md), [8](8_api-architecture.md), [11](11_status-values.md), [12](12_i2c-register-transport.md).
+
+## Objective and boundaries
+
+Prove the compatible device family without pretending TMP117 versus TMP119 grade is uniquely encoded in the revision nibble.
+
+## Source audit
+
+Check exact TI ID sections, documented revision fields, TMP119 contradictory default table, Linux driver device matches; inspect OPT4001 identity APIs and exact-bits native tests.
+
+## Complete implementation work
+
+- Implement `readIdentity`, `probe` and selected-model validation that reads 0x0F with no configuration write. Retain raw ID, recognized group, revision field, selected BOM model and confidence/ambiguity.
+- TMP116 group expected documented ID 0x1116; TMP117 and TMP119 accept verified base DID[11:0] `0x117` with revision separately recorded. Never blindly reject future revisions or assert accuracy grade from an address ACK.
+- Reject incompatible family IDs, malformed register reads, unsupported addresses and mismatched selected model/group. Distinguish transport errors from valid but unexpected identity.
+- Ensure `probe` is a diagnostics operation with explicit health side effects (or lack thereof) and that discovery never mutates hardware.
+- Provide tests for known 0x1116, 0x0117, 0x2117 examples, alternate possible revision nibble, wrong ID and same-bus unrelated responders.
+
+## Verification and exit criteria
+
+A strong independent reviewer challenges any claim that raw 0x2117 proves actual TMP119; source contradiction is retained in docs.
+
+## Documentation and delegation
+
+Follow [COMMON.md](COMMON.md), [CONVENTIONS.md](CONVENTIONS.md),
+[ENGINEERING.md](ENGINEERING.md), [EVIDENCE.md](EVIDENCE.md),
+[VERIFICATION.md](VERIFICATION.md), [DELEGATION.md](DELEGATION.md) and
+[SOURCE_MAP.md](SOURCE_MAP.md) for the relevant code and sources. The lead owns
+shared API/architecture, integration, progress and Git; delegate only disjoint
+read-only audits, feature tests or implementation under frozen interfaces.
+Update public Doxygen and affected guides in the same stage as source changes.
+Do not run unrelated sibling suites or remote CI (except stage 43).
+
+## Checkpoint and report
+
+For each closed software unit, run appropriate focused local checks; inspect
+both working and staged diffs; record actual commands, versions, commit and
+PASS/FAIL/NOT RUN/BLOCKED. Write `docs/reports/prompt_13.md` with sources,
+owned artifacts, named test cases and open evidence gates. Update
+`docs/prompts/PROGRESS.md`, commit and sync verified meaningful work on `main`
+when authenticated upstream is configured, and verify synchronization. Keep
+missing physical/SDK evidence explicit; never claim tests not run.
