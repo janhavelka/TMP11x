@@ -1,90 +1,118 @@
-# TMP11x agent instructions
+# TMP11x repository conventions
 
-Applies to the full repository including prompt execution. This is the single
-source of project instructions for Codex and Claude; keep `CLAUDE.md` as an
-import, not a second rulebook. Read `docs/prompts/COMMON.md` and the selected
-numbered prompt before stage work.
+These instructions apply to the whole repository. `AGENTS.md` is the single
+source of project guidance; `CLAUDE.md` imports it.
 
-## Scope and source authority
+## CI and local verification
 
-- Determine whether the user requested preparation, one stage, or the whole
-  sequence. Repository review/reference intake does not authorize implementing
-  all 44 stages. Resume from actual artifacts and `docs/prompts/PROGRESS.md`.
-- `docs/prompts/START_HERE.md` is the canonical execution guide;
-  `docs/prompts/SEQUENCE.json` owns stage ordering, dependencies and declared
-  producer/consumer IDs. `docs/prompts/HANDOFFS.md` explains usable outputs,
-  later integration owners and conditional firmware/hardware gates.
-- Exact-part TI PDFs pinned in `docs/reference/manifest.json` own silicon
-  facts. Sibling implementations establish reusable conventions, not register
-  behavior. Seed notes and public drivers must be checked against the PDFs.
-- Use clean, pinned sibling sources or record local modifications separately.
-  Reuse an existing local checkout read-only; check its remote HEAD without
-  changing it. Put any new clone outside this repository.
-- Preparation can supply evidence for stages 1–3. Mark a stage COMPLETE only
-  when all its exit criteria are met; record partial work and the next gate.
+- Work with CI in mind from the start: inspect the relevant workflows and checks
+  before implementation, reuse their commands, and keep changes compatible with
+  their platforms, pinned dependencies, generated files and test registration.
+- Run focused local checks for each change. Reserve remote CI dispatch and waiting
+  for major changes: substantial behavior/API changes, cross-module integration,
+  persistence/security changes, build/toolchain/dependency/workflow changes, and
+  release or major integration milestones. Judge impact, not just diff size.
+- Small documentation, comment, formatting and low-risk isolated edits need
+  appropriate local verification, not a CI run after every commit or push. Batch
+  related work before requesting CI; do not repeatedly dispatch unchanged suites.
+- For major changes, use existing CI and verify the exact final commit through
+  terminal results; dispatch it if needed. Fix confirmed failures without weakening
+  checks. Report checks not run, blocked or failed honestly; never claim an older
+  green run verifies a new commit. Honor required merge/release checks and existing
+  hooks; do not change workflow triggers or bypass checks to avoid CI.
 
-## Git / teamwork
+For numbered prompt execution, follow the checkpoint policy in
+[COMMON.md](docs/prompts/COMMON.md); it controls when the sequence runs its
+comprehensive remote check. Keep automatic workflow triggers intact.
 
-- At entry: inspect `git status`, branch, HEAD, configured remote and upstream;
-  fetch/check for incoming changes when possible. Preserve all unrelated and
-  concurrent changes. Never force-push, reset, discard or stash others' work.
-- This initial execution remains on the current `main` branch (or the one
-  checkout branch explicitly supplied by the user). No per-prompt branches or
-  worktrees unless the user requests them.
-- One lead agent owns shared API contracts, integration, reports and Git
-  mutations. Subagents receive disjoint write scopes or read-only reviews.
-- After a coherent scope passes relevant local checks, stage only owned hunks,
-  commit and push to the configured **new TMP11x** remote if authorized.
-  Verify synchronization; otherwise report precisely why push is unavailable.
-- Sibling repositories are **read-only**. Never edit, push to, dispatch CI on,
-  or merge into TMP1x2, OPT4001, ADS1115, 24Cxx, FieldCore-node, etc.
+## Git workflow
 
-## CI and verification
+- Before editing, inspect status, branch, HEAD, configured remote and upstream.
+  Fetch/check incoming changes; fast-forward only when safe.
+- Keep the whole promptset on its existing branch. Do not create a branch or
+  worktree per prompt or agent unless the user asks.
+- Assume concurrent agents. Preserve unrelated changes; never stash, discard,
+  overwrite, or commit them. A dirty worktree alone is not a blocker.
+- After relevant checks pass, stage only your own files or hunks, then commit
+  and push each meaningful completed chunk, including multiple times within
+  one prompt and before finishing. No further permission is needed.
+- When using subagents, the lead owns shared contracts, integration and Git
+  mutations. Assign disjoint write scopes or read-only reviews.
+- Confirm synchronization with the intended repository's upstream. Report
+  conflicts or unavailable access; never force-push to resolve them.
+- Sibling repositories are read-only references. Inspect pinned clean sources
+  or record local modifications separately; do not fetch into, edit, build,
+  push to or dispatch CI on them. Put any needed separate clone outside this repo.
 
-- Inspect current workflows/source before changing them. Run focused local
-  checks per stage; do not repeatedly dispatch remote CI for minor changes.
-- For this initial promptset, stage 43 owns the single comprehensive remote-CI
-  checkpoint. Keep automatic triggers; run local builds/tests at all relevant
-  earlier stages. A later source edit is not covered by an older green commit.
-- Treat host tests, full linked MCU builds, remote CI and physical HIL as
-  **different** evidence layers. Mark unavailable checks `NOT RUN` or `BLOCKED`.
-- On Windows reuse VS Code-managed PlatformIO via `scripts/pio.cmd` once
-  established from sibling precedent. Do not use an unrelated `pio` on PATH
-  or install a second PlatformIO Core.
-- Available preparation checks: `python scripts/check_promptset.py`,
-  `python scripts/test_check_promptset.py`, `python scripts/check_references.py`,
-  `python scripts/test_check_references.py` and `git diff --check`.
-  Firmware/C++ gates start when their sources exist.
+## Scope and navigation
 
-## Engineering boundaries
+- Work within the user's requested scope. An audit, preparation task or single
+  prompt does not authorize executing the entire implementation sequence.
+- Use [START_HERE](docs/prompts/START_HERE.md) for prompt execution and
+  [PROGRESS](docs/prompts/PROGRESS.md) for current evidence. Read COMMON and the
+  selected prompt before stage work. Verify actual artifacts; plans are not
+  implemented behavior or passing tests.
+- [SEQUENCE](docs/prompts/SEQUENCE.json) owns ordering, dependencies and artifact
+  IDs; [HANDOFFS](docs/prompts/HANDOFFS.md) assigns producers and integration
+  owners. Update connected contracts together when changing a handoff.
+- Prefer small, direct changes to existing owners. Add abstractions only for
+  a concrete current caller or test. Do not introduce speculative frameworks,
+  placeholder drivers or successful no-op implementations.
+- Use short, precise engineering language. Deliver behavior, meaningful public
+  Doxygen, relevant tests and affected documentation together.
 
-- Core: C++17, portable `include/TMP11x/` and `src/` with no Arduino/ESP-IDF,
-  FreeRTOS, logging, heap allocation, tasks, sleeps, pin/bus ownership, retries
-  or hidden general-call reset.
-- One owner serializes instance state and shared I2C; callback attempts are
-  synchronous, terminal, timeout bounded, pointer-write/repeated-START/read.
-- Stable names: `TMP11x`, `Config`, `Status`/`Err`, `DriverState`,
-  `HealthSnapshot`, `Sample`, `begin`, `bind`, `recover`, `start*`, `poll`,
-  `cancel`, `takeResult`; exact final signatures belong to the API contract.
-- The **selected BOM model** determines features. Device ID does not prove
-  TMP117 versus TMP119 if the documented distinguishing bits are revision bits.
-- Do not equate a temperature register read with fresh conversion. CONFIG and
-  TEMP reads can clear DATA_READY. Observe EEPROM lock/busy and startup/reset
-  timing before writes; TMP116's documented startup busy behavior is contradictory.
-- One-shot and reset are explicit operations, not persistent settings replayed
-  by initialization/recovery. Read-only firmware must use bind-only diagnostics
-  without initialization writes; it still reports destructive-read effects.
-- First-release nonvolatile behavior is read-only; no EEPROM unlocking,
-  reprogramming, startup persistence or factory traceability modification.
-- Verify literal register addresses, mask/writes, conversion timing and exact
-  variant differences against the applicable TI datasheet. No guesswork.
-- Prefer small, direct code over speculative frameworks. New public behavior
-  must have tests and meaningful Doxygen on the same stage.
-- Keep framework/board code in examples/adapters. A shared CLI belongs in
-  `examples/common/`; native ESP-IDF must not compile an Arduino facade.
-- Once created at stage 10, `library.json` owns versioning. Generate checked-in
-  `Version.h`; do not copy a sibling's package identity or hand-edit the version.
-- Use short, precise, understandable engineering language. Preserve source
-  attribution and license notices for adapted MIT code. Vendor documents and
-  incompatible reference code retain their own terms; exclude references from
-  runtime packages, and never copy GPL code into the MIT core.
+## Project guidance
+
+- TMP11x targets TMP116/TMP116N, TMP117/TMP117M/TMP117N and TMP119, with TMP117
+  as the primary intended device. TMP114/TMP118 and other similarly named
+  families are outside this driver. Select the exact model from the BOM;
+  compatible ID/revision bits do not prove an exact part or accuracy grade.
+- Public headers belong in `include/TMP11x/`, implementation in `src/`.
+  Keep the core standard C++17 with no Arduino, ESP-IDF, FreeRTOS, logging,
+  allocation, tasks, sleeps, bus/pin ownership or hidden retries.
+- Follow [CONVENTIONS](docs/prompts/CONVENTIONS.md) and
+  [ENGINEERING](docs/prompts/ENGINEERING.md) for the typed Status/API, lifecycle,
+  passive health, configuration trust and operation contracts. Count physical
+  tracked transport attempts separately from precondition or logical failures.
+- Applications own I2C initialization, pins, clocks, routing, serialization and
+  recovery. Callbacks are synchronous, terminal, timeout-bounded and must not
+  retain borrowed buffers or re-enter the instance. Public APIs are not
+  internally thread-safe or ISR-safe; the owner serializes access.
+- Binding, job admission, cancellation, result consumption and teardown are
+  bus-silent. Explicit synchronous operations and owner-driven poll steps have
+  bounded I/O and visible failure paths. Settings operations never replace the
+  binding; recovery replays the owned profile without hidden reset or rollback.
+- Treat temperature value, fresh-conversion evidence and configuration trust
+  separately. CONFIG/TEMP reads can consume flags. Preserve dirty state after
+  ambiguous writes and uncertain observations after destructive reads.
+- Keep first-release EEPROM data words read-only, including their volatile
+  shadows.
+  Check startup readiness and EEPROM lock/busy before allowed volatile writes.
+  No unlock/program/persistence path, general-call reset or SMBus alert-response
+  traffic. TMP116 has no supported addressed reset or hardware offset; its
+  `0x07` is EEPROM data. Apply model gates to every API, diagnostic and CLI route.
+- One-shot and supported addressed reset are explicit operations, not replayable
+  settings. Managed one-shot requires desired and verified shutdown. Observation
+  firmware uses bind-only diagnostics without implicit initialization writes.
+- Exact-part TI PDFs pinned in [the reference manifest](docs/reference/manifest.json)
+  govern silicon facts. Recheck register masks, timing and side effects against
+  those sources; retain contradictions and unknowns. [SILICON](docs/prompts/SILICON.md)
+  and [FULL_COVERAGE](docs/prompts/FULL_COVERAGE.md) track the evidence and scope.
+  Sibling implementations establish conventions, not this chip's protocol.
+- Framework/board glue belongs in examples/adapters. Arduino and native ESP-IDF
+  share one framework-neutral CLI under `examples/common/`; native IDF must
+  not compile an Arduino facade. Keep examples and test doubles out of core.
+- Once package metadata exists, `library.json` owns versioning. Use the
+  repository's generator/check commands and keep `Version.h` checked in;
+  do not hand-edit generated versions or copy another package's identity.
+- On Windows use `scripts/pio.cmd` for the existing VS Code-managed PlatformIO.
+  Do not use an unrelated executable on PATH or install another Core. Report a
+  missing installation precisely and continue independent work.
+- Run checks appropriate to the changed scope, using
+  [VERIFICATION](docs/prompts/VERIFICATION.md) and the actual available tools.
+  Preserve separate evidence for native tests, full MCU links, remote CI and
+  physical fixtures. Do not invoke future tools or claim unavailable checks.
+- Preserve source attribution and license notices for adapted MIT material.
+  Vendor documents and incompatible reference code retain their own terms;
+  keep URLs/revisions/hashes, exclude references from runtime packages and
+  never copy GPL code into the MIT core.

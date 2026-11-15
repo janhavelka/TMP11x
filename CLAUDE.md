@@ -1,7 +1,7 @@
 # CLAUDE.md
 
-[AGENTS.md](AGENTS.md) is the single source of project instructions; maintain
-them there. Use [the execution guide](docs/prompts/START_HERE.md) for the
-requested preparation, stage, or whole-sequence scope.
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+[AGENTS.md](AGENTS.md) is the single source of project instructions; maintain them there.
 
 @AGENTS.md

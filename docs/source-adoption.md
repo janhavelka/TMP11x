@@ -11,12 +11,24 @@ revision and implementation evidence are in [library-comparison.md](library-comp
 | `scripts/pio.cmd` | `janhavelka/TMP1x2`, `afd50889312f6e218a6a34eca687e3e8547d8b40`, `scripts/pio.cmd` | Copied unchanged. Finds the current user's existing VS Code-managed PlatformIO; does not install another Core. |
 | `LICENSE` | Same TMP1x2 revision, `LICENSE` | Copied unchanged: MIT, copyright (c) 2026 THYMOS Solution s.r.o., Jan Havelka, with original website/contact and permission notice. |
 | `.gitignore` | Same TMP1x2 revision, `.gitignore` | Adapted development-artifact exclusions to this repository. This is not a runtime source import. |
+| `AGENTS.md` | Same TMP1x2 revision, `AGENTS.md`; compact structure also compared with `janhavelka/24Cxx` at `1bd9f969d1df55ca5819b0d290ff331869e7d5bc` | Reused general CI/Git conventions; adapted scope/navigation and project guidance to TMP11x. Detailed stage policy remains in the promptset. |
+| `CLAUDE.md` | Same TMP1x2 revision, `CLAUDE.md` | Standard shared-instruction import, matching TMP1x2, OPT4001, ADS1115 and 24Cxx. No second rulebook. |
 
-`.gitattributes` is repository-specific. Agent entry files and promptset
-revisions are original TMP11x guidance informed by the audited siblings;
-`CLAUDE.md` imports the shared `AGENTS.md` contract rather than maintaining
-another independent copy. No production C++ headers, implementation, sibling
-reference archive or hardware logs have been copied during preparation.
+`.gitattributes` is repository-specific. Agent entry conventions were aligned
+with the siblings on 2026-11-15; TMP11x-specific guidance and promptset revisions
+retain this repository's own contracts. `CLAUDE.md` imports `AGENTS.md` rather
+than maintaining another independent copy. No production C++ headers,
+implementation, sibling reference archive or hardware logs have been copied
+during preparation.
+
+The entry-file comparison used clean local checkouts, each matching its observed
+remote HEAD: TMP1x2 `afd50889312f6e218a6a34eca687e3e8547d8b40`, 24Cxx
+`1bd9f969d1df55ca5819b0d290ff331869e7d5bc`, OPT4001
+`441ef579d7fa3f7bca7665f52632fdaddd306300` and ADS1115
+`e07622a99fe9f13c5d6a5a2497a8112a14185b9d`. Broader sibling guidelines were
+checked for ownership, framework boundaries and documentation practice; their
+chip behavior, lifecycle differences, release commands and machine-specific
+tool paths were not copied into TMP11x instructions.
 
 The MIT notice covers original/adapted library and tooling code. Vendor PDFs
 and any separately licensed reference material retain their own notices;
