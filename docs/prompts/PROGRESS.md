@@ -6,7 +6,8 @@
 **Preparation input HEAD:** `6c5e4496d5c896af689228d4bee4382a53c20626` (clean and synchronized at entry).
 **Hardware:** Physical TMP11x board and test wiring NOT CONFIRMED.
 **Last completed stage:** 3 (intake scope clarified by the full promptset audit).
-**Last update:** 2026-11-17; see [individual audit responses](audit.md#response--2026-11-17),
+**Last update:** 2026-11-17; see the [cb73740 follow-up](../reports/audit-followup-cb73740.md#response--2026-11-17),
+[individual audit responses](audit.md#response--2026-11-17),
 [full promptset audit](../reports/promptset-audit.md)
 and [datasheet/functionality gap audit](../reports/feature-gap-audit.md).
 The latest [handoff consistency audit](../reports/handoff-audit.md) assigns
@@ -51,6 +52,13 @@ The configured PlatformIO launcher selects the active Core rather than the
 inactive default installation. Reference PDF names from `19facbe` remain
 descriptive and the original bytes stay pinned. No driver, MCU, CI or physical
 qualification stage was executed by this review.
+
+The cb73740 follow-up checks all 42 submitted top-level items and their nested
+requests. It reconciles startup-origin defaults/invalidation, one-shot order
+and provenance, bounded guard polling, SDK tick/budget admission, fixture
+authority and CLI producer boundaries. Prior response overclaims and auditor
+citation errors are explicitly corrected. No new implementation stage was run;
+61 producer IDs and 263 required-input links remain unchanged.
 
 The [report index](../reports/index.md) separates completed preparation from
 stage-owned evidence. Final commit/upstream synchronization is recorded in the

@@ -32,8 +32,8 @@ protocol authority. Stage 8 freezes any needed exact signatures in
   offset is observed, not replayed; TMP116 rejects managed offset before I2C.
 - A synchronous helper may use an explicitly bounded application yield hook
   only if stage 8 defines it; cooperative `poll` always returns during waits.
-  The required clock hook governs deadlines/ages; legacy `nowMs` arguments
-  do not override it. Stage 9 freezes per-API clock requirements.
+  The required clock hook governs deadlines/ages/scheduling; selected start/poll
+  signatures retain `nowMs` but explicitly ignore it. Stage 9 lists clock requirements.
 - A per-instance user callback context and selected I2C address may coexist
   with other TMP11x/TMP1x2 instances on a shared bus. Bus route selection,
   mutexes and TCA9548A channel selection belong to application owner.
@@ -43,13 +43,17 @@ protocol authority. Stage 8 freezes any needed exact signatures in
   commands and cannot be replayed by initialization or recovery. Bind-only
   diagnostics can observe permitted registers without managed initialization;
   report unknown startup/configuration/sample trust instead of writing settings.
-- Managed one-shot first checks current stable CONFIG before mutation, then
-  requires desired shutdown and a guarded shutdown write
-  followed by a cleared readiness baseline before triggering;
-  a continuous desired mode rejects before I2C. The caller explicitly selects
-  shutdown first. Desired shutdown remains unchanged across the owned
-  one-shot and its completion; undocumented MOD readback is not completion
-  evidence. Cancellation does not restore a prior mode.
+- Managed one-shot uses one order: local desired-shutdown/initialized/clean
+  checks (zero I2C on rejection), 0x04 guard, CONFIG stable-field comparison,
+  guarded SD write, CONFIG baseline, one trigger, readiness polls, TEMP.
+  Mismatch or unowned MOD=11 latches dirty with zero CONFIG writes. Desired
+  shutdown stays unchanged. Owned-trigger provenance permits MOD=01/11 during
+  the shot and after cancellation/timeout until successful SD or invalidation,
+  without proving completion. Cancellation never restores or retriggers.
+- StartupOrigin defaults to FIRST_ACK; CALLER_TIMESTAMP is optional. It is
+  mutable device evidence, not transport binding. Both require stable power/no
+  reset; bind time alone is not a power origin. Stage 19's bus-silent
+  invalidateDeviceState(nextOrigin = FIRST_ACK) clears old proof before recovery.
 - Acquisition kinds are explicit: latest register read, continuous try-fresh
   (and its bounded wait), or owned one-shot. No mode-dependent read silently
   triggers a conversion. Dirty/uninitialized profiles reject fresh requests;

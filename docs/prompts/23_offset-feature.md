@@ -17,7 +17,7 @@ Verify TI TMP117/TMP119 `Temp_Offset` register, saturation behavior and its EEPR
 
 - Implement `setTemperatureOffset`, `readTemperatureOffset`, desired offset snapshot and 16-bit encoding for TMP117/M/N and TMP119 through the shared startup/0x04 EUN/busy guard. The hardware register is EEPROM-backed; only guarded volatile writes are permitted.
 - Introduce the public optional managed-offset field and desired/observed/trusted state now, as frozen in stage 8. Default is unmanaged: observe the existing offset for provenance but never overwrite it merely because Config was default-constructed. Explicitly managing zero is distinct from opting out and must apply/read back/recover zero. Connect every accepted managed value to actual I2C; update stages 18/21 so owned-profile trust covers managed offset and sample provenance records the observed unmanaged offset. TMP116 remains unsupported, including explicit zero requests.
-- For TMP116/TMP116N, return `UNSUPPORTED` without any I2C transfer. Enforce this in the shared capability/write-policy seam now; stage 26 must apply it to any raw route and stage 38 to CLI routes when they exist.
+- For TMP116/TMP116N, return `UNSUPPORTED` without any I2C transfer. Enforce this in the shared capability/write-policy seam now; stage 26 must apply it to diagnostic and typed routes and stage 38 to CLI routes when they exist.
 - Distinguish offset applied by chip to sensor reading from an application software correction; do not reapply offset in software when reading TEMP.
 - Preserve write/readback/dirty-state behavior and quantization. The offset register encodes -256 through +255.9921875 degrees C. Reject out-of-range/nonfinite API inputs under the codec policy; do not silently saturate the requested offset. Sensor saturation applies to the sum of conversion plus offset, as described in TMP117 p.31 section 7.6.9 and TMP119 p.38 section 8.5.9.
 - Offset changes invalidate the current profile's sample/freshness evidence. A read of an existing TEMP word is not proof that a new offset has been applied; require a subsequent confirmed conversion before publishing a sample attributed to the new offset.
@@ -30,7 +30,9 @@ Verify TI TMP117/TMP119 `Temp_Offset` register, saturation behavior and its EEPR
 ## Verification and exit criteria
 
 Test 0x07 writes for TMP117/TMP119 only, TMP116 rejected with **zero I2C**, correct sign/rounding, ambiguous failed write and verified recovery.
-EUN=1, busy=1 or unestablished startup causes zero 0x07 writes. Test a
+EUN=1, busy that remains set through the bounded guard wait, or unestablished
+startup causes zero 0x07 writes. A busy-to-clear guard permits writing only
+after an EUN=0/busy=0 observation and startup readiness. Test a
 nonzero EEPROM-loaded calibration with default/unmanaged Config (no offset
 write), explicit zero (written and verified), and unchanged sample outputs/cache
 after late success. Physical saturation trials belong to stage 41; simulator

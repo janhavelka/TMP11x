@@ -13,7 +13,7 @@ freezes arguments and output fields; do not create competing `average`,
 
 | Command | Required semantics |
 |---|---|
-| `help`, `version`, `model`, `addr`, `caps`, `health`, `settings`, `jobs`, `bus` | Query cached/software state without I2C. `settings` reports desired/trusted state; observed CONFIG uses `config`. Any model/address setter is a separate explicit binding change, rejected while a job/result owns the instance. |
+| `help`, `version`, `model`, `addr`, `caps`, `health`, `settings`, `jobs`, `bus` | Query cached/software state without I2C. `settings` reports desired/trusted state; observed CONFIG uses `config`. `model` and `addr` are query-only: change them through explicit `bind`, rejected while a job/result owns the instance. |
 | `latest` | Return the cached sample with validity and acquisition provenance; no I2C and no new-conversion claim. |
 | `bind <model> <addr>`, `unbind`, `end` | Bus-silent lifecycle actions; bind validates the full available profile and preserves the instance on rejection. Stage 37 freezes omitted/default arguments; stage 38 wires final routes. |
 | `begin` | Explicit guarded initialization; never run implicitly when connecting or issuing observation commands. |
@@ -23,7 +23,7 @@ freezes arguments and output fields; do not create competing `average`,
 | `discover` | Read identity only at application-authorized candidates within 0x48–0x4B. Those addresses may contain unrelated devices; require fixture/bus ownership, never run discovery implicitly. Do not infer TMP119 or grade from revision bits. |
 | `mode`, `cycle`, `avg`, `limits`, `alert`, `offset` | Explicit volatile-register changes that remain the desired profile, never NVM writes. `mode` accepts continuous/shutdown; one-shot is separate. Offset management is opt-in on TMP117/TMP119 and defaults off, preserving observed calibration. No implicit restoration after an intentional setter. |
 | `oneshot`, `recover`, `reset` | Explicit typed guarded mutation. `reset` is TMP117/TMP119 only, with unknown reset effects followed by safe-state/full readback; no general-call fallback. Report resulting trust. |
-| `shutdown` | Exact alias for `mode shutdown`, including desired-mode update and guards, owned by stage 20 and integrated in 38. |
+| `shutdown` | Exact alias for `mode shutdown`, including desired-mode update and guards; defined at stage 37, wired at 38 over stage 20's typed setter. |
 | `invalidate`, `job cancel`, `job result` | Bus-silent state/result actions under the owner/result contract. Cancellation cannot undo an earlier hardware effect. |
 | `job start init/configure/recover/read/tryfresh/oneshot`, `job step` | Explicit operation kind and bounded timeout; read/try-fresh/one-shot are distinct. Stage 37 freezes profile arguments and framing; stage 38 implements all kinds. No low-level I2C bypass. |
 | `job auto [0/1]` | Default automatic owner-loop polling with a fixed per-turn transfer budget. Manual steps require a finite explicit deadline that includes host delay. |
@@ -49,6 +49,17 @@ unrelated I2C commands return BUSY while a job/result owns the instance.
 Stage 37 freezes a bounded request-ID envelope; responses echo that ID and
 session. No additional marker/alias command is needed solely for correlation.
 
+Stage 37 freezes optional `--startup first-ack` and
+`--startup at:<firmware_monotonic_ms>` for bind/begin/recover/invalidate.
+Bind defaults to FIRST_ACK; bare begin/recover use the existing valid seed or
+establish missing proof from FIRST_ACK. An explicit begin/recover option uses
+the same bus-silent `invalidateDeviceState(nextOrigin)` transition before
+starting, with BUSY/invalid-input rejection preserving prior state. Bare
+invalidate clears old proof to FIRST_ACK. Caller timestamps use the firmware
+hook epoch, never host wall time; both paths require stable power/no reset.
+After external power loss stop polling stale state, cancel/take any result,
+invalidate with a new seed, restore stable power and explicitly recover.
+
 Temporary test campaigns snapshot restorable settings and verify restoration
 or report failure. Restore only writable stable fields, with reset commands
 masked and mode normalization handled; flags, conversion phase, consumed
@@ -65,11 +76,15 @@ would leave the temporary calibration in hardware. If the original value is
 unknown, refuse the campaign; if restoration cannot complete, report failure
 and remaining state instead of reporting a clean restore.
 
-Physical selection uses concrete authorization already supplied in the session
-or a fixture record: board/port, exact part/address, bus participants and mux
-route, upload permission and allowed observe/volatile/power-cycle actions.
-Do not infer authorization from enumerating ports. A mandatory user-authored
-JSON file is not required; stage 39 validates concrete resolved inputs. Default
+Physical selection uses authorization traceable to the user's instruction or
+a named user-authored/explicitly user-approved record: board/port, exact
+part/address, bus/mux participants, upload and campaign scope. Agent reports
+can cite that authority but cannot create it; another fixture's record cannot
+authorize this one. Authorization persists within its granted scope, without
+automatic expiry or repeated confirmation. Stage 39 validates resolved inputs;
+verify target/route/address/compatible identity before mutation and after
+reconnect/reset/rebind/mismatch. Port enumeration and ID alone are insufficient.
+No mandatory user-written JSON file is needed. Default
 campaigns omit discovery; each candidate must be an authorized pointer-safe
 device. Named mux routing is permitted and counted separately from sensor writes.
 Observation campaigns retain boot-to-end data-write counters (including attempts
@@ -90,8 +105,9 @@ from 34/35 supply firmware/session metadata without sensor access; 38 wires it
 into final images and records them in `docs/firmware-cli-handoff.md`. Unknown
 device ID/observations are explicit null/unknown fields, never a reason for an
 implicit probe during `version`, `help` or other bus-silent commands.
-Stages 34/35 initially provide fixed demos and byte-I/O hooks, without a second
-parser. Stage 37 defines the shared processor/host protocol, stage 38 attaches
+Stages 34/35 initially provide fixed demos and bounded byte-I/O hooks.
+Stage 37 owns line assembly, overflow handling and parsing in the shared
+processor/host protocol; stage 38 attaches
 it. If a backend resumes later, that backend owner integrates the current CLI
 and refreshes its build record and firmware handoff.
 

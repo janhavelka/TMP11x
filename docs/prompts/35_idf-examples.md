@@ -17,11 +17,11 @@ Inspect TMP1x2 `examples/esp_idf/basic` CMake/PlatformIO, modern ESP-IDF `driver
 
 - Create native ESP-IDF CMake example for ESP32-S3 and S2 using app-owned `i2c_master_bus_handle_t` and per-device handles; driver only sees I2C callback table, never SDK headers or handles.
 - Use `i2c_master_transmit_receive` for the combined pointer-write/read, with terminal timeout/error mapping. Do not register asynchronous transfer callbacks on these handles: the SDK then returns before completion, violating the borrowed-buffer contract. Validate positive finite timeouts before conversion to the SDK's signed `int`; never map overflow/exhaustion to its `-1` infinite wait. Account for owner lock/route time, and document SDK tick quantization and timing limits. Do not invent a short-transfer count or NACK phase the SDK does not return.
-- Implement nonblocking caller scheduling, monotonic time, a fixed observation demo and bounded line-I/O hooks for the later shared processor. No independent command parser is created here; stage 38 owns its attachment. Input/ISR callbacks may queue bounded input or GPIO observations; only the owner calls driver APIs. Preserve a register-write-free observation startup path for stage 40.
+- Implement nonblocking caller scheduling, monotonic time, a fixed observation demo and bounded byte-I/O hooks for the later shared processor. Stage 37 owns line assembly, overflow handling and command parsing; stage 38 attaches it. Input/ISR callbacks may queue bounded input or GPIO observations; only the owner calls driver APIs. Preserve a register-write-free observation startup path for stage 40.
 - Demonstrate one device/one bus owner and coexistence with a second I2C device. GPIO and bus recovery/reset remain app-owned. Create handles only for intended sensor addresses; do not inherit TMP1x2's general-call/SMBus alert-response handles or commands.
 - Register clean native ESP-IDF app linking, including a minimal app linking the TMP11x component, not only header syntax tests. An IDF component needs a project to build. Keep IDF-only CMake source/target dependencies outside portable native `find_package` consumers.
 - Supply application-owned firmware build identity and per-boot session identity, separate from the core library version and obtained without sensor access. Stage 37 defines the protocol fields; stage 38 integrates the final CLI and refreshes linked images. Preserve precise target/SDK/source identity so stage 40 cannot select an older pre-CLI image.
-- Set and record the example's `CONFIG_FREERTOS_HZ` (1000 Hz is the selected example default). Validate actual SDK millisecond-to-tick conversion; reject a zero-tick or otherwise insufficient remaining budget before I2C. Budget lock, transfer, cleanup and SDK timing overhead without rounding beyond the caller's deadline. Test boundary budgets and post-return time. Do not claim that two ticks or a 1000 Hz scheduler alone proves terminal cleanup or a hard wall-time bound.
+- Set and record the example's `CONFIG_FREERTOS_HZ` (1000 Hz is the selected example default). Apply the computable tick/budget policy below using the actual SDK conversion. Reject insufficient budgets before sensor I2C, without rounding beyond the caller's deadline. A two-tick floor or 1000 Hz scheduler alone does not prove terminal cleanup or a hard wall-time bound.
 - Document the pinned SDK's own timeout recovery/bus-clear behavior. It is adapter/backend behavior, not a TMP11x retry, and must fit the application bus-ownership contract. If the SDK cannot satisfy terminal borrowed-buffer lifetime or the declared deadline bound, report that adapter gate BLOCKED rather than weaken the core contract.
 - Count all adapter attempts from boot, separating pointer-only writes, sensor data writes, reads and any mux traffic; provide a bus-silent snapshot for `xfer`. Include health-neutral diagnostics and mark counter saturation/continuity loss.
 - If this stage resumes after stage 38, attach the final shared CLI, rebuild and update `docs/firmware-cli-handoff.md` with the new image; do not leave integration ownerless after a late SDK installation.
@@ -30,6 +30,31 @@ Inspect TMP1x2 `examples/esp_idf/basic` CMake/PlatformIO, modern ESP-IDF `driver
 - Extend stage 4's `docs/board-integration.md` independently with IDF setup: ADD0 straps, exact package/supply/temp constraints, external pullups, 100 nF decoupling, open-drain active-high ALERT and thermal/strain conditions. This guide does not require an Arduino build. Internal MCU pullups or a successful link alone do not qualify electrical timing or accuracy.
 
 ## Verification and exit criteria
+
+For this truncating SDK backend, define `P = 1000/configTICK_RATE_HZ` ms and
+`t = pdMS_TO_TICKS(sdkTimeoutMs)` using the pinned conversion. Require `t >= 2`
+and `(t - 1) * P >= Ttransfer`. Derive `Ttransfer` from the bounded configured
+SCL period (36 clocks for a register write, 45 for a combined register read),
+START/STOP timing and named controller/interrupt-service allowances. Record
+their numerical/configured values and assumptions, using overflow-safe
+arithmetic. Nominal SCL and tick conversion alone are not worst-case evidence.
+
+After subtracting actual owner lock/route time, require `t * P <= remainingMs`
+and `Bbackend(t) + cleanupReserve <= remainingMs`. `Bbackend` must include all
+potentially sequential SDK semaphore/event/NACK waits, SDK recovery and
+scheduling allowance; the SDK can reuse the same timeout for several waits.
+Calculate it as the maximum over reachable backend paths of
+`sum(maxCalls(j) * waitBound(j, t)) + setupReserve + recoveryReserve + scheduleReserve`,
+with finite source-derived counts and numerical/configured reserves. A normal
+tick wait contributes up to `t * P` before scheduling delay; the pinned strict-`>`
+NACK loop needs another tick. Do not hide missing evidence in an unnamed margin.
+Check admission before route activity and remaining time again after it. An
+exhausted budget returns a typed error without sensor I2C; any already completed
+mux write remains separately counted. Test 0/1/2 ticks, tick-phase edges,
+configured slow-SCL durations, lock/route exhaustion, late return and buffer
+lifetime after failure. Unknown finite bounds or cleanup leave the adapter
+qualification gate BLOCKED instead of turning the inequalities into a false
+end-to-end guarantee.
 
 Build/verify real IDF firmware images for S2/S3 where toolchain exists, with exact IDF version and command. Record BLOCKED where unavailable, not a fake CI success.
 

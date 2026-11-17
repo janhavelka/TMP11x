@@ -24,6 +24,10 @@ Inspect TMP1x2 and OPT4001 CMake, metadata, tests-OFF consumer, generated Versio
 
 ## Verification and exit criteria
 
+Stages 1–42 add no initial `.github/workflows/*`; stage 43 owns their creation.
+Preserve any workflows/triggers/protection already present rather than deleting
+them to enforce this sequencing rule. Local test scaffolding is required now.
+
 Run clean native CMake configure/build/CTest against the minimal real types, an isolated public-header compile, version reproducibility and package listing. No declared chip function succeeds without implementation.
 
 ## Documentation and delegation

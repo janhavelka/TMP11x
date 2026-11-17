@@ -19,7 +19,7 @@ Compare TI timing/data-ready/one-shot sections and TMP1x2 `startRead` job state 
 - Budget 0x04 safety guard, preflight CONFIG comparison, explicit SD write, CONFIG stale-ready baseline, one OS trigger, wait, CONFIG observation and TEMP read as distinct steps, each at most one physical callback. Preflight drift or unowned MOD=11 latches dirty state with zero CONFIG writes; only retained owned-trigger provenance permits normalization of residual OS to SD. Freshness-producing continuous jobs also check 0x04 and require their established current-generation baseline; latest-only jobs do not claim freshness. Apply stage 6/21's sparse default poll schedule. Bind evidence to request/profile and consume it once; ambiguous read failures can consume hardware evidence.
 - Record host observation timestamp validity, freshness evidence and possible read-to-clear effects in the retained result. Every successful CONFIG read updates shared sticky alert evidence, including late callbacks and later-failed composites; result copies do not drain the explicit alert consumer. Recheck completion time before publishing: late successful reads update physical health/evidence but not outputs/cache/timely success. GPIO observation alone does not supply a new completion protocol, and no ISR may mutate the driver.
 - Support other sensor instances using the same bus between polling turns, without holding locks or assuming pointer persistence.
-- Reject or preserve uncertain freshness after outside configuration reads, raw diagnostic interference, missed event or reset.
+- Reject or preserve uncertain freshness after configuration/diagnostic reads by outside masters or other instances, a missed event or reset. This instance's unrelated diagnostics are already BUSY-gated and cannot interleave with its job.
 
 - Carry stage 6/21's accumulated-average, aborted-partial-block and TEMP coherence qualifications into cooperative results. Changes to limits/offset/settings use the shared profile-generation policy; no accepted job may relabel an earlier sample under a new profile or resolve unknown silicon semantics via a fake.
 
@@ -31,14 +31,20 @@ CONFIG baseline before trigger, retain desired shutdown regardless of the
 undocumented during/after-OS MOD readback, and preserve
 uncertain conversion evidence on cancel/timeout without mode restore/retrigger.
 The preflight CONFIG comparison precedes the SD write; no acquisition silently
-repairs unknown configuration drift. Retain alert events from both CONFIG reads.
+repairs unknown configuration drift. Retain alert events from every CONFIG read.
 Run lifecycle/invalidation integration tests from stages 14/19/28 against real
-measurement jobs, not only the admission harness.
+measurement jobs, not only the private state-transition component.
 
 Test interleaved two-sensor fake transport, one transfer per poll, 32-bit wrap, invalid/no clock, same temperature consecutive one-shots, missed ready and late successful read not published as timely result.
 Include EUN/busy/startup refusal without CONFIG writes or fresh results,
 both compatible post-OS MOD outcomes, residual conversion after cancellation,
 continuous first-baseline suppression and one-time alert consumption.
+Also test MOD=01/11 during readiness polling and after timeout/cancel under
+retained acknowledged-trigger provenance; unowned MOD=11 remains drift. A
+terminal physically successful trigger retains that provenance even when the
+whole operation times out; it is not fresh evidence or permission to publish a
+sample. Successful explicit SD or invalidation ends the exception; an ambiguous
+SD write invalidates trust instead of proving shutdown.
 
 ## Documentation and delegation
 

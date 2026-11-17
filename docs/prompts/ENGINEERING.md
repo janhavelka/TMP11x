@@ -42,7 +42,9 @@ separate from tracked health; document their exact side effects.
 `DriverState` describes tracked transport health independently of initialization.
 UNINIT means no tracked outcome since bind/teardown; tracked successes/failures
 drive health even before initialization. Invalidation clears device trust, not
-transport history. Stage 8 defines `initialized` and `isOnline()` separately;
+transport history. `isOnline()` is bus-silent and means initialized plus
+READY/DEGRADED; it is neither a live probe nor proof of freshness/config trust.
+Stage 8 freezes this separately from the transport-health state;
 this deliberately differs from TMP1x2's initialization-gated state changes.
 Stage 18 extends bus-silent bind validation to the complete accepted profile.
 Rejected binding preserves the old instance; accepted rebind discards old
@@ -91,10 +93,17 @@ CONV/AVG cycle-table entries are nominal, with no specified continuous-cycle
 maximum. TMP117's 17.5 ms maximum is explicitly conditioned on one-shot mode;
 extrapolating it to continuous cadence is policy. Stage 6 defines finite
 continuous timeout margins without advertising them as silicon guarantees.
-For precision, schedule the first owned-one-shot readiness poll no earlier
-than AVG count times the applicable single-conversion maximum, with rounding
+For precision, by default schedule the first owned-one-shot readiness poll at
+AVG count times the applicable single-conversion maximum, with rounding
 up to the clock resolution. Earlier sparse polling is an explicit latency
 tradeoff, especially on TMP119 (SNIS236 p.23 recommends avoiding active I2C).
+Bounded continuous-fresh helpers/jobs default to one CONFIG-ready poll per
+nominal CONV×AVG cycle, rounded up to clock resolution, measured from the
+baseline or previous poll. A due time beyond the deadline expires without
+another poll. This is pacing policy, not a continuous-cycle maximum or a way
+to avoid every active conversion. Untimed try-fresh performs one bounded
+attempt; its caller owns repeated-call pacing. These policies limit only this
+driver's own polling, not other devices or masters on the shared bus.
 Elapsed time alone is not evidence that this instance completed a conversion.
 
 DATA_READY is cleared on CONFIG or TEMP read; configuration diagnostics can
@@ -116,19 +125,25 @@ MOD=11 is compatible only with retained known owned-shot provenance, never an
 unknown outside trigger. The operation then uses an explicit shutdown write to abort residual work,
 reads CONFIG to establish the old-readiness baseline, and triggers exactly once.
 Desired mode stays shutdown. MOD readback during/after a one-shot is undocumented;
-it proves neither completion nor abort. After an owned DATA_READY completion,
-MOD=01 or 11 may be compatible with that owned operation, never independent
-evidence. Cancellation/timeout is bus-silent and never restores or retriggers.
+it proves neither completion nor abort. From the terminal physically successful
+trigger through in-flight/completed/cancelled/timed-out states, MOD=01/11 is
+compatible by owned-trigger provenance until successful explicit SD or
+invalidation/rebind. A physical trigger success after the deadline retains
+provenance, not timely success. An ambiguous trigger/SD write invalidates trust;
+it cannot establish clean ownership or verified shutdown. Cancellation/timeout
+is bus-silent and never restores or retriggers.
 The next explicitly requested one-shot establishes its own shutdown boundary.
 
-Continuous profile changes use guarded shutdown, apply/readback, a cleared
+All managed profile changes, including limit-only and routing/polarity-only
+changes while continuous, use guarded shutdown, apply/readback, a cleared
 readiness baseline, then the desired continuous mode and a final CONFIG
 readback comparing every stable field. Dirty remains set until that final
 verification succeeds; its returned flags feed the evidence record and its
 readiness consumption establishes the new acquisition baseline. This avoids guessing how
 a mid-average write affects the current block. Bind/outside access invalidates
 the baseline; a continuous try-fresh call never silently writes or establishes
-profile trust. Freshness requires the current trusted generation and new
+profile trust. If no baseline exists under an otherwise trusted generation,
+the first read only establishes it. Freshness requires that baseline and new
 DATA_READY evidence. Discarding one completion is not a proven alternative.
 If readiness is never observed, return a bounded not-ready/timeout outcome;
 elapsed time or an unverified GPIO level is not fresh-conversion evidence.
@@ -155,9 +170,12 @@ bookkeeping and stage 22 exposes bus-silent inspect/consume; include source,
 profile generation and uncertainty when a failed read may have consumed flags.
 If sticky events span generations/modes, use a bounded mixed/unknown provenance
 marker; do not attribute the aggregate to the most recently observed profile.
-Therm-mode HIGH is a level snapshot, not an OR-latched software event. With
-mode/routing/polarity unchanged and no reset, its documented set/clear condition
+Therm-mode HIGH is a level snapshot, not an OR-latched software event. While
+T/nA remains therm and no reset occurs, its documented set/clear condition
 is a completed comparison; shutdown/abort alone is not a documented clear.
+Routing and polarity affect the pin, not that flag's retention. Pin persistence
+through shutdown with routing/polarity unchanged is an inference from these
+rules, not an independent explicit retention specification.
 TMP116 does not explicitly say comparisons wait for the full averaging block;
 keep that inference separate from TMP117/TMP119's explicit wording.
 An alert-mode flag remains latched when temperature returns in range; after
@@ -176,20 +194,43 @@ TMP116 SBOS740A p.17 says busy is cleared during reset load, contradicting p.26
 and p.29 tables: busy==0 alone must not prove completed startup. The roughly
 1.5 ms POR interval is not a specified maximum. Record assumptions and require
 bounded readback; preserve this source conflict rather than guessing hardware.
-The owner must establish continuously applied, stable power/no outside reset
-over the startup policy interval. Stage 8 freezes a caller-supplied origin or
-a conservative wait beginning at bind/recovery under that explicit assumption;
-an observation is not proof of power-on time. Unknown power stability refuses
-mutation. TMP117 tRESET=1.5 ms (p.7) is also typical only, without a maximum.
+Both startup-origin paths require continuously stable power/no outside reset
+from the chosen origin through the operation. Default `StartupOrigin` source
+FIRST_ACK uses completion of the first successful compatible read in the
+current initialization/recovery operation when startup proof is absent. This
+is naturally no earlier than operation start; an old bind timestamp cannot
+substitute. Startup reads are permitted (TMP116 p.17; TMP117 p.18; TMP119 p.20),
+so a successful read is a conservative power-present anchor, not completed POR.
+CALLER_TIMESTAMP uses the same hook epoch and must be nonfuture/unambiguous
+under bounded wrap-safe arithmetic; it does not waive the stable-power assumption.
+Unknown power stability refuses mutation. The wait is conservative policy:
+TMP117 tRESET=1.5 ms (p.7) is typical, without a maximum.
 
-Read 0x04 once at the start of each mutating or freshness-producing acquisition
-operation, before its first write/freshness observation and under exclusive
-sensor ownership. Require EUN=0 and busy=0; use neither CONFIG busy nor a
-previous operation's cached lock check as a substitute. Reuse the guard only
+Config supplies the initial source/seed, not immutable transport binding.
+Retain established startup evidence until invalidated. The bus-silent
+`invalidateDeviceState(nextOrigin = FIRST_ACK)` clears old origin/startup proof,
+initialized/config/freshness/owned-trigger knowledge and installs the new seed,
+while retaining desired settings, transport history and historical alerts.
+It requires idle/no retained-result ownership; rejection preserves state.
+After power loss stop using old trust, cancel/take the result if needed,
+invalidate with FIRST_ACK or a new caller timestamp, then recover. Bind seeds
+the origin; teardown/reset clear prior proof. Stage 19 owns the origin-replacement
+API; before it exists, stage 18 startup tests use a fresh bind rather than a
+placeholder invalidation API.
+
+Acquire an operation-local 0x04 guard at the start of each mutating operation
+(apply/recover, limits, offset, shutdown, one-shot, reset) or freshness-producing
+acquisition, before its first write/freshness observation under exclusive
+ownership. EUN=1 refuses immediately. EUN=0/busy=1 permits paced successful
+0x04 re-reads only, bounded by deadline and work cap; no retries after transfer
+failure and no writes before observing EUN=0/busy=0. Use neither destructive
+CONFIG busy nor a previous operation's lock check as a substitute. Reuse the safe word only
 within that uninterrupted operation; invalidate on reset, rebind, outside
 access, ambiguous transfer failure or observed busy. After reset, recheck
 0x04 before further writes. Latest/diagnostic reads need not poll 0x04 and
 never claim fresh acquisition. EUN=1 permits no writes, including shutdown.
+An untimed/nonblocking acquisition returns busy/not-ready instead of entering
+a timed busy-wait; only a deadline-bearing path may repeat guard observations.
 The library cannot stop externally unlocked continuous conversions safely.
 This release has no unlock/relock/maintenance path. Recovery from EUN=1 needs
 an application power cycle or authorized external relock, then invalidation

@@ -41,22 +41,22 @@ than duplicating every transitive consumer list. There are 61 produced IDs and
 
 | Stage | Produced IDs | Usable output and boundary |
 |---:|---|---|
-| 1 | `ecosystem-audit` | `docs/library-comparison.md` and `docs/source-adoption.md`; source revisions/license decisions for 2/8. Research, no copied driver. |
-| 2 | `tooling-plan` | `docs/toolchain-and-package-plan.md`; selected build/layout/test tools for 10/34/35/42. Installed SDK discovery is not a firmware build. |
-| 3 | `ti-archive` | Pinned PDFs/manifest, review notes and public-code catalog; exact sources for 4–7. Optional inaccessible example code does not block intake. |
-| 4 | `variant-contract`, `board-guide` | `docs/variants.md` and initial `docs/board-integration.md`; model/grade and board facts for 5/8 and independent 34/35 integration. |
+| 1 | `ecosystem-audit` | `docs/library-comparison.md` and `docs/source-adoption.md`; source revisions/license decisions; consumers: see SEQUENCE. Research, no copied driver. |
+| 2 | `tooling-plan` | `docs/toolchain-and-package-plan.md`; selected build/layout/test tools; consumers: see SEQUENCE. Installed SDK discovery is not a firmware build. |
+| 3 | `ti-archive` | Pinned PDFs/manifest, review notes and public-code catalog; exact sources; consumers: see SEQUENCE. Optional inaccessible example code does not block intake. |
+| 4 | `variant-contract`, `board-guide` | `docs/variants.md` and initial `docs/board-integration.md`; model/grade and board facts; consumers: see SEQUENCE. Stages 34/35 extend the guide independently. |
 | 5 | `register-ledger`, `feature-ledger`, `register-validator` | `docs/registers/tmp11x.json`, `docs/feature-coverage.md`, `tools/check_register_ledger.py` and `tools/test_check_register_ledger.py`; one fact/policy inventory, with standalone regression command before stage 10 registers it. |
-| 6 | `behavior-contract`, `behavior-vectors` | `docs/device-behavior.md` and `docs/registers/behavior-vectors.json`; source-backed traces for 16–23/32. No pre-driver executable test claim. |
-| 7 | `safety-policy` | `docs/eeprom-and-reset-policy.md` and refined stage 5 access/reset policy; guards/exclusions for 8/18–26. |
+| 6 | `behavior-contract`, `behavior-vectors` | `docs/device-behavior.md` and `docs/registers/behavior-vectors.json`; source-backed traces; consumers: see SEQUENCE. No pre-driver executable test claim. |
+| 7 | `safety-policy` | `docs/eeprom-and-reset-policy.md` and refined stage 5 access/reset policy; guards/exclusions; consumers: see SEQUENCE. |
 | 8 | `api-contract` | `docs/api-contracts.md` and architecture; one-shot/binding/settings/failure contracts for all code. Declarations alone are not implementations. |
-| 9 | `owner-contract` | `docs/owner-operations.md`; immutable binding, clock, admission/result/cancellation rules for 18/21/28–31. |
+| 9 | `owner-contract` | `docs/owner-operations.md`; immutable binding, clock, admission/result/cancellation rules; consumers: see SEQUENCE. |
 | 10 | `build-foundation`, `version-tools`, `host-test-entrypoint` | Real CMake library/test skeleton, scripts/generate_version.py, tools/check_version_sync.py and docs/testing.md; later stages add tests to this host entrypoint. |
-| 11 | `value-types` | Pure Status/Config/model/value types and single capability table for 12–17. No I2C or device-success placeholders. |
+| 11 | `value-types` | Pure Status/Config/model/value types and single capability table; consumers: see SEQUENCE. No I2C or device-success placeholders. |
 | 12 | `register-transport`, `command-table`, `register-fake` | Private checked transport, include/TMP11x/CommandTable.h and initial reusable test/support/FakeTmp11xDevice.{h,cpp}; literal ledger-derived test behavior, extended by later owners. Public unbound guards integrate at stage 14. |
 | 13 | `identity-engine` | Private identity engine using stage 12's binding view. Public identity/probe integration belongs to stage 14. |
 | 14 | `binding-api`, `public-identity-api` | Real bus-silent bind/end/unbind and public bound identity/probe. Stage 18 extends bind profile validation; job-slot lifecycle tests belong to stages 28–30. |
 | 15 | `transport-health` | Tracked transport health independently of initialized state; identity/probe stays health-neutral. Initialization integration belongs to stage 18. |
-| 16 | `temperature-codec`, `latest-read-engine` | Signed codecs plus latest-read engine/cache for 17/18/21. Managed API remains guarded until real initialization 18; private seams are tested now. |
+| 16 | `temperature-codec`, `latest-read-engine` | Signed codecs plus latest-read engine/cache; consumers: see SEQUENCE. Managed API remains guarded until real initialization 18; private seams are tested now. |
 | 17 | `config-codec` | Pure CONFIG codecs, stable comparison and profile validation using stage 16; no duplicate capability table. Physical apply belongs to stage 18. |
 | 18 | `safe-apply-engine`, `sync-initialize-recover` | Real bounded begin/recover over resumable apply/readback phases, full available bind validation and desired/dirty state; offset management arrives at stage 23. |
 | 19 | `config-trust` | Shared observed configuration/trust and retained destructive-read evidence around stage 18's engine; setters extend it, stage 28 adds job ownership. |
@@ -67,7 +67,7 @@ than duplicating every transitive consumer list. There are 61 produced IDs and
 | 24 | `readonly-eeprom` | Read-only EEPROM-shadow APIs and shared write denials; diagnostics integrate at stage 26 and CLI at stages 37/38. |
 | 25 | `device-reset` | Guarded addressed reset/refusal with unresolved effects retained; nonfactory reset/recovery tests use stage 23's managed/unmanaged offset policy. |
 | 26 | `diagnostics` | One bound-only diagnostic route and identity-gated ordered dumps; all CONFIG reads retain evidence. No public raw register-data write API. |
-| 27 | `sync-api` | Complete synchronous public API/snapshots and compile consumer; reconcile feature coverage for 28/33/34–38. |
+| 27 | `sync-api` | Complete synchronous public API/snapshots and compile consumer; reconcile feature coverage; consumers: see SEQUENCE. |
 | 28 | `job-lifecycle` | Real private admission/result component and lifecycle integration; unrelated I2C is BUSY while active/result pending. Unconnected public kinds reject; stages 29/30 connect real engines. |
 | 29 | `configuration-jobs` | Initialize/configure/recover reuse stages 18/19/23 phases with immutable binding; execute lifecycle cases against real jobs. |
 | 30 | `measurement-jobs` | Latest/try-fresh/one-shot reuse stage 21; execute lifecycle/interleaving cases and operation-local guards. |

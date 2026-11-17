@@ -173,7 +173,8 @@ The complete pinned datasheet does **not** specify:
   baseline and triggers once; no elapsed-time-only completion or retrigger.
 - DATA_READY/alert-mode flag effects on SD entry and inverted therm limits.
   Therm HIGH itself is constrained by p.17's conversion-end-only rule while
-  therm mode, routing/polarity and reset state remain unchanged.
+  T/nA remains therm and no reset occurs. Routing/polarity affect the pin;
+  pin persistence through SD with those settings unchanged is an inference.
 
 The datasheet also exposes no conversion sequence counter, sensor conversion
 timestamp, CRC/PEC register, running-average mode, or fault queue. No such

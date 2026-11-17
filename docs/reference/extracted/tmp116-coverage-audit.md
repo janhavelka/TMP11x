@@ -95,8 +95,10 @@ when a conversion completes between MSB and LSB; exact partial-word-write
 commit behavior. TEMP is described as the most recent completed conversion
 (p.25), but there is no separate shutdown-reset guarantee.
 Therm HIGH is narrower: p.16 says it changes only at completed conversions;
-under unchanged therm/routing/polarity/reset state an abort/SD does not clear
-it. Page 14 does not explicitly say the comparator waits for full averaging,
+while T/nA remains therm and no reset occurs, abort/SD alone is not a documented
+clear. POL/DR affect the pin, not HIGH retention; pin persistence through SD is
+an inference under unchanged routing/polarity. Page 14 does not explicitly say
+the comparator waits for full averaging,
 unlike TMP117/TMP119; TMP116 block-end comparison is a labelled inference from
 the p.11 completed-result model, not an independently guaranteed timing fact.
 

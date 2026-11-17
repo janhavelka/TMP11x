@@ -96,8 +96,9 @@ invocation in START_HERE explicitly authorizes continuation.
 Hardware prompts 40–41 are intentionally fixture-gated. If no real authorized
 fixture exists, complete software/runner work and mark physical work BLOCKED or
 NOT RUN; do not change software evidence to PASS. Firmware builds similarly
-require actual installed target toolchains. Remote CI is reserved for prompt
-43. Final stage 44 reconciles every required software and physical scope
+require actual installed target toolchains. Remote CI runs at stage 43;
+stage 44 reruns that procedure for CI-covered fixes before closure.
+Final stage 44 reconciles every required software and physical scope
 without inventing completions or overwriting unresolved source conflicts.
 Stage 40 additionally requires one current fully linked observation image from
 a stage 34 **or** 35 backend after the final stage 38 CLI integration, matching

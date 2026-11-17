@@ -61,7 +61,7 @@ pin function`, `[1:0] part-specific/reserved/reset behavior`. Datasheets show
 MOD=10 is a legal continuous-mode encoding and reads back MOD=00; it is not
 reserved. TMP116 bits 1:0 are reserved. TMP117/TMP119 bit 1 commands software
 reset and always reads zero; ordinary setting writes must never set it.
-CONFIG bit11 MOD1 is explicitly not EEPROM-stored; bit10 MOD0 and bits9:2
+CONFIG bit 11 MOD1 is explicitly not EEPROM-stored; bit 10 MOD0 and bits 9:2
 are persistent-capable hardware fields. First-release software does not
 program any of them into NVM. Factory CONFIG is not a whole-word persisted
 image of status, commands and settings.
@@ -104,7 +104,7 @@ prove freshness or erase evidence without surfacing the side effect.
 - The same four-word mismatch appears in TMP117 p.20 Figure 7-8/p.30 and
   TMP119 p.22 Figure 7-9/p.37. Their startup summaries (pp.18/20) omit
   DR/Alert and offset from stored fields, while the CONFIG and map footnotes
-  (TMP117 pp.25/27; TMP119 pp.32/34) mark them EEPROM-backed. Detailed field
+  (TMP117 pp.25,27–28; TMP119 pp.32,34–35) mark them EEPROM-backed. Detailed field
   tables govern the conservative write guards and programmable reset domains.
 - Startup ignored writes are model-specific: TMP116 p.17 says all register
   writes; TMP117 p.18/TMP119 p.20 specify CONFIG and limits. Offset writes
@@ -159,8 +159,10 @@ byte-latching during updates. TMP117/119's offset/comparator order is also
 not explicitly proven by the offset-register text. Record conservative library
 policy, uncertain claims and required evidence separately. Do not invent a
 simulator behavior or repeated-read workaround and label it a datasheet fact.
-Therm HIGH is set/cleared at conversion comparisons; with mode/routing/polarity
-unchanged and no reset, shutdown/abort alone is not a documented clear path.
+Therm HIGH is set/cleared at conversion comparisons; while T/nA stays therm
+and no reset occurs, shutdown/abort alone is not a documented clear path.
+Routing/polarity affect the pin, not that flag. Pin persistence through SD
+with routing/polarity unchanged is an inference, not a separate explicit guarantee.
 TMP116's comparison text omits the explicit "including averaging" phrase of
 TMP117/TMP119; block-end comparison is an inference requiring separate evidence.
 STOP-reset/ignore-until-START prose is explicit for TMP117 p.20/TMP119 p.23;

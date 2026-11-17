@@ -24,7 +24,7 @@ Inspect TMP1x2 `readSnapshot`, `readRegisterRaw`, `BusOperations`, OPT4001 clear
 - Add a concise register dump format with unsigned hex, signed decoded units where known, source-model and status flag caveats.
 
 - A dump reads only explicit documented pointers. Reject 0x09–0x0E and nonzero upper pointer bits instead of masking aliases or probing alternate-family IDs. Never use a burst through 0x07 or skip model checks. Include each R row's exact read effects and report unavailable fields rather than fabricating zero defaults.
-- Every successful CONFIG observation feeds sticky alert and same-generation readiness bookkeeping even if the dump later fails. Ambiguous destructive reads mark possible evidence loss. Diagnostics do not independently claim fresh conversion and are blocked while an unrelated cooperative result is active or retained, under the shared ownership contract.
+- Every successful CONFIG observation feeds sticky alert and same-generation readiness bookkeeping even if the dump later fails. Ambiguous destructive reads mark possible evidence loss. Diagnostics do not independently claim fresh conversion and are blocked while a cooperative job is active or its result is retained, under the shared ownership contract.
 
 ## Verification and exit criteria
 

@@ -169,12 +169,25 @@ the already verified preparation work.
   documents the virtual environment under `core_dir/penv`. No new Core was installed.
 - TOOL-5 is supported by pinned ESP-IDF v5.5.5 source
   `b774170ff46c393eeb5e495ea37936038d3f4f4f`: `components/esp_driver_i2c/i2c_master.c`
-  lines 589, 683 and 1011 use tick-based waits after starting work; lines 684–688
-  and the synchronous error path perform SDK recovery. FreeRTOS Kconfig defaults
+  line 683 converts the transaction wait; line 589 waits for its event after
+  starting hardware. Lines 1011–1012 convert/take the bus lock **before** transfer,
+  and line 543 also waits for the command semaphore. The NACK path at 597–603
+  may wait again. Lines 684–688 and the synchronous error path perform SDK
+  recovery. FreeRTOS Kconfig defaults
   to 100 Hz. The proposed universal two-tick rule is not sufficient proof of
   terminal lifetime or total elapsed time: locks, waits and cleanup need their
   own pinned-backend assessment. Stages 34/35 now require that assessment and
   budget-edge tests. The example's 1000 Hz setting is policy, not a sensor fact.
+- The follow-up review makes admission computable: after the actual truncating
+  SDK conversion, the selected example policy requires at least two ticks and
+  a `(ticks - 1) * tickPeriod` window sufficient for the bounded configured
+  transfer/service time. Its complete backend bound must separately include
+  sequential waits and cleanup; `ticks * tickPeriod <= remaining` alone is
+  insufficient. Pin the numerical/configured bounds and test 0/1/2-tick and
+  tick-phase edges. A missing bound leaves adapter qualification open; no
+  universal two-tick guarantee is claimed. The executable launcher now prints
+  its selected path to stderr, including when an unset process override selects
+  the older default environment.
 - TOOL-6's claim that all package/coexistence/P4 gates are unnecessary is a scope
   preference, not a correctness finding. Retain the agreed independent consumers,
   reuse a shared sample and keep optional dependencies out of exports. DP8382x's

@@ -12,5 +12,6 @@ if not exist "%PIO_EXE%" (
     exit /b 1
 )
 
+>&2 echo PlatformIO executable: "%PIO_EXE%"
 "%PIO_EXE%" %*
 exit /b %ERRORLEVEL%

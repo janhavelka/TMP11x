@@ -44,8 +44,10 @@ Feature and protocol differences:
   final XOR zero. CRC-enable takes effect after STOP. Burst CONFIG writes
   have a documented limitation, so TI recommends single-register writes.
   These are not TMP11x register transactions.
-- Page 24 explicitly returns zero for a non-indexed read, including 0x0F with
-  CRC disabled. Page 26 documents bad-CRC detection followed by NACK and FFh
+- Page 24 states that a non-indexed read returns zero; it names neither 0x0F
+  nor a CRC state. The expected 0x0F zero response is inferred from that rule
+  and its absence in the p.29 map, using the ordinary CRC-disabled fixture.
+  Page 26 documents bad-CRC detection followed by NACK and FFh
   if clocking continues. It does not explicitly establish every missing-CRC
   sequence; transport-error and 0xFFFF adverse fixtures must retain that scope.
 - p.27: general-call reset, 30-ms typical serial timeout and I3C mixed-bus
@@ -112,8 +114,10 @@ boundary evidence above to stages 4–5 and explicit negative fixtures to
    CONFIG write. Probe only the supported family's 0x0F ID location;
    transport failure or incompatible content remains failure. Do not
    traverse foreign register maps to identify or configure them.
-2. Both TMP114 (CRC disabled, p.24) and TMP118 (p.23) document zero for a
-   non-indexed 0x0F read. Reject before any data-register mutation. Add
+2. Derive the ordinary-protocol 0x0F zero response from TMP114's non-indexed-read
+   rule (p.24) and register map (p.29), and TMP118's corresponding rule/map
+   (pp.23/26). The rule sentences do not literally name 0x0F; select CRC-disabled
+   TMP114 as fixture policy. Reject before any data-register mutation. Add
    CRC-enabled TMP114 transport-failure/0xFFFF adverse fixtures with no retry;
    distinguish documented bad-CRC behavior from an omitted-CRC assumption.
    Pointer writes used by an attempted read are distinct from data-register
@@ -145,7 +149,7 @@ temperature coding and address overlap do not establish compatibility.
 | Original finding | Review and applied response |
 |---|---|
 | 1: Same-address responder must not authorize writes | Correct and already required. Added exact TMP114 electrical/address qualifications in stage 4: only A–D overlap 0x48–0x4B; N D/C/B/A use 0x4C–0x4F. Host mismatch tests do not authorize a 3.3-V physical substitution. |
-| 2: Unsupported pointer observations | Partly incorrect for TMP114: p.24 explicitly specifies zero, just as TMP118 p.23 does. Corrected the row and added bounded CRC-error fixtures plus ID-first dumps in 26/32. No foreign-ID/UID scan or CRC fallback is permitted. |
+| 2: Unsupported pointer observations | Partly incorrect for TMP114: p.24 specifies zero for non-indexed locations, just as TMP118 p.23 does. The expected 0x0F response is an inference using the respective register maps, with CRC-disabled TMP114 selected as fixture policy. Added bounded CRC-error fixtures plus ID-first dumps in 26/32. No foreign-ID/UID scan or CRC fallback is permitted. |
 | 3: Invalid model/raw bypass | Correct. Invalid model selection remains zero-I2C; first release exposes no arbitrary register-data write API. Diagnostics retain checked pointers and cannot add UID-write/reset/CRC escape paths. |
 | 4: Independent supported-family literals | Correct and already assigned to codec/transport/variant fixtures. Stage 32 retains negative controls, THIGH/TLOW order, model-dependent 0x07 and differing ID layouts. |
 | 5: Explicit exclusion rows | Already addressed in FULL_COVERAGE. Stage 32 consolidates X03/X08 absence/interference checks; stage 42 still owns final user-facing support boundaries. |
@@ -154,3 +158,12 @@ temperature coding and address overlap do not establish compatibility.
 No excluded-family driver, physical fixture operation or stronger hardware
 identity claim was introduced. The earlier “missing” labels describe the
 historical baseline; current prompt coverage is not implementation evidence.
+
+## Follow-up response to the cb73740 review - 2026-11-17
+
+Accepted the source-attribution correction: SNIS214E p.24 gives a general
+non-indexed-read rule, not a literal 0x0F/CRC-disabled statement. The p.29 map
+and that rule support the expected zero observation as an inference; the
+CRC-disabled condition belongs to the fixture. Updated the earlier response
+and stage 32 wording accordingly. CRC-enabled adverse cases remain separate,
+and no foreign-device probing or physical substitution was performed.

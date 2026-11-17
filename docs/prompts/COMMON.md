@@ -63,7 +63,9 @@ Preparatory evidence may be reused later after checking its hashes/revisions.
   offset as well as stable CONFIG fields.
 - Use meaningful public Doxygen and readable source comments. Keep README,
   CHANGELOG (once created), feature matrix, architecture, example guides and
-  tests current. Research stages update existing evidence documents only.
+  tests current. Research stages need not update README/CHANGELOG/user guides;
+  they create or update their named evidence artifacts, including stage 5's
+  ledger validator and regression tests. Follow each stage's explicit outputs.
 
 ## Delegate / review
 
@@ -107,13 +109,21 @@ SHA; do not force-push.
 
 ## Blocked tasks and the final verdict
 
-Physical work uses concrete fixture authorization already supplied by the user
-in the session or a fixture record: board/port, exact part/address, bus/mux
-participants, upload permission and allowed observe/volatile/power-cycle scope.
-Do not infer a target from port enumeration or flash another project's bench.
-A user-written JSON file is optional, not an extra approval prerequisite.
+Physical work requires authorization traceable to the user's instruction or a
+named user-authored or explicitly user-approved fixture record: board/port,
+exact part/address, bus/mux participants, upload permission and permitted
+observe/volatile/power-cycle actions. An agent report may record that source;
+it cannot grant authority itself or inherit authority from another fixture's
+record. Do not infer a target from port enumeration. A mandatory JSON file or
+repeated confirmation is unnecessary when existing user authorization covers
+the named fixture/actions. Verify board/route/address and compatible identity
+before a mutating campaign and again after reconnect/reset/rebind/mismatch;
+ID bits alone do not prove exact BOM model. An unexplained target change stops
+dependent work until its scope is resolved.
 If essential target/scope information is missing, keep dependent physical work
-BLOCKED and continue independent software work. Existing authorization persists.
+BLOCKED and continue independent software work. Existing authorization persists
+only within its granted fixture/actions and constraints; a continuation or
+new report neither expands it nor automatically revokes it.
 
 A blocked stage keeps its exact remaining scope and required evidence. In a
 whole-set invocation, continue independent later work whose concrete inputs

@@ -27,7 +27,7 @@ Ask an independent reviewer to trace original TI PDF register fields and side ef
 
 ## Verification and exit criteria
 
-Run final focused/integrated software tests and docs/package checks affected by findings; distinguish host tested, ESP builds, CI tested SHA and physical trials. Overall status remains PARTIAL if required physical/model evidence remains unavailable.
+Run final focused/integrated software tests and docs/package checks affected by findings; report the six canonical FULL_COVERAGE evidence columns separately, with the exact SHA for remote-CI evidence. Overall status remains PARTIAL if required physical/model evidence remains unavailable.
 
 ## Documentation and delegation
 

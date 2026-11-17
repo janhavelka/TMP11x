@@ -44,11 +44,15 @@ interpretation or establish any of the implementation layers below.
   volatile state. HIL must not mutate EEPROM or undeclared bus devices;
   authorized mux routing is separate from sensor register writes.
 
-Resolve fixture authorization from the user's existing session instructions
-or a record: board/serial port, exact model/address, bus participants/route,
-upload permission and allowed campaign classes. Do not infer consent or a
-target from enumerated ports; missing essential inputs block only dependent
-physical work. No mandatory user-written file or repeated approval is needed.
+Resolve fixture authorization from the user's instruction or a named
+user-authored/explicitly user-approved record: board/serial port, exact
+model/address, bus participants/route, upload and campaign scope. Record that
+source, not an agent report as independent permission. Another fixture's record
+grants no authority. Verify board/route/address/compatible identity before
+mutation and after reconnect/reset/rebind/mismatch; ID alone does not prove the
+exact model. Existing scope persists across continuation, without expansion or
+automatic expiry. Missing essentials block only dependent physical work; no
+mandatory JSON file or repeated approval when valid authorization exists.
 Default campaigns omit discovery; even an identity pointer byte may affect an
 unrelated device, so every candidate needs a known compatible protocol.
 

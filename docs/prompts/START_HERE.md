@@ -59,7 +59,7 @@ push verified meaningful work on the existing checked-out branch if origin/acces
 permit; never modify sibling repositories or make per-prompt branches. Use
 subagents for bounded parallel reviews and tests when useful; the lead owns
 integration and Git. The first comprehensive remote CI checkpoint is prompt 43.
-No available physical TMP11x fixture means hardware stages 40–41 remain
+No user-authorized physical TMP11x fixture means hardware stages 40–41 remain
 BLOCKED/NOT RUN, not falsely PASS; continue independent software work.
 
 Finish by reporting actual implementation coverage by exact model, native

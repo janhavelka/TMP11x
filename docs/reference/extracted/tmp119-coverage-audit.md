@@ -21,7 +21,7 @@ the project deliberately permits fewer writes.
 | 0x00 TEMP[15:0] | pp.15,33: signed 16-bit counts, 1/128°C; reset 0x8000 until completed conversion including averaging. Reading clears DATA_READY. | Latest/raw/fresh observations have different validity, 16,21,26,30. No writes. |
 | 0x01 CONFIG[15] HIGH, [14] LOW | pp.18–19,34: high/low comparator flags; CONFIG read acknowledges both in alert mode. Therm HIGH retains hysteresis state and LOW is zero. TEMP does not clear comparator flags. | Typed status/read effects, 19,22,26. |
 | CONFIG[13] DATA_READY | pp.16–17,34: set on completed result update, cleared by CONFIG or TEMP read. No sample counter. | Evidence belongs to one observation/profile, 21,27,30. |
-| CONFIG[12] EEPROM_Busy | pp.20,34,37: programming/reset-load busy, mirrored by 0x04[14]. Not EUN. | Read-only preflight, 7,18,19,24–25. |
+| CONFIG[12] EEPROM_Busy | pp.20,34,37: programming/reset-load busy, mirrored by 0x04[14]. Not EUN. | Observe during CONFIG reads already performed; the write guard reads 0x04[14] together with EUN[15], 7,18,19,24–25. |
 | CONFIG[11:10] MOD | pp.16–17,34–35: 00/10 continuous, 10 reads 00; 01 shutdown aborts conversion; 11 one-shot returns to shutdown. Bit 11 cannot persist in EEPROM. | Stable CC/SD versus explicit OS command, 17,20–21; EEPROM persistence excluded. |
 | CONFIG[9:7] CONV | p.35 Table 8-6: eight cycle selectors; effective period depends on AVG, not an independent rate. | All 32 CONV/AVG combinations, 6,17,20. |
 | CONFIG[6:5] AVG | pp.14,34: 00/01/10/11 select 1/8/32/64 conversions; accumulated average, not moving average. | Typed settings/timing, 17,20–21. |
@@ -87,8 +87,10 @@ need explicit entries rather than guessed defaults:
   addressed-reset outcomes. Observe them after a conservative wait.
 - OS physically returns to SD (p.17), but MOD readback during/after OS and
   retrigger during active OS are not specified. Therm HIGH changes at completed
-  conversions (p.19); only DATA_READY/alert-mode SD-entry flags remain unknown
-  under an otherwise unchanged therm/routing/polarity/reset state.
+  comparisons (p.19); its retention requires T/nA to remain therm and no reset,
+  not unchanged POL/DR routing. DATA_READY/alert-mode SD-entry flags remain
+  unknown. Pin persistence through SD with unchanged routing/polarity is an
+  inference from the status/routing rules, not explicit shutdown text.
 
 p.7 has TMP119M-specific accuracy rows, but p.45's pinned orderable addendum
 lists TMP119AIYBGR and TMP119AIYBGR.A only. TI's current
@@ -130,3 +132,12 @@ comparison table was visually rechecked for the supply/current discrepancies.
 All original named discrepancies remain evidence obligations, with the
 corrections above. These changes update instructions and source interpretation;
 they do not implement a driver, run physical HIL or establish component accuracy.
+
+## Follow-up response to the cb73740 review - 2026-11-17
+
+Accepted the cited CONFIG[12] wording correction: it is observed only as part
+of CONFIG reads already needed, while the safe-write preflight reads 0x04
+EUN/busy together (SNIS236 pp.34,37). Corrected therm-status retention to
+depend on T/nA and reset, with POL/DR affecting the pin and shutdown pin
+persistence labelled inference (p.19). No new source revision or physical
+qualification is implied.
