@@ -16,6 +16,8 @@ integration boundaries. `Produces`/`Consumes` IDs in SEQUENCE and each prompt
 are checked for unique ownership, known inputs and dependency reachability.
 See the [handoff consistency audit](../reports/handoff-audit.md) for corrected
 missing producers, future-stage requirements and integration/evidence gaps.
+The [2026-11-17 finding responses](audit.md#response--2026-11-17) assess every
+claim in the later 68-finding audit and record applied/qualified/rejected fixes.
 
 Each prompt is a bounded engineering work unit with evidence inputs, exact
 scope, concrete code/documentation, adversarial tests and a report/commit
@@ -34,6 +36,7 @@ invocation in START_HERE explicitly authorizes continuation.
 | [CONVENTIONS.md](CONVENTIONS.md) | Public type, status, model and I2C callback naming |
 | [ENGINEERING.md](ENGINEERING.md) | EEPROM, freshness, ownership, conversion state and recovery rules |
 | [FULL_COVERAGE.md](FULL_COVERAGE.md) | Complete per-silicon feature and per-variant capability obligations |
+| [COVERAGE.md](COVERAGE.md) | Non-normative navigation summary; FULL_COVERAGE owns exact rows and stages |
 | [VERIFICATION.md](VERIFICATION.md) | Native, firmware, HIL, package, docs and CI evidence gates |
 | [CLI_CONTRACT.md](CLI_CONTRACT.md) | Bounded shared console commands and HIL record format |
 | [DELEGATION.md](DELEGATION.md) | Disjoint subagent delegation with lead integration |
@@ -68,14 +71,14 @@ invocation in START_HERE explicitly authorizes continuation.
 | 23 | [Implement hardware offset for TMP117/TMP119 only](23_offset-feature.md) | 4, 5, 7, 11, 12, 16, 17, 19, 21 | software |
 | 24 | [Implement safe EEPROM reads and traceability metadata](24_readonly-eeprom.md) | 4, 5, 7, 11, 12, 13, 19 | software |
 | 25 | [Implement supported per-device reset and invalidation safely](25_per-device-reset.md) | 5, 7, 9, 14, 18, 19, 21, 23 | software |
-| 26 | [Implement read-only register snapshots and guarded raw access](26_diagnostic-access.md) | 5, 7, 12, 13, 19, 21, 22, 23, 24 | software |
+| 26 | [Implement read-only register snapshots and checked diagnostic access](26_diagnostic-access.md) | 5, 7, 12, 13, 19, 21, 22, 23, 24 | software |
 | 27 | [Complete synchronous API, samples and snapshots](27_sync-helpers-cache.md) | 16, 19, 20, 21, 22, 23, 24, 25, 26 | software |
 | 28 | [Implement bus-silent jobs and exactly-once results](28_cooperative-admission.md) | 9, 14, 15, 27 | software |
 | 29 | [Implement cooperative initialization, settings and recovery](29_cooperative-config.md) | 18, 19, 25, 28 | software |
 | 30 | [Implement owner-driven fresh measurement and one-shot jobs](30_cooperative-measurement.md) | 20, 21, 22, 28, 29 | software |
 | 31 | [Harden cancellation, ambiguous effects, timeout and health](31_failure-recovery.md) | 15, 19, 25, 28, 29, 30 | software |
 | 32 | [Complete independent multi-model device register simulators](32_variant-model-fixtures.md) | 13, 17, 18, 21, 23, 24, 29, 30, 31 | software |
-| 33 | [Close independent native correctness and packaging gates](33_native-suite.md) | 16, 17, 18, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32 | software |
+| 33 | [Close independent native correctness and source-consumer gates](33_native-suite.md) | 16, 17, 18, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32 | software |
 | 34 | [Implement Arduino/PlatformIO adapters and reusable example](34_arduino-examples.md) | 27, 30, 33 | software |
 | 35 | [Implement native ESP-IDF examples and framework adapter](35_idf-examples.md) | 27, 30, 33 | software |
 | 36 | [Qualify clean ESP32-P4 integration and shared-bus consumer](36_p4-consumer.md) | 33, 35 | software |

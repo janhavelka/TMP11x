@@ -24,12 +24,12 @@ attribution. A copy of a driver file without its semantics is not reuse.
 | Workflow only | https://github.com/janhavelka/DP8382x — `docs/prompts/*` | Source-ledger, numbered prompts, shared contracts, single remote-CI stage and hardware qualification gating. |
 | Workflow only | https://github.com/janhavelka/MotorControl-CAN — `docs/prompts/{START_HERE,COMMON,CONVENTIONS,SEQUENCE,PROGRESS}.md` or `.json`, numbered prompts | Prompt execution/closure, incremental reports, agents and no-false-evidence policy. |
 
-Source snapshots observed during promptset preparation (2026-11-15; **refresh
-before coding**): TMP1x2 `afd50889312f6e218a6a34eca687e3e8547d8b40`,
-OPT4001 `441ef579d7fa3f7bca7665f52632fdaddd306300`,
-ADS1115 `e07622a99fe9f13c5d6a5a2497a8112a14185b9d`,
-DP8382x `d58a7da95b0f3e96c0a908b70eb2ecaa439b1377`,
-MotorControl-CAN `1b1d352889fed052deb5ec221790169f0dfa8eb9`.
+Reviewed workflow/toolchain source revisions are recorded in the
+[toolchain plan](../toolchain-and-package-plan.md); runtime API/adoption
+revisions are in the [library comparison](../library-comparison.md) and
+[adoption record](../source-adoption.md). These are dated observations;
+refresh the relevant sources before coding. Older audit SHAs describe their
+own inputs, not competing claims about the current HEAD.
 Record the *actual* fetched revision, license and source path at each adoption;
 HEAD state and working-tree changes cannot be inferred from an old hash.
 

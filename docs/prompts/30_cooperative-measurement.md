@@ -3,7 +3,7 @@
 Apply [COMMON.md](COMMON.md) and root [AGENTS.md](../../AGENTS.md). Phase: **Cooperative operation and exhaustive native qualification**. Type: **software**.
 Prerequisites: [20](20_conversion-settings.md), [21](21_fresh-one-shot.md), [22](22_limits-alert.md), [28](28_cooperative-admission.md), [29](29_cooperative-config.md).
 Produces: `measurement-jobs`.
-Consumes: `sync-acquisition`, `conversion-settings`, `limits-alert`, `job-lifecycle`, `configuration-jobs`.
+Consumes: `sync-acquisition`, `conversion-settings`, `limits-alert`, `job-lifecycle`, `configuration-jobs`, `register-fake`.
 
 ## Objective and boundaries
 
@@ -15,9 +15,9 @@ Compare TI timing/data-ready/one-shot sections and TMP1x2 `startRead` job state 
 
 ## Complete implementation work
 
-- Implement separate requested acquisition semantics: continuous latest, continuous try-fresh, and an owned shutdown one-shot. Use the stage 21 evidence model and expose these choices without silently changing mode or promising a new conversion for a latest read.
-- Stage stale-ready baseline, EUN/busy guard for a trigger write, trigger, wait, CONFIG observation and TEMP read as separately budgeted steps. Bind captured ready evidence to the request/profile and consume it once. Equal raw values can be distinct conversions; a CONFIG/TEMP read failure may still have consumed hardware evidence.
-- Record host observation timestamp validity, freshness evidence and possible read-to-clear effects in the retained result. Recheck completion time under stage 9's clock contract before publishing. No sensor GPIO ISR can directly mutate the driver; the owner may check application-supplied GPIO state.
+- Implement separate requested acquisition semantics: continuous latest, continuous try-fresh, and an owned shutdown one-shot. Reuse stage 21's private resumable engine and its clean-profile/baseline requirements; do not duplicate it or silently change desired mode. Latest never promises a new conversion.
+- Budget 0x04 safety guard, preflight CONFIG comparison, explicit SD write, CONFIG stale-ready baseline, one OS trigger, wait, CONFIG observation and TEMP read as distinct steps, each at most one physical callback. Preflight drift or unowned MOD=11 latches dirty state with zero CONFIG writes; only retained owned-trigger provenance permits normalization of residual OS to SD. Freshness-producing continuous jobs also check 0x04 and require their established current-generation baseline; latest-only jobs do not claim freshness. Apply stage 6/21's sparse default poll schedule. Bind evidence to request/profile and consume it once; ambiguous read failures can consume hardware evidence.
+- Record host observation timestamp validity, freshness evidence and possible read-to-clear effects in the retained result. Every successful CONFIG read updates shared sticky alert evidence, including late callbacks and later-failed composites; result copies do not drain the explicit alert consumer. Recheck completion time before publishing: late successful reads update physical health/evidence but not outputs/cache/timely success. GPIO observation alone does not supply a new completion protocol, and no ISR may mutate the driver.
 - Support other sensor instances using the same bus between polling turns, without holding locks or assuming pointer persistence.
 - Reject or preserve uncertain freshness after outside configuration reads, raw diagnostic interference, missed event or reset.
 
@@ -26,13 +26,19 @@ Compare TI timing/data-ready/one-shot sections and TMP1x2 `startRead` job state 
 ## Verification and exit criteria
 
 Apply stage 21's shutdown-only managed one-shot policy unchanged: reject
-desired continuous before admission, verify hardware shutdown before trigger,
-retain desired shutdown across transient MOD=11 and completion, and preserve
+desired continuous before admission, explicitly establish guarded SD then a
+CONFIG baseline before trigger, retain desired shutdown regardless of the
+undocumented during/after-OS MOD readback, and preserve
 uncertain conversion evidence on cancel/timeout without mode restore/retrigger.
+The preflight CONFIG comparison precedes the SD write; no acquisition silently
+repairs unknown configuration drift. Retain alert events from both CONFIG reads.
 Run lifecycle/invalidation integration tests from stages 14/19/28 against real
 measurement jobs, not only the admission harness.
 
 Test interleaved two-sensor fake transport, one transfer per poll, 32-bit wrap, invalid/no clock, same temperature consecutive one-shots, missed ready and late successful read not published as timely result.
+Include EUN/busy/startup refusal without CONFIG writes or fresh results,
+both compatible post-OS MOD outcomes, residual conversion after cancellation,
+continuous first-baseline suppression and one-time alert consumption.
 
 ## Documentation and delegation
 
@@ -43,7 +49,7 @@ Follow [COMMON.md](COMMON.md), [CONVENTIONS.md](CONVENTIONS.md),
 shared API/architecture, integration, progress and Git; delegate only disjoint
 read-only audits, feature tests or implementation under frozen interfaces.
 Update public Doxygen and affected guides in the same stage as source changes.
-Do not run unrelated sibling suites or remote CI (except stage 43).
+Do not run sibling suites. Follow COMMON for remote-CI dispatch/poll/wait policy; preserve automatic triggers.
 
 ## Checkpoint and report
 
@@ -51,6 +57,6 @@ For each closed software unit, run appropriate focused local checks; inspect
 both working and staged diffs; record actual commands, versions, commit and
 PASS/FAIL/NOT RUN/BLOCKED. Write `docs/reports/prompt_30.md` with sources,
 owned artifacts, named test cases and open evidence gates. Update
-`docs/prompts/PROGRESS.md`, commit and sync verified meaningful work on `main`
+`docs/prompts/PROGRESS.md`, commit and sync verified meaningful work on the existing checked-out branch
 when authenticated upstream is configured, and verify synchronization. Keep
 missing physical/SDK evidence explicit; never claim tests not run.

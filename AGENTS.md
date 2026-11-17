@@ -22,8 +22,10 @@ source of project guidance; `CLAUDE.md` imports it.
   hooks; do not change workflow triggers or bypass checks to avoid CI.
 
 For numbered prompt execution, follow the checkpoint policy in
-[COMMON.md](docs/prompts/COMMON.md); it controls when the sequence runs its
-comprehensive remote check. Keep automatic workflow triggers intact.
+[COMMON.md](docs/prompts/COMMON.md); it overrides deliberate remote-CI dispatch,
+polling and waiting under the major-change rule for stages 1–42. Stage 43 owns
+the first workflow/checkpoint; stage 44 reruns that procedure for CI-covered
+fixes before final closure. Keep existing automatic workflow triggers intact.
 
 ## Git workflow
 
@@ -52,9 +54,9 @@ comprehensive remote check. Keep automatic workflow triggers intact.
   [PROGRESS](docs/prompts/PROGRESS.md) for current evidence. Read COMMON and the
   selected prompt before stage work. Verify actual artifacts; plans are not
   implemented behavior or passing tests.
-- [SEQUENCE](docs/prompts/SEQUENCE.json) owns ordering, dependencies and artifact
-  IDs; [HANDOFFS](docs/prompts/HANDOFFS.md) assigns producers and integration
-  owners. Update connected contracts together when changing a handoff.
+- [SEQUENCE](docs/prompts/SEQUENCE.json) owns ordering, dependencies and
+  producer/consumer IDs; [HANDOFFS](docs/prompts/HANDOFFS.md) explains artifact
+  boundaries and integration owners. Update connected contracts together.
 - Prefer small, direct changes to existing owners. Add abstractions only for
   a concrete current caller or test. Do not introduce speculative frameworks,
   placeholder drivers or successful no-op implementations.
@@ -91,8 +93,10 @@ comprehensive remote check. Keep automatic workflow triggers intact.
   No unlock/program/persistence path, general-call reset or SMBus alert-response
   traffic. TMP116 has no supported addressed reset or hardware offset; its
   `0x07` is EEPROM data. Apply model gates to every API, diagnostic and CLI route.
-- One-shot and supported addressed reset are explicit operations, not replayable
-  settings. Managed one-shot requires desired and verified shutdown. Observation
+- Offset management is opt-in; preserve unmanaged calibration. One-shot and
+  supported addressed reset are explicit operations, not replayable settings.
+  Managed one-shot requires desired shutdown and an explicit guarded
+  shutdown/baseline boundary; MOD readback alone is not proof. Observation
   firmware uses bind-only diagnostics without implicit initialization writes.
 - Exact-part TI PDFs pinned in [the reference manifest](docs/reference/manifest.json)
   govern silicon facts. Recheck register masks, timing and side effects against

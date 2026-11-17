@@ -82,3 +82,38 @@ Stage status remains 1–3 COMPLETE and 4–44 NOT STARTED. Unresolved datasheet
 questions and physical evidence from the prior audits remain owned obligations;
 this audit fixes how their future work connects. Commit/upstream synchronization
 is recorded in the handoff, without inventing a self-referential report SHA.
+
+## Response to each boundary — 2026-11-17
+
+Reviewed each boundary above against the promptset at
+`171dbf58251e8606d3b643aa1ceddcc7e921c906`. The historical changes remain
+useful, but structural reachability never proved a complete semantic handoff.
+The [later audit](../prompts/audit.md) records individual claim/fix decisions.
+No stage is executed or promoted to COMPLETE by these corrections.
+
+| Earlier boundary | Review response |
+|---|---|
+| 12/13 → 14 | Correct and retained: private transport/identity precedes real binding. The shared reusable register fake now starts at 12, so subsequent private tests have an explicit producer. |
+| 14 → 16/17/18 | Correct sequencing, incomplete final bind contract. Stage 14 validates available binding structure; stage 18 extends bind to full profile validation with the codecs and preserves the previous binding on rejection. |
+| 5/6/7 → implementation | Correct: research vectors are inputs, not executed driver tests. Their validators and regression commands need explicit production/registration ownership; stages 5/10 provide it. |
+| 18 → 19/22/23/29/31 | Correct producer, incomplete engine shape. Stage 18 now requires resumable single-callback phases and explicit wait state so stage 29 can reuse actual logic rather than rewrite blocking code. |
+| 19 → 20/22 | Correct and retained: shared trust/apply plus typed wrappers. Every CONFIG observation now feeds retained alert evidence; duplicate apply engines remain forbidden. |
+| 8/11/18/21 → 23 | Correct staged availability but incomplete default ownership. Offset arrives at 23 as opt-in management; default initialization preserves programmed calibration and managed zero is explicit. Full-profile trust means every owned field, not implicitly owned offset. |
+| 16 → 17; 21 → 23 | Correct dependency edges, retained. Current metadata additionally names capability/ledger inputs and the shared fake where relevant rather than relying solely on implicit stage order. |
+| 8/9 → 21/30/38 | The desired-shutdown policy is valid; MOD readback as shutdown/completion proof was not. The operation now explicitly establishes guarded shutdown and a stale-readiness baseline, with hardware DATA_READY evidence for completion. Undocumented MOD readback is retained as uncertainty. |
+| 8/9 → 28/29 | Correct immutable-binding rule. Accepted bind installs its validated target; first-write target commitment applies to settings changes, not to binding. Invalid rebind preserves prior state. |
+| 14/19 → 28–30 | Correct staged integration. Early stages document policy without unused job scaffolding; 28 tests its actual private transition component and 29/30 repeat with real jobs. A private test seam does not inherently require fake production job kinds. |
+| 23/24 → 26/37/38 | Correct forward-owner distinction. Shared capability/access policy has one owner; later diagnostic/CLI routes consume it. Optional raw-write surface is not needed to prove feature coverage. |
+| 5/10/12/42 → verification/CI | Correct named producers. Clarified validator regressions, one version-generator/check implementation, the tests-OFF option, shared fake and stage 43 ownership of an initial remote workflow. Preserve any pre-existing automatic triggers. |
+| 4 → 34/35 → 42 | Correct and retained: board guide begins with exact-part facts, gains backend details, and is finalized for packaging. A guide is not physical qualification. |
+| 34/35 → 37/38 → 39 | Correct separation of library version, firmware identity and protocol. Golden transcripts and the compiled fixture must match; a source/build record alone is not a usable image. |
+| 37 → 38 | Correct conditional SDK/source integration and honest help. Host grammar tests remain independent of MCU availability; final routes require their real consumer implementation. |
+| 34/35/38 → 40 | Correct OR gate and current-image requirement. Fixture identity, wiring, port/image match and authorization are concrete prerequisites; a missing-build record or outdated image cannot satisfy them. |
+| 33 → 37–39 → 43 | Correct later-suite registration and exact-final-SHA requirement. A native PASS at 33 never covers subsequent CLI/Python changes or an MCU image that was not relinked. |
+
+The historical 60/226 counts describe this audit's original checkpoint.
+Use current SEQUENCE/HANDOFFS for the revised dependency inventory. The checker
+still proves declared structure and local links only; source semantics,
+datasheet facts, useful tests, MCU linking and physical behavior require their
+separate evidence layers. The current corrections do not qualify hardware or
+claim an unexecuted implementation test.

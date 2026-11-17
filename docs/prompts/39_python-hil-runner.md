@@ -15,11 +15,14 @@ Study TMP1x2 `tools/hil_tmp1x2_runner.py` and parser/unit tests, OPT4001 and LDC
 
 ## Complete implementation work
 
-- Build Python CLI tool with explicit serial port, baud, expected firmware version/identity/model, fixture description for physical claims, command timeout and output directory. Report the selected serial reset/control-line behavior; port opening or MCU reboot must not cause implicit sensor initialization/configuration in an observation campaign.
+- Build `tools/hil_tmp11x_runner.py` with explicit serial port, baud, expected firmware version/identity/model/address, fixture description for physical claims, command timeout and output directory. Physical mode requires concrete user-authorized board/port/part/address, bus peers and permitted campaign classes, recorded from the current session or a fixture record. Uploads additionally require their own explicit scope. Never infer the target from port enumeration or another project's authorization; missing required scope leaves physical work BLOCKED. Report the selected serial reset/control-line behavior; port opening or MCU reboot must not cause implicit sensor initialization/configuration in an observation campaign.
 - Correlate requests and completions by nonce/sequence; detect split/late/duplicated/missing records, reboot/line noise, incomplete transactions and failure while waiting. Keep finite buffer/record/time bounds and return meaningful nonzero exits.
 - Implement observation-only identity, configuration, temperature, device-capability, flags and EEPROM campaigns by default. Permit pointer selection but no register-data writes; identify CONFIG/TEMP flag consumption explicitly. Prove the same policy across firmware startup, CLI setup and runner commands. More intrusive volatile config/restoration trials must be opt-in and require explicit fixture authorization.
-- Record exact raw transcript, structured JSON summary, input environment/firmware git identity, document revision, suite counts, PASS/FAIL/SKIP/NOT RUN and restoration outcome; no synthetic serial printout may be marked physical PASS. Persist the baseline before the first trial write, distinguish primary and restoration outcomes, and report a reboot or transport loss as loss of session continuity. Never blindly replay a saved baseline to an unconfirmed replacement device.
+- Record exact raw transcript, structured JSON summary, input environment/firmware git identity, document revision, suite counts, PASS/FAIL/NOT RUN/BLOCKED and restoration outcome; no synthetic serial printout may be marked physical PASS. Persist the baseline before the first trial write, distinguish primary and restoration outcomes, and report a reboot or transport loss as loss of session continuity. Never blindly replay a saved baseline to an unconfirmed replacement device.
 - Provide a dry-run plan that opens no port, unit tests for runner parser/record integrity, and a compiled fake CLI integration harness for full protocol exercise.
+- Import optional `pyserial` only in physical mode. Dry-run, transcript parsing and unit/compiled-fixture tests use the standard library and require no serial hardware. Missing pyserial produces a clear physical-mode dependency error, not an import failure for host tests.
+- Store raw logs outside release artifacts (the ignored `hil_logs/` is suitable); commit per-run metadata, transcript/summary SHA-256 and a durable raw-artifact location under `docs/hil/<date>-<fixture>/`. Never claim evidence from a hash whose source cannot be retrieved by a reviewer.
+- Validate the selected model/address/port against the authorized fixture scope before opening a port; firmware upload requires its separate authorized scope. Default observation campaigns omit `discover` and allow only declared addresses. Compare the passive `xfer` counters from boot to campaign end and require zero sensor data-write attempts, stable session identity and no counter loss for a software-instrumented no-write claim; external bus capture is a separate stronger evidence layer.
 - Consume `docs/cli-protocol.md`, golden transcripts and the actual compiled stage 37/38 fixture. Verify protocol compatibility and boot/session changes independently of library version; reject unknown/mismatched firmware identity for a physical qualification claim. Add runner unit and subprocess CLI integration tests to the standard host entrypoint and `docs/testing.md`; stage 33's earlier PASS does not cover these new suites.
 - The runner may be fully host-tested without an MCU SDK. Physical execution separately selects a current image from `docs/firmware-cli-handoff.md` and the fixture gate; do not require both firmware backends or use an older example image simply because it once linked.
 
@@ -38,7 +41,7 @@ Follow [COMMON.md](COMMON.md), [CONVENTIONS.md](CONVENTIONS.md),
 shared API/architecture, integration, progress and Git; delegate only disjoint
 read-only audits, feature tests or implementation under frozen interfaces.
 Update public Doxygen and affected guides in the same stage as source changes.
-Do not run unrelated sibling suites or remote CI (except stage 43).
+Do not run sibling suites. Follow COMMON for remote-CI dispatch/poll/wait policy; preserve automatic triggers.
 
 ## Checkpoint and report
 
@@ -46,6 +49,6 @@ For each closed software unit, run appropriate focused local checks; inspect
 both working and staged diffs; record actual commands, versions, commit and
 PASS/FAIL/NOT RUN/BLOCKED. Write `docs/reports/prompt_39.md` with sources,
 owned artifacts, named test cases and open evidence gates. Update
-`docs/prompts/PROGRESS.md`, commit and sync verified meaningful work on `main`
+`docs/prompts/PROGRESS.md`, commit and sync verified meaningful work on the existing checked-out branch
 when authenticated upstream is configured, and verify synchronization. Keep
 missing physical/SDK evidence explicit; never claim tests not run.

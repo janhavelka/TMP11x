@@ -1,6 +1,7 @@
 # Toolchain, package and prompt workflow plan
 
-Audited 2026-11-15 during repository preparation. These are selected build
+Audited 2026-11-15 during repository preparation; findings revalidated 2026-11-17
+against input `171dbf58251e8606d3b643aa1ceddcc7e921c906`. These are selected build
 patterns and an installed-tool inventory, not TMP11x firmware or hardware
 qualification. The repository had no driver, build definition or CI workflow
 at the start of this audit (`6c5e4496d5c896af689228d4bee4382a53c20626`).
@@ -66,7 +67,7 @@ directory name. Do not advertise broader framework support from metadata alone.
 
 | Source file or group | Decision | Reason / owning stage |
 |---|---|---|
-| TMP1x2 `scripts/pio.cmd` | Reuse unchanged when introduced | Resolves one existing managed Core and fails clearly when missing; usable in preparation |
+| TMP1x2 `scripts/pio.cmd` | Adapted after TOOL-1 revalidation | Select the configured `PLATFORMIO_CORE_DIR` virtual environment, otherwise the user's default `.platformio`; fail if the selected installation is missing, without PATH fallback |
 | TMP1x2 `LICENSE` | Preserve on adopted source | The same maintained MIT source notice applies to copied substantial material |
 | TMP1x2 `scripts/generate_version.py` | Adapt at stage 10 | CMake regex contains `project(TMP1x2 VERSION ...)`; regenerate for TMP11x metadata and test nonmutating check behavior |
 | TMP1x2 root CMake, manifests, PlatformIO config | Adapt at stage 10 | Project names, exported sources, targets, version and board/package claims differ; add missing install/export behavior |
@@ -80,18 +81,21 @@ directory name. Do not advertise broader framework support from metadata alone.
 
 ## Installed tools on the preparation host
 
-These observations come from commands and files inspected on 2026-11-15.
-No installation or firmware build ran.
+The PlatformIO rows below were corrected from read-only commands and package
+metadata on 2026-11-17. Other rows retain their dated 2026-11-15 observation.
+No installation or firmware build ran. The original wrapper really printed
+6.1.19, but describing it as the active IDE-managed Core was incorrect:
+process and user `PLATFORMIO_CORE_DIR` both select `C:\pio`.
 
 | Tool | Observation |
 |---|---|
 | Python | `python --version`: 3.12.10 |
 | CMake | `cmake --version`: 4.0.1 |
 | Native compiler | `g++ --version`: MinGW-W64 UCRT MCF GCC 15.1.0; available on PATH |
-| Managed PlatformIO | `%USERPROFILE%\.platformio\penv\Scripts\pio.exe --version`: Core 6.1.19 |
-| PATH PlatformIO | A different `Python312\Scripts\pio.exe` is on PATH; use the repository wrapper to select the managed Core |
-| Arduino package cache | `framework-arduinoespressif32/package.json`: 3.2.0; cached package metadata does not prove the future pinned platform build |
-| PlatformIO compiler cache | Xtensa and RISC-V package metadata: `14.2.0+20241119`; other versioned compiler directories also exist |
+| Managed PlatformIO | Corrected `scripts/pio.cmd --version`: Core 6.2.0 from `C:\pio\penv\Scripts\pio.exe`; `system info` reports Core directory `C:\pio` and Python `C:\pio\penv\Scripts\python.exe` |
+| Old/default and PATH PlatformIO | The unused `%USERPROFILE%\.platformio` environment still reports 6.1.19. `system info` also lists a Python312 Scripts entrypoint; the verified launched executable and virtual-environment Python, not that metadata line alone, identify this check |
+| Arduino package cache | `C:/pio/packages/framework-arduinoespressif32/package.json`: 3.3.11; cached package metadata does not prove a future pinned platform build |
+| PlatformIO compiler cache | Active `C:/pio/packages` metadata: Xtensa `14.2.0+20260121`, RISC-V `14.2.0+20241119`; additional versioned packages exist. Framework ESP-IDF package metadata is `3.50505` |
 | IDF environment | `IDF_PATH` unset and `idf.py` absent from PATH in this shell; installed SDKs exist below and need their matching environment activated |
 | Additional host compiler | `clang++` not found on PATH in this audit; second-compiler evidence NOT RUN |
 
@@ -148,3 +152,34 @@ reports. The recommendations above describe the audit findings; final integrated
 check results belong in the preparation report. Native TMP11x tests, MCU links,
 package consumers, remote CI and physical HIL are **NOT RUN** at this preparation
 checkpoint because their implementations or fixtures are not established.
+
+## Response to the tooling audit, 2026-11-17
+
+The seven preparation recommendations above remain relevant: shared AGENTS/CLAUDE
+instructions, explicit execution scope, current-branch ownership, structural
+schema/parity checks, lightweight fixtures, artifact-based completion and targeted
+source refresh are all retained. Their presence does not prove implementation.
+The new [audit](prompts/audit.md) identifies refinements, not grounds to discard
+the already verified preparation work.
+
+- TOOL-1 is reproduced and fixed in the wrapper and inventory above. Official
+  [PlatformIO environment-variable documentation](https://docs.platformio.org/en/stable/envvars.html)
+  defines the Core-directory override; the
+  [installer documentation](https://docs.platformio.org/en/latest/core/installation/methods/installer-script.html)
+  documents the virtual environment under `core_dir/penv`. No new Core was installed.
+- TOOL-5 is supported by pinned ESP-IDF v5.5.5 source
+  `b774170ff46c393eeb5e495ea37936038d3f4f4f`: `components/esp_driver_i2c/i2c_master.c`
+  lines 589, 683 and 1011 use tick-based waits after starting work; lines 684–688
+  and the synchronous error path perform SDK recovery. FreeRTOS Kconfig defaults
+  to 100 Hz. The proposed universal two-tick rule is not sufficient proof of
+  terminal lifetime or total elapsed time: locks, waits and cleanup need their
+  own pinned-backend assessment. Stages 34/35 now require that assessment and
+  budget-edge tests. The example's 1000 Hz setting is policy, not a sensor fact.
+- TOOL-6's claim that all package/coexistence/P4 gates are unnecessary is a scope
+  preference, not a correctness finding. Retain the agreed independent consumers,
+  reuse a shared sample and keep optional dependencies out of exports. DP8382x's
+  relocated-consumer prompt is a plan; stage 42 must prove the TMP11x implementation.
+- Historical sibling SHAs identify observations at different checkpoints. They
+  must not be silently replaced with today's HEAD or called simultaneously
+  current. This table remains the preparation selection; each later source
+  adoption records its own actual revision and dirty state.

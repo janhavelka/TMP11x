@@ -3,7 +3,7 @@
 Apply [COMMON.md](COMMON.md) and root [AGENTS.md](../../AGENTS.md). Phase: **Firmware, CLI and runner integrations**. Type: **software**.
 Prerequisites: [22](22_limits-alert.md), [23](23_offset-feature.md), [24](24_readonly-eeprom.md), [25](25_per-device-reset.md), [26](26_diagnostic-access.md), [28](28_cooperative-admission.md), [29](29_cooperative-config.md), [30](30_cooperative-measurement.md), [31](31_failure-recovery.md), [37](37_cli-baseline.md).
 Produces: `cli-complete`, `firmware-cli-handoff`.
-Consumes: `cli-baseline`, `cli-protocol`, `limits-alert`, `offset-feature`, `readonly-eeprom`, `device-reset`, `diagnostics`, `configuration-jobs`, `measurement-jobs`, `fault-closure`.
+Consumes: `cli-baseline`, `cli-protocol`, `limits-alert`, `offset-feature`, `readonly-eeprom`, `device-reset`, `diagnostics`, `configuration-jobs`, `measurement-jobs`, `fault-closure`, `host-test-entrypoint`.
 
 ## Objective and boundaries
 
@@ -22,7 +22,9 @@ Review current public API and tests, TMP1x2 shared CLI measured one-shots/owner-
 - Register native CLI tests and shared grammar checks so Arduino and IDF use the same exact commands and help definitions. A finite `watch` observes existing conversions by default; any one-shot-triggering mode requires the explicit mutating option and its own deadline/cancellation behavior.
 - Enforce the shared one-shot policy: desired continuous mode rejects without I2C; the caller explicitly requests shutdown before one-shot or one-shot watch. Do not silently change the persistent profile or restore a previous mode inside the command.
 - Complete stage 37's grammar/help and register every command/job test in the standard host suite. Integrate the shared processor, final routes and application identity/session fields into available stage 34/35 firmware sources. Rebuild affected targets when their toolchain exists; preserve pending source/link gates when unavailable without blocking the host CLI work.
+- Exercise lifecycle/configuration jobs, request framing, default owner-loop job pacing, manual-step deadlines, and bus-silent watch/campaign stop from the canonical contract. `shutdown`, if retained, is only the exact alias of `mode shutdown`; it changes the desired profile through the same typed setter and guard.
 - Produce `docs/firmware-cli-handoff.md` listing each backend/target, final protocol version, source/build/image identity and current full-link result or exact missing gate. A pre-37/38 example build is not a compatible runner image. Stage 40 requires one actual matching image from this handoff; stage 42/43 must refresh links if later changes invalidate them.
+- If a backend is resumed later, its stage 34/35 owner attaches these completed routes and refreshes this handoff. Keep source integration, host command qualification and each target link as separate sub-checkpoints; report this stage PARTIAL while required source wiring remains missing.
 
 - Reconcile R/F/X coverage against canonical commands and output fields: all stable settings, both limits, supported offset, all permitted shadow words, identity, status and profile trust need a route. Excluded ARA/broadcast/persistence/alternate-family UID procedures must have no command/raw escape. Report unsupported/unknown explicitly; do not infer electrical grade or factory serial validity.
 
@@ -41,7 +43,7 @@ Follow [COMMON.md](COMMON.md), [CONVENTIONS.md](CONVENTIONS.md),
 shared API/architecture, integration, progress and Git; delegate only disjoint
 read-only audits, feature tests or implementation under frozen interfaces.
 Update public Doxygen and affected guides in the same stage as source changes.
-Do not run unrelated sibling suites or remote CI (except stage 43).
+Do not run sibling suites. Follow COMMON for remote-CI dispatch/poll/wait policy; preserve automatic triggers.
 
 ## Checkpoint and report
 
@@ -49,6 +51,6 @@ For each closed software unit, run appropriate focused local checks; inspect
 both working and staged diffs; record actual commands, versions, commit and
 PASS/FAIL/NOT RUN/BLOCKED. Write `docs/reports/prompt_38.md` with sources,
 owned artifacts, named test cases and open evidence gates. Update
-`docs/prompts/PROGRESS.md`, commit and sync verified meaningful work on `main`
+`docs/prompts/PROGRESS.md`, commit and sync verified meaningful work on the existing checked-out branch
 when authenticated upstream is configured, and verify synchronization. Keep
 missing physical/SDK evidence explicit; never claim tests not run.

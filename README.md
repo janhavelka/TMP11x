@@ -13,6 +13,7 @@ sensor, MCU build, or physical qualification claims.
 - [Agent and execution guide](docs/prompts/START_HERE.md)
 - [Current progress](docs/prompts/PROGRESS.md) and [preparation report](docs/reports/preparation.md)
 - [Audit of all 44 prompts](docs/reports/promptset-audit.md)
+- [Review and responses to the 68-finding audit](docs/prompts/audit.md#response--2026-11-17)
 - [Datasheet/functionality gap audit](docs/reports/feature-gap-audit.md) and [complete feature requirements](docs/prompts/FULL_COVERAGE.md)
 - [Prompt handoff audit](docs/reports/handoff-audit.md) and [producer/consumer inventory](docs/prompts/HANDOFFS.md)
 - [Library comparison](docs/library-comparison.md) and [source adoption](docs/source-adoption.md)

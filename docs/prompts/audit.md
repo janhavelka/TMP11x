@@ -1,5 +1,11 @@
 # TMP11x promptset audit — 2026-11-16
 
+**Reviewed 2026-11-17:** the original 68 findings and proposals below are kept
+as the auditor's historical record. The [individual responses](#response--2026-11-17)
+at the end assess each claim against the current promptset, tools and pinned
+sources, and supersede proposals where qualified or rejected. This review
+changes no implementation-stage status.
+
 **Input:** `main` at `19facbe`, clean and synchronized with `origin/main`.
 **Scope:** prompts 1–44 and every shared contract in `docs/prompts/`. Also root
 `AGENTS.md`, `README.md` and `START_HERE.md`; `docs/reference/` (manifest and
@@ -2025,3 +2031,180 @@ TMP1x2 provides `xfer_stats`/`counters` and `xfer_assert` for exactly this
 | A coincident DATA_READY set and clear-on-read (the E2E lead returned HTTP 403) | TI E2E access, or a HIL missed-ready rate (BEH-7) | 6, 41 |
 | TMP116 comparison after the full average | HIL with AVG=64 (BEH-10) | 6, 41 |
 | Whether entering SD clears DATA_READY or the alert-mode flags | HIL (BEH-6) | 6, 41 |
+
+## Response — 2026-11-17
+
+Input: clean `main` at `171dbf58251e8606d3b643aa1ceddcc7e921c906`, synchronized
+with `origin/main`. Reviewed all 68 findings individually, including their
+proposed fixes, plus every earlier audit/report listed below. Three independent
+reviewers split silicon, API/state and tooling/structure; the lead reconciled
+shared contracts, dependencies and the resulting changes. A second integration
+review challenged the changed acquisition, reset and restoration sequences.
+
+There is still no `include/` or `src/` driver. A claim that the current driver
+already corrupts EEPROM, calibration or alerts is therefore a **future risk**,
+not a reproduced runtime defect. The reproducible code defect was the existing
+PlatformIO launcher selecting the wrong installed Core. Prompt/checker fixes
+are applied now; physical behavior and future implementation tests remain
+owned by their stages.
+
+ACCEPT means the claim supports a concrete correction; PARTIAL distinguishes
+a real gap from an overstated claim or unsuitable remedy; NOT REQUIRED rejects
+the proposed requirement while retaining any useful clarification. Original
+severity/counts describe the auditor's baseline, not a count of confirmed bugs.
+
+### EEPROM and write safety responses
+
+| ID | Verdict | Evidence, correction and disposition |
+|---|---|---|
+| SAF-1 | ACCEPT, scoped | Global guards existed, but stage 21 omitted the explicit trigger guard/test. Stages 7/18/21/30 now use operation-local 0x04 EUN/busy checks before any CONFIG write, including preflight/SD/trigger phases. EUN=1 means zero data writes. SNOSD82D pp.7/18/30 supports the endurance risk; 1,000 writes in ~17 minutes is not a prediction of exact failure time. |
+| SAF-2 | ACCEPT | 0x04 bit 14 mirrors CONFIG bit 12 (TMP116 p.29; TMP117 p.30; TMP119 p.37). ENGINEERING and stages 7/18 require the nondestructive 0x04 guard, with EUN and busy from the same word; CONFIG cannot substitute for it. |
+| SAF-3 | ACCEPT | Offset persistence is already in the map footnotes, but stage 23 lacked explicit refusal cases. Added shared guard tests and R16's EEPROM-backed reset domain, plus opt-in offset ownership. TMP117 p.25/Table 7-3 and TMP119 p.32/Table 8-2 govern. |
+| SAF-4 | PARTIAL | Cadence needed one rule. Adopted one guard at the start of each mutating **or freshness-producing** operation under uninterrupted exclusive ownership; reset/failure/interference invalidates it. Latest/diagnostic reads make no fresh claim. Rejected the proposed never-check-read-path rule and extra public lock-age fields: per-operation fresh guards are simpler and enforce the existing safety promise. No protection against an uncoordinated second master is claimed. |
+| SAF-5 | PARTIAL | The reset uncertainty is real; a chosen 16-bit word is policy, not proof of undocumented effects. Stage 25 preserves verified stable bits with MOD=00/01, zero status/reserved bits and bit 1 set; after the documented wait it requires safe 0x04 plus full readback. EEPROM reload, EUN effects, other-bit application and reset ACK behavior remain unknown. Corrected the TMP117 audit; historical alert evidence survives reset with uncertain current trust. |
+| SAF-6 | ACCEPT | Replaced "factory locked" with power-up EUN=0. Stages 7/25 and ENGINEERING explicitly refuse relock/shutdown/reset writes while unlocked. An application power cycle or authorized external relock, followed by invalidation/recovery, is required; no new in-band maintenance path was added. |
+
+### Behavior and timing responses
+
+| ID | Verdict | Evidence, correction and disposition |
+|---|---|---|
+| BEH-1 | PARTIAL | Datasheets describe physical shutdown after one-shot, not MOD readback. Added both unknowns to sources/fixtures. Rejected the elapsed-time shortcut. Stages 6/21/30 now require 0x04 guard → preflight CONFIG comparison **before any CONFIG write** → explicit SD → cleared baseline → one trigger. Known owned MOD=11 provenance may be compatible; unowned MOD=11 is not silently normalized. Neither MOD nor time proves completion. |
+| BEH-2 | ACCEPT | CONFIG reads acknowledge alert-mode flags (TMP117 pp.16/27 and corresponding exact-part sections). Stages 19/22 now retain sticky evidence from every successful CONFIG read, including diagnostics and failed/late composite operations; later zero reads do not erase it. Explicit bus-silent consumption, loss uncertainty and mixed-generation provenance are required. Therm HIGH remains a level snapshot. |
+| BEH-3 | PARTIAL | Continuous generation/baseline rules were incomplete. Adopted guarded SD → apply/verify → clear baseline → desired CC → final CONFIG verification/baseline. Rejected "discard one completion" as proof of undocumented mid-average behavior. Fresh read paths never perform hidden mode writes or repair trust. |
+| BEH-4 | PARTIAL | Earlier prompts already separated nominal values from maxima, but did not state that continuous cycle maxima are absent. Stage 6/20 and ENGINEERING now do, preserving TMP117's one-shot condition. Any derived continuous timeout margin is library policy, not a guaranteed timing bound. |
+| BEH-5 | ACCEPT | Inverted therm limits have unspecified behavior. Stage 22 rejects an inverted target and chooses order from the known old pair; unknown/inverted starting state uses controlled shutdown/apply. Separate writes still cannot promise atomic/glitch-free alerts. |
+| BEH-6 | PARTIAL | Therm HIGH's documented set/clear condition supports retention through abort/shutdown **with mode/routing/polarity unchanged and no reset**. Corrected the overly broad unknown lists. Rejected unconditional pin persistence: changing routing/polarity/reset changes what the pin means. DATA_READY/alert-mode retention remains unknown. |
+| BEH-7 | NOT REQUIRED | A bounded timeout when no completion evidence is observed is already safe. The inaccessible E2E lead does not establish a reproduced defect. Sparse polling is now explicit, but no fallback sample, mandatory new error enum or unverified GPIO-completion path was added. No automatic retrigger or time-only fresh claim. |
+| BEH-8 | PARTIAL | The precision recommendation needed to reach core acquisition stages. The proposed typical-time default can still overlap active conversion. Stages 6/21/30 use the applicable averaged maximum for default one-shot polling, with explicit earlier-latency tradeoffs; SNIS236 p.23 remains an accuracy recommendation, not proof of zero interference or completion. |
+| BEH-9 | PARTIAL | One-shot tests use four AVG values plus CONV independence; continuous timing keeps all 32 pairs. Physical equality is difficult, not impossible; source/native equality proof is mandatory and HIL optional. Controlled alert clearing belongs in stage 41; stage 40 checks DATA_READY where available. Saturation tests state ambient/fixture limits and no physical pass is invented. |
+| BEH-10 | ACCEPT | TMP116 p.14 omits TMP117/TMP119's explicit comparison "including averaging" wording. Preserved block-end comparator timing as an inference for TMP116, with distinct fixture assumptions and optional physical observation; a fake cannot prove it. |
+
+### Silicon facts and citations responses
+
+| ID | Verdict | Evidence, correction and disposition |
+|---|---|---|
+| SIL-1 | PARTIAL | Added TMP114 supply/I/O limits and exact A/B/C/D versus ND/NC/NB/NA addresses. A pullup ≤1.98 V alone is insufficient: every participant's VIH/VIL/supply requirements must also hold, or use level shifting. Host negative fixtures do not authorize substituting a TMP114 on a 3.3-V bus. |
+| SIL-2 | ACCEPT | Added the paired startup-summary/detail-footnote citations and four-word diagram/table references in SILICON and stage 5. Detailed maps govern the three EEPROM words and offset persistence; omissions remain visible as source discrepancies. |
+| SIL-3 | ACCEPT, scoped | TMP116 p.17 says all register writes are ignored; TMP117 p.18/TMP119 p.20 specify CONFIG/limits. Corrected stage 18 and fixtures; offset writes during load remain unknown. The TMP119 extracted audit already restricted its sentence to CONFIG/limits, so that cited location was not itself defective. |
+| SIL-4 | ACCEPT | All TMP117 grades offer DRV/YBG; accuracy/orderable ranges differ. Visually rechecked p.6 spanning condition and p.46: unsoldered-pad condition applies across DRV grades, not YBG. Corrected SILICON. |
+| SIL-5 | PARTIAL | TMP116 p.36 Figure 44 **does** draw ALERT open, but also omits other signal connections in a partial power-filter drawing. It is not an unused-pin wiring instruction. Corrected the earlier audit/SILICON claim; retain p.3 pullup-if-used and p.32 unqualified grounding conflict. |
+| SIL-6 | ACCEPT | STOP-reset/ignore-until-START prose is explicit in TMP117 p.20/TMP119 p.23, not TMP116's protocol text. F04/stage 5 now distinguish those claims by model instead of inventing TMP116 behavior. |
+| SIL-7 | ACCEPT | TMP119's portfolio comparison table is not authoritative for another part's electrical conditions. SILICON and stage 4 now retain supply/current discrepancies alongside accuracy discrepancies and use exact-part electrical rows. |
+| SIL-8 | PARTIAL | Ordinary unsupported-pointer zero response is documented. Added ID-first dumps and negative fixtures without an override that traverses a foreign map. TMP114 p.26 documents **bad CRC** NACK/FF; it does not by itself prove every omitted-CRC transaction has that exact outcome. Error/FF fixtures are adverse cases, not a fabricated protocol guarantee. |
+| SIL-9 | ACCEPT | Stage 5 now records literal access code R separately from prose read-clear effects, each with citations. Semantic RC shorthand cannot replace what the table actually says. |
+| SIL-10 | ACCEPT, qualified | Corrected page-number convention, TMP119 CONV citation, model-dependent 0x07 wording, secondary Linux evidence, volatile-setting wording and tRESET TYP/no-MAX. Reviewed-page lists represent different dated passes; manifest now records their union without altering PDF bytes. SDAA311 is generic portfolio guidance, not authority for TMP11x open-drain or hysteresis registers. |
+
+### API, state and ownership responses
+
+| ID | Verdict | Evidence, correction and disposition |
+|---|---|---|
+| API-1 | ACCEPT | Stages 18/21 now produce single-callback resumable engines with explicit wait states, reused by synchronous wrappers and stages 29/30. This applies the useful TMP1x2 step-engine precedent without copying its silicon protocol. |
+| API-2 | ACCEPT risk | Stages 8/11/18/23 freeze opt-in offset management, default off; unmanaged supported offset is observed, never replayed. Managed zero remains a real setting; TMP116 rejects management before I2C. The datasheets support the persistence risk, not a claim about nonexistent current implementation. |
+| API-3 | PARTIAL | Freeze transport health independently of initialization as an intentional TMP1x2 deviation. UNINIT follows bind/teardown; invalidation does **not** erase valid transport history. Stage 15 can test tracked outcomes before stage 18 without fake initialization. |
+| API-4 | PARTIAL | Only TEMP/CONFIG consume DATA_READY, not ID/EEPROM. Nevertheless stages 28/30 use a uniform all-unrelated-I2C BUSY gate while active or a result is pending, simplifying ownership and preserving results. |
+| API-5 | ACCEPT | Stage 8/19 gates fresh requests on clean initialized trust while allowing untrusted latest diagnostics. Recovery still requires binding, available slot, deadline and safety; "always allowed" was too broad. Pre-trigger stable-field comparison now precedes SD/trigger writes, so drift cannot be silently repaired before checking it. |
+| API-6 | ACCEPT | The clock hook is authoritative; retained `nowMs` cannot override it. Stage 9 supplies per-API clock requirements and rejects missing required clocks before I2C. Untimed finite reads may omit the hook and cannot fabricate timestamps/deadline evidence. |
+| API-7 | PARTIAL | Timing-origin input/policy was missing. Stage 8/18 now requires an origin or explicit stable-power/no-reset owner assumption for a conservative bind/recovery wait. First observation alone is not proof of power-on time, and a typical POR duration is not a guaranteed maximum. |
+| API-8 | PARTIAL | Stage 14 intentionally predates codecs; stage 18 now extends bus-silent full-profile validation. Rejected bind preserves the old state; accepted rebind creates unknown hardware trust. Bind installs its target directly, distinct from setters' first-write commitment. This is an explicit improvement, not identical TMP1x2 behavior. |
+| API-9 | PARTIAL | Three descriptions were not evidence of three existing implementations. Stages 11/12 now specify one capability source/access-policy seam with ledger cross-checks; later stages extend it. Added the missing variant/register source inputs at stage 11. |
+| API-10 | PARTIAL | Optional API is not automatically a defect, but current scope has no caller needing arbitrary register-data writes. Excluded those in X04; kept one diagnostic route and private manual-trigger/readiness helpers. Aliases require a named consumer; shutdown is the documented CLI alias of mode shutdown. |
+| API-11 | ACCEPT | Explicit latest, continuous-fresh and one-shot acquisition kinds replace ambiguous mode-dispatched blocking reads in stages 8/21/27/30. A read command cannot silently mutate because the desired mode differs. |
+| API-12 | ACCEPT | CONVENTIONS and stage 8/11 now require acquisition kind, profile generation, configuration trust and offset provenance alongside raw/time/fresh fields. Stage 8 owns exact final types. |
+| API-13 | ACCEPT | Late physical success preserves observed values/flags/transport outcome and possible hardware effects, but cannot clear dirty, initialize, publish/cache a successful sample or erase a timeout. Applied across 9/18/29/30/31 and ENGINEERING. |
+| API-14 | ACCEPT | Corrected full-wrap detectability, core versus adapter timeout responsibility, returned-CONFIG wording and health-neutral stage integration. Owner service-gap obligations replace an impossible 32-bit overflow detector. |
+| API-15 | NOT REQUIRED | A real private state-transition component can be unit-tested without a fake public job or test-only production branch. Retained stages 28–30 ownership; clarified legitimate tests and avoided unused early slot scaffolding. Moving LATEST to stage 28 is unnecessary schema churn. |
+
+### Prompt structure and consistency responses
+
+| ID | Verdict | Evidence, correction and disposition |
+|---|---|---|
+| CON-1 | PARTIAL | AGENTS already delegated sequence policy, but the boundary was easy to misread. Clarified stages 1–42 deliberate dispatch/poll/wait exclusion, stage 10 local scaffolding and stage 43 initial workflow/checkpoint. Existing automatic triggers/protection remain intact; their execution is not forbidden. |
+| CON-2 | ACCEPT | Stage 44 now executes the stage 43 procedure for its changed CI-covered SHA **within** final closure, recording terminal result or BLOCKED before finalizing `prompt_44.md`. |
+| CON-3 | ACCEPT | Stages 34/35 produce fixed demos and byte-I/O hooks, stage 37 the processor/protocol, stage 38 the attachment. A resumed backend after 38 must integrate the current CLI and refresh firmware/build handoff evidence. |
+| CON-4 | ACCEPT | Entry/progress wording now calls TMP117 primary; every relevant stage covers all six selected BOM-model capability gates. Physical qualification remains per actual fixture. |
+| CON-5 | ACCEPT gap | Stage 12 explicitly produces a reusable literal-fact register fake, extended by consumers and consolidated at 32. Added `register-fake` to metadata and affected consumers; no second model simulator or mandatory test-only production behavior. |
+| CON-6 | ACCEPT | Named `tools/test_check_register_ledger.py` at stage 5, runnable before the driver exists; stage 10 registers it with the host entrypoint. COMMON/VERIFICATION name the command. |
+| CON-7 | ACCEPT terminology | FULL_COVERAGE owns the six canonical evidence column names; other contracts point to them. Similar old names did not constitute interchangeable proof, but one vocabulary prevents drift. |
+| CON-8 | PARTIAL | Reconciled actual owners and integration obligations, rather than deleting broad integration owners merely because they omitted a row ID. COVERAGE is a linked non-normative summary; FULL_COVERAGE governs. COMMON now includes CLI_CONTRACT/COVERAGE. |
+| CON-9 | ACCEPT bounded checks | Checker now validates all 46 requirement IDs, explicit owner ranges, future feature-table ID preservation and pinned PDF page anchors, with seven additional regression cases. HANDOFFS accurately names the Produced IDs comparison. Rejected arbitrary prose regex/path equality as supposed semantic proof; wording is reviewed directly. |
+| CON-10 | PARTIAL | Size is not itself a correctness defect. Added useful sub-checkpoints without removing requested targets or moving backend wiring out of its agreed stage 38 owner. Stage 33 title now says native correctness/source-consumer gates; package/install qualification remains stage 42. |
+| CON-11 | ACCEPT | Rewrote glued stage references and compressed register/timing language in HANDOFFS/FULL_COVERAGE and affected numbered prompts; did not introduce a broad false-positive prose checker. |
+| CON-12 | ACCEPT, evidence-based | Added missing validator, behavior, apply, host-entrypoint, adapter and firmware-handoff inputs. Stage 18 really integrates latest reads in its exit tests, so its latest-read-engine input is justified. Added applicable behavior-vector consumers and removed stale ad-hoc consumer lists from handoff explanations. Current metadata: 61 produced IDs, 263 input links. |
+| CON-13 | PARTIAL | Existing footer already limited authorization. Made copy/paste templates explicit: preparation stops after 1–3; resume stops after the selected stage unless a whole-set request authorizes continuation. |
+| CON-14 | ACCEPT | Named the test option/entrypoint owner and `docs/testing.md`, HIL runner and Doxyfile producers; removed the alternative ledger-path ambiguity and limited CHANGELOG upkeep to after creation. Future paths remain plans, not invented files. |
+| CON-15 | ACCEPT | One stage-44 report, COMMON report-index upkeep, canonical state/evidence vocabulary, current-branch wording and producer-versus-explanation ownership. Continuous encoders must emit MOD=00. |
+| CON-16 | PARTIAL | Historical SHAs/counts describe dated work and were not rewritten as current facts. Linked revision authorities, corrected the FieldCore branch comparison, marked stage-3 PARTIAL preparation claims superseded, added stage 1–3 artifact mappings, refreshed PROGRESS/index and corrected launcher adoption/tool inventory. |
+
+### Tooling, CLI, HIL and CI responses
+
+| ID | Verdict | Evidence, correction and disposition |
+|---|---|---|
+| TOOL-1 | ACCEPT, reproduced | Original launcher selected Core 6.1.19; the configured `C:\pio` installation is Core 6.2.0. `pio.cmd` now uses `PLATFORMIO_CORE_DIR` or the default directory and fails when that chosen executable is absent, with no PATH fallback/install. Updated adoption and active package evidence. Verified actual invocation, unset-variable fallback and missing configured path with spaces. |
+| TOOL-2 | PARTIAL | Concrete target/upload/campaign scope was needed. COMMON/VERIFICATION/CLI and stage 39 accept existing session authorization or a fixture record; no port is selected merely by enumeration. Rejected a mandatory user-written JSON file and repeated confirmation when authorization already exists. No port/upload was used in this review. |
+| TOOL-3 | ACCEPT | Added canonical lifecycle, job kinds/automatic pacing, stop, attempt counters and request framing requirements. `shutdown` is an exact `mode shutdown` alias, including desired state. Stage 37 freezes grammar; 38 owns final routes/backend wiring. |
+| TOOL-4 | PARTIAL | Added boot/session-wide adapter **attempt** counters including health-neutral traffic, sensor data writes and separate mux routing. Software counters are not independent hardware proof; logic traces remain a separate evidence layer. Failed attempts and saturation must not hide activity. |
+| TOOL-5 | PARTIAL | The zero-tick hazard was confirmed against local pinned ESP-IDF v5.5.5 source. Stages 34/35 now require backend-specific quantization/preflight, zero-tick refusal, cleanup/terminal-buffer-lifetime proof and timeout margins. A blanket two-tick threshold cannot guarantee a whole-transfer deadline; the example's 1000-Hz tick setting is not a universal fix. SDK bus recovery is disclosed separately from core retries. |
+| TOOL-6 | NOT REQUIRED broad removal | P4, package relocation and independent consumer gates are already agreed scope; complexity preference does not justify deleting them. Clarified optional mux/sibling integration, plan-only DP8382x precedent, one version generator with a check wrapper, conditional physical observations and session-header metadata reuse. No unsupported hardware/package pass is claimed. |
+| TOOL-7 | PARTIAL | FieldCore is an S3 Arduino ownership reference, not evidence of a P4/native-IDF consumer. Stage 36 now names the I2C master target and configured minimum silicon revision; any optional dependencies must be pinned and not resolved from sibling working copies. |
+| TOOL-8 | PARTIAL | Discovery was already explicitly authorized, but physical campaigns now exclude it by default and require pointer-safe named candidates. Authorized mux-route writes are allowed separately; no EEPROM or undeclared-device mutation. |
+| TOOL-9 | ACCEPT | Stage 42 explicitly produces Doxyfile and checker, with public-header/user-doc input scope, generated PROJECT_NUMBER and recorded local/CI Doxygen versions. Prompt/audit/vendor archives are excluded. |
+| TOOL-10 | ACCEPT | Stage 39 names optional physical-mode pyserial and durable `docs/hil/<date>-<fixture>/` evidence or committed summaries/hashes/retrieval references. Ignored logs alone cannot close qualification. |
+| TOOL-11 | ACCEPT | Corrected all five items: minimal linked IDF app, package entrypoint, pinned CI Core identity, unknown lot allowed, and TMP117EVM exclusive-master isolation/prior GUI-programming provenance (SNOU161 pp.3/22). No EVM operation was performed. |
+
+### Earlier audits, verified-correct section and remaining evidence
+
+Each earlier audit now has its own dated response, rather than silently treating
+the original report as current implementation proof:
+
+- [Promptset correctness audit](../reports/promptset-audit.md): every finding
+  row rechecked; source/branch/tooling overclaims corrected or qualified.
+- [Feature-gap audit](../reports/feature-gap-audit.md): all ten gap rows reviewed;
+  whole-profile/offset and reset claims qualified for the new ownership policy.
+- [Handoff audit](../reports/handoff-audit.md): all 17 boundaries reviewed;
+  current contracts supersede the old MODE/offset/test-seam assumptions.
+- [TMP116 audit](../reference/extracted/tmp116-coverage-audit.md),
+  [TMP117 audit](../reference/extracted/tmp117-coverage-audit.md),
+  [TMP119 audit](../reference/extracted/tmp119-coverage-audit.md), and
+  [excluded-family audit](../reference/extracted/excluded-families-audit.md):
+  all actionable findings checked against their pinned exact-part sources.
+- [Preparation](../reports/preparation.md) and stage
+  [1](../reports/prompt_1.md), [2](../reports/prompt_2.md),
+  [3](../reports/prompt_3.md) reports have responses distinguishing historical
+  observations from current revisions/tools and completion scope.
+
+The audit-named numbered files 1/2/44 are instructions for their stages, not
+additional executed audit findings. PNGs under `.review` are evidence images,
+not issue reports. They do not imply that later stages have run.
+
+The original "Verified correct" section is mostly supported, with these
+qualifications: writable stable CONFIG mask excludes the separate reset
+command; OS returning physically to SD does not establish MOD readback;
+TMP114 0x0F zero assumes the documented ordinary/CRC-disabled protocol; pointer
+traffic must not be called harmless to arbitrary foreign devices; installed
+SDKs and historical tool observations are not built firmware. Its counts
+60/226 and 27+9 are historical; current declarations are 61/263 and the
+checker suite has 34 cases plus nine reference cases.
+
+Open silicon questions above remain open. Stage 41 must not deliberately
+unlock EEPROM, write during unsafe startup, violate therm-limit policy or use
+unsafe reset behavior merely to answer an audit question. Such observations
+need permitted fixture conditions or further TI evidence; unsupported physical
+experiments are not required exit criteria. Negative/adverse host fixtures
+test library conservatism without proving the silicon's unknown behavior.
+
+Validation on the integrated change (Python 3.12.10):
+
+- `python scripts/check_promptset.py`: PASS, 44 stages, 61 producer IDs,
+  263 inputs, coverage IDs/owners and local links/PDF page anchors.
+- `python scripts/test_check_promptset.py`: PASS, 34 cases.
+- `python scripts/check_references.py`: PASS, all 14 pinned PDFs.
+- `python scripts/test_check_references.py`: PASS, nine cases.
+- `scripts/pio.cmd --version`: PASS, selected Core 6.2.0; default-selection
+  and missing-configured-installation checks also passed.
+- One-response-per-finding inventory and `git diff --check`: PASS.
+
+Original PDF bytes,
+source URLs and acquisition dates remain pinned. Driver tests, MCU links,
+remote CI and physical HIL are **NOT RUN**; stages 4–44 remain NOT_STARTED.
+The result commit and actual upstream synchronization are reported after
+commit, rather than inventing a self-referential SHA here.

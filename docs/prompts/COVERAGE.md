@@ -1,9 +1,9 @@
 # Requirement-to-stage coverage
 
-A planned prompt is **not** implementation evidence. Use this table with the
-machine-readable per-part feature ledger established in stage 5 and maintained
-through stage 44. Record `documented`, `implemented`, `native tested`,
-`firmware built`, `CI tested`, `hardware qualified` separately.
+A planned prompt is **not** implementation evidence. This is a non-normative
+navigation summary; [FULL_COVERAGE](FULL_COVERAGE.md) governs row IDs, owners
+and the six canonical evidence columns. Use it with the per-part ledger
+established in stage 5 and maintained through stage 44.
 The mandatory [R/F/X inventory](FULL_COVERAGE.md) expands this summary to every
 register field, protocol/physical requirement and intentional exclusion. No
 row disappears merely because it is application-owned or lacks hardware.
@@ -16,13 +16,13 @@ row disappears merely because it is application-owned or lacks hardware.
 | Framework-independent C++17, I2C ownership | 8–12; 28–30; 42 | Native linked no-SDK/installed consumer |
 | No EEPROM writes or global reset | 7; 18; 23–26; 31–33; 44 | Forbidden I2C patterns zero callback on denial |
 | Correct signed measurement and thresholds | 16–17; 21–22; 32–33 | Independent raw literal vectors |
-| Startup and EEPROM-busy lock | 6–7; 18–20; 29–31 | Deterministic guarded I2C traces |
+| Startup and EEPROM-busy lock | 6–9; 18–21; 23–25; 29–32 | Operation-local 0x04 guard, startup origin and deterministic I2C traces |
 | Conversion cycle, average, mode, one-shot | 6; 20–21; 30 | Correct register/timing and fresh samples |
 | Alert DATA_READY and destructive-read semantics | 6; 21–22; 26; 30 | Event-flag consumption and stale-negative tests |
-| TMP117/119 offset, not TMP116 offset | 4–5; 23; 32 | Capability refusal with zero I2C |
+| TMP117/119 offset, not TMP116 offset | 4–5; 7–8; 16; 23; 25–26; 29; 32; 38; 41 | Opt-in management, unmanaged preservation, guard and TMP116 zero-I2C refusal |
 | Safe EEPROM-backed shadow observations | 7; 24; 32 | Variant word maps; all shadow/NVM writes forbidden; no immutable-ID claim |
 | Verified config, dirty trust, recovery | 18–19; 28–31 | Injected ambiguous-failure tests |
-| Complete profile including limits and supported offset | 8; 18–19; 22–23; 25; 29–33 | Per-field desired/observed trust, nonfactory reset and partial replay tests |
+| Complete profile including limits and owned offset | 8; 18–19; 22–23; 25; 27; 29–33 | Per-field desired/observed trust, unmanaged offset provenance, nonfactory reset and partial replay tests |
 | Field-level persistence and arbitrary shadow content | 5; 17; 24–25; 32 | MOD1 not stored; reset conflicts retained; no fabricated serial validity |
 | Protocol/electrical limits and actual ADD0 straps | 4–6; 9; 12; 34–36; 40–42 | 1–400 kHz, separate hardware timeout, pointer/ACK/NACK and physical bus evidence |
 | Accumulated average and alert latch re-arm | 6; 20–22; 32–33; 41 | All 32 timing pairs, partial-block abort, eight routing combinations |

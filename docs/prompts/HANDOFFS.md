@@ -7,7 +7,8 @@ Later stages may extend that artifact, but must preserve its contract or update
 all affected consumers, tests and documentation together.
 
 The checker verifies unique producers, known inputs, dependency reachability
-and agreement with this table and the numbered prompts. It cannot prove that
+and agreement with this table's Produced IDs column and numbered declarations.
+Coverage-ID/owner and PDF-page checks are structural only. It cannot prove that
 an implementation exists, that a test is meaningful or that a fixture passed.
 At execution, inspect actual artifacts and their required evidence.
 
@@ -34,52 +35,56 @@ At execution, inspect actual artifacts and their required evidence.
 
 ## All 44 handoffs
 
+Exact consumers are in SEQUENCE; descriptions below explain boundaries rather
+than duplicating every transitive consumer list. There are 61 produced IDs and
+263 declared input links after the 2026-11-17 finding review.
+
 | Stage | Produced IDs | Usable output and boundary |
 |---:|---|---|
 | 1 | `ecosystem-audit` | `docs/library-comparison.md` and `docs/source-adoption.md`; source revisions/license decisions for 2/8. Research, no copied driver. |
 | 2 | `tooling-plan` | `docs/toolchain-and-package-plan.md`; selected build/layout/test tools for 10/34/35/42. Installed SDK discovery is not a firmware build. |
 | 3 | `ti-archive` | Pinned PDFs/manifest, review notes and public-code catalog; exact sources for 4–7. Optional inaccessible example code does not block intake. |
 | 4 | `variant-contract`, `board-guide` | `docs/variants.md` and initial `docs/board-integration.md`; model/grade and board facts for 5/8 and independent 34/35 integration. |
-| 5 | `register-ledger`, `feature-ledger`, `register-validator` | `docs/registers/tmp11x.json`, `docs/feature-coverage.md`, `tools/check_register_ledger.py`; one fact/policy inventory for 6–7 and all implementation owners. |
+| 5 | `register-ledger`, `feature-ledger`, `register-validator` | `docs/registers/tmp11x.json`, `docs/feature-coverage.md`, `tools/check_register_ledger.py` and `tools/test_check_register_ledger.py`; one fact/policy inventory, with standalone regression command before stage 10 registers it. |
 | 6 | `behavior-contract`, `behavior-vectors` | `docs/device-behavior.md` and `docs/registers/behavior-vectors.json`; source-backed traces for 16–23/32. No pre-driver executable test claim. |
 | 7 | `safety-policy` | `docs/eeprom-and-reset-policy.md` and refined stage 5 access/reset policy; guards/exclusions for 8/18–26. |
 | 8 | `api-contract` | `docs/api-contracts.md` and architecture; one-shot/binding/settings/failure contracts for all code. Declarations alone are not implementations. |
 | 9 | `owner-contract` | `docs/owner-operations.md`; immutable binding, clock, admission/result/cancellation rules for 18/21/28–31. |
 | 10 | `build-foundation`, `version-tools`, `host-test-entrypoint` | Real CMake library/test skeleton, scripts/generate_version.py, tools/check_version_sync.py and docs/testing.md; later stages add tests to this host entrypoint. |
 | 11 | `value-types` | Pure Status/Config/model/value types and single capability table for 12–17. No I2C or device-success placeholders. |
-| 12 | `register-transport`, `command-table` | Private checked word transport and include/TMP11x/CommandTable.h for 13/14/17. Public unbound guards wait for real lifecycle 14. |
-| 13 | `identity-engine` | Private identity engine for 14/18 using 12's binding view. Public identity/probe integration belongs14. |
-| 14 | `binding-api`, `public-identity-api` | Real bus-silent bind/end/unbind and public bound identity/probe for 15/16/18. Job-slot lifecycle tests hand off to28–30. |
-| 15 | `transport-health` | Tracked transport health for 16/18/31; public identity/probe stays health-neutral. Full initialization integration lands18. |
+| 12 | `register-transport`, `command-table`, `register-fake` | Private checked transport, include/TMP11x/CommandTable.h and initial reusable test/support/FakeTmp11xDevice.{h,cpp}; literal ledger-derived test behavior, extended by later owners. Public unbound guards integrate at stage 14. |
+| 13 | `identity-engine` | Private identity engine using stage 12's binding view. Public identity/probe integration belongs to stage 14. |
+| 14 | `binding-api`, `public-identity-api` | Real bus-silent bind/end/unbind and public bound identity/probe. Stage 18 extends bind profile validation; job-slot lifecycle tests belong to stages 28–30. |
+| 15 | `transport-health` | Tracked transport health independently of initialized state; identity/probe stays health-neutral. Initialization integration belongs to stage 18. |
 | 16 | `temperature-codec`, `latest-read-engine` | Signed codecs plus latest-read engine/cache for 17/18/21. Managed API remains guarded until real initialization 18; private seams are tested now. |
-| 17 | `config-codec` | Pure CONFIG codecs, stable comparison and profile-value validation using 16; no duplicate register/capability table. Physical apply belongs18. |
-| 18 | `safe-apply-engine`, `sync-initialize-recover` | Real bounded synchronous begin/recover, safe apply/readback and minimum desired/dirty state for 19/22/23/29; offset availability/trust remains explicit until23. |
-| 19 | `config-trust` | Observed configuration/snapshots/invalidation/trust around18's engine; typed convenience setters belong20/22 and active-job integration28. |
-| 20 | `conversion-settings` | Mode/cycle/AVG wrappers and timing helpers over18/19; execute applicable6 vectors. Shutdown transition and one-shot baseline feed21. |
-| 21 | `sync-acquisition` | Real latest/try-fresh/owned-one-shot/blocking acquisition over16; shutdown-only managed one-shot policy. Supplies23/27/30. |
-| 22 | `limits-alert` | Typed limit/alert wrappers and observations over existing18/19 apply; no second limits engine. Supplies26/27/30/38. |
-| 23 | `offset-feature` | Guarded offset APIs plus extension of the shared full-profile engine; freshness integration uses21. Supplies25/27/29, raw/CLI gates later26/38. |
-| 24 | `readonly-eeprom` | Read-only EEPROM-shadow APIs and shared write denials; existing-path tests now. Public optional raw/dump integration belongs26, CLI37/38. |
-| 25 | `device-reset` | Guarded addressed reset/refusal and nonfactory reset/recovery tests using 23 offset. Supplies27/31/38. |
-| 26 | `diagnostics` | Bound-only diagnostics, ordered snapshots and optional guarded raw route using prior safety policy. No raw-write API is forced by24. |
+| 17 | `config-codec` | Pure CONFIG codecs, stable comparison and profile validation using stage 16; no duplicate capability table. Physical apply belongs to stage 18. |
+| 18 | `safe-apply-engine`, `sync-initialize-recover` | Real bounded begin/recover over resumable apply/readback phases, full available bind validation and desired/dirty state; offset management arrives at stage 23. |
+| 19 | `config-trust` | Shared observed configuration/trust and retained destructive-read evidence around stage 18's engine; setters extend it, stage 28 adds job ownership. |
+| 20 | `conversion-settings` | Mode/cycle/AVG wrappers, explicit shutdown and timing helpers over stages 18/19; execute stage 6 vectors and provide a verified continuous baseline. |
+| 21 | `sync-acquisition` | Resumable latest/continuous-fresh/owned-one-shot acquisition; explicit blocking kinds, guarded shutdown baseline and no MOD-only freshness proof. |
+| 22 | `limits-alert` | Typed limit/alert wrappers over stages 18/19; bus-silent consumption of retained alert evidence, no duplicate limits engine. |
+| 23 | `offset-feature` | Opt-in guarded offset management extends the full-profile engine; unmanaged calibration remains observed only. Freshness uses stage 21; diagnostics/CLI integrate at stages 26/38. |
+| 24 | `readonly-eeprom` | Read-only EEPROM-shadow APIs and shared write denials; diagnostics integrate at stage 26 and CLI at stages 37/38. |
+| 25 | `device-reset` | Guarded addressed reset/refusal with unresolved effects retained; nonfactory reset/recovery tests use stage 23's managed/unmanaged offset policy. |
+| 26 | `diagnostics` | One bound-only diagnostic route and identity-gated ordered dumps; all CONFIG reads retain evidence. No public raw register-data write API. |
 | 27 | `sync-api` | Complete synchronous public API/snapshots and compile consumer; reconcile feature coverage for 28/33/34–38. |
-| 28 | `job-lifecycle` | Real private admission/result machinery and lifecycle/invalidation integration; unsupported unconnected kinds reject. Real public job execution lands29/30. |
-| 29 | `configuration-jobs` | Initialize/configure/recover jobs reuse18/19/23 phases with immutable binding; execute lifecycle cases against real jobs. |
-| 30 | `measurement-jobs` | Latest/try-fresh/one-shot jobs reuse21, including shutdown-only policy; execute lifecycle and measurement interleaving cases. |
+| 28 | `job-lifecycle` | Real private admission/result component and lifecycle integration; unrelated I2C is BUSY while active/result pending. Unconnected public kinds reject; stages 29/30 connect real engines. |
+| 29 | `configuration-jobs` | Initialize/configure/recover reuse stages 18/19/23 phases with immutable binding; execute lifecycle cases against real jobs. |
+| 30 | `measurement-jobs` | Latest/try-fresh/one-shot reuse stage 21; execute lifecycle/interleaving cases and operation-local guards. |
 | 31 | `fault-closure` | Adversarial fault closure of existing synchronous/cooperative recovery and transport/result policies; not the first recovery implementation. |
 | 32 | `variant-fixtures` | Consolidated independent variant fixtures built incrementally since 12; literal source vectors and explicit unknown assumptions. |
-| 33 | `native-qualification` | Native production qualification and existing registered suite;37–39 must extend it when CLI/runner tests are added. |
-| 34 | `arduino-adapter-source`, `arduino-build-record` | Arduino source adapter/example and initial build record; app firmware/session identity and board guide extension. Final CLI image integration belongs38. |
-| 35 | `idf-adapter-source`, `idf-build-record` | Independent IDF source adapter/example and initial build record; app identity and guide extension. No Arduino SDK prerequisite; final CLI image belongs38. |
+| 33 | `native-qualification` | Native correctness and source-consumer qualification; stages 37–39 extend the registered host suite with CLI/runner tests. |
+| 34 | `arduino-adapter-source`, `arduino-build-record` | Arduino fixed demo/byte-I/O adapter, identity, attempt counters and build record. Stage 38 attaches final CLI; resumed backend work refreshes the current handoff. |
+| 35 | `idf-adapter-source`, `idf-build-record` | Independent IDF fixed demo/byte-I/O adapter, identity, counters and build record. No Arduino dependency; stage 38 attaches CLI, resumed backend work refreshes it. |
 | 36 | `p4-consumer-source`, `p4-build-record` | P4 consumer source and build record using 35; no physical board needed for linking. Missing SDK/target remains explicit. |
 | 37 | `cli-baseline`, `cli-protocol` | Shared observation CLI, docs/cli-protocol.md and golden transcripts in test/cli; complete grammar but only implemented help/routes. Host tests independent of MCU SDKs. |
-| 38 | `cli-complete`, `firmware-cli-handoff` | Complete CLI/jobs/help, standard-host tests and docs/firmware-cli-handoff.md; integrate available34/35 sources and refresh links, or record exact pending target gates. |
-| 39 | `hil-runner` | Python runner and unit/subprocess tests against the actual37/38 fixture, registered in standard host checks; uses the frozen protocol and firmware handoff. |
-| 40 | `readonly-hil-record` | Read-only physical evidence or explicit blocked record. Requires authorized fixture and one current CLI-integrated image from 34 OR35 after38. |
-| 41 | `volatile-hil-record` | Volatile/restore/soak evidence or blocked record. Actual physical execution requires40's valid fixture/read-only qualification, not merely a report file. |
+| 38 | `cli-complete`, `firmware-cli-handoff` | Complete CLI/jobs/help, host tests and docs/firmware-cli-handoff.md; attach available stage 34/35 adapters and refresh links, retaining pending target gates. |
+| 39 | `hil-runner` | tools/hil_tmp11x_runner.py and host unit/subprocess tests against the actual stage 37/38 fixture; concrete physical target/scope validation, optional physical-mode pyserial. |
+| 40 | `readonly-hil-record` | Read-only physical evidence or blocked record. Requires authorized fixture and one current CLI-integrated stage 34 or 35 image after stage 38. |
+| 41 | `volatile-hil-record` | Volatile/restore/soak evidence or blocked record; physical work requires stage 40's actual fixture qualification, not merely a report. |
 | 42 | `package-qualification`, `package-doc-tools` | Package/relocation/coexistence/docs qualification and tools/check_package.py + tools/check_doxygen.py; consumes available firmware sources separately from target link evidence. |
 | 43 | `ci-record` | Exact-SHA remote CI record including current CLI/Python suites and final firmware sources; absent access remains blocked, no physical port by default. |
-| 44 | `final-audit` | Final row-by-row software/evidence audit; inspect36/40/41/43 records when available and list missing gates. No unconditional physical/CI dependency. |
+| 44 | `final-audit` | docs/reports/prompt_44.md audits all rows and available stage 36/40/41/43 evidence. After CI-covered fixes, run stage 43's procedure within this stage before closing; missing gates remain explicit. |
 
 ## Conditional integration and evidence gates
 
@@ -89,6 +94,8 @@ backends and records full-link results or missing gates in the firmware
 handoff. These are conditional source/build integrations, not mandatory SDK
 dependencies for host CLI/runner development. Stages 42/43 refresh affected
 links if later changes invalidate the recorded images.
+If stage 34/35 resumes after stage 38, the resumed backend owner integrates the
+current shared CLI and updates `docs/firmware-cli-handoff.md` and its link record.
 
 Stage 40 has an **OR** gate: one actual current Arduino or IDF image containing
 the completed stage 37/38 protocol/routes, plus runner compatibility and an

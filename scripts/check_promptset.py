@@ -20,6 +20,90 @@ REQUIRED_SHARED = (
 LOCAL_LINK = re.compile(r"(?<!!)\[[^\]]*\]\(([^)]+)\)")
 PREREQUISITE_LINK = re.compile(r"\[([0-9]+)\]\(([^)]+)\)")
 ARTIFACT_ID = re.compile(r"[a-z][a-z0-9-]*")
+COVERAGE_IDS = {f"{prefix}{number:02d}" for prefix, count in (("R", 18), ("F", 20), ("X", 8))
+                for number in range(1, count + 1)}
+
+
+def coverage_rows(path: Path):
+    """Yield requirement rows; Markdown references elsewhere are not evidence rows."""
+    for line in path.read_text(encoding="utf-8").splitlines():
+        if not line.startswith("|"):
+            continue
+        cells = [cell.strip() for cell in line.strip().strip("|").split("|")]
+        if cells and re.match(r"^[RFX][0-9]", cells[0]):
+            yield cells
+
+
+def validate_coverage(root: Path) -> list[str]:
+    errors: list[str] = []
+    inventory = root / "docs/prompts/FULL_COVERAGE.md"
+    if not inventory.is_file():
+        return errors
+    seen: set[str] = set()
+    for cells in coverage_rows(inventory):
+        row_id = cells[0]
+        if row_id not in COVERAGE_IDS:
+            errors.append(f"FULL_COVERAGE: invalid requirement ID {row_id}")
+        if row_id in seen:
+            errors.append(f"FULL_COVERAGE: duplicate requirement ID {row_id}")
+        seen.add(row_id)
+        owners = cells[2] if len(cells) == 4 else ""
+        # Explicit owner column, not a search for numbers in descriptive prose.
+        terms = re.split(r"\s*[,/]\s*", owners)
+        parsed: list[int] = []
+        valid = bool(owners)
+        for term in terms:
+            match = re.fullmatch(r"([0-9]{1,2})(?:[–-]([0-9]{1,2}))?", term)
+            if match is None:
+                valid = False
+                break
+            first, last = int(match[1]), int(match[2] or match[1])
+            if not 1 <= first <= last <= 44:
+                valid = False
+                break
+            parsed.extend(range(first, last + 1))
+        if not valid or len(parsed) != len(set(parsed)):
+            errors.append(f"FULL_COVERAGE {row_id}: invalid or duplicate owner stages {owners!r}")
+    if seen != COVERAGE_IDS:
+        errors.append(f"FULL_COVERAGE requirement inventory differs: missing={sorted(COVERAGE_IDS - seen)} extra={sorted(seen - COVERAGE_IDS)}")
+    feature = root / "docs/feature-coverage.md"
+    if feature.is_file():
+        feature_ids: set[str] = set()
+        for cells in coverage_rows(feature):
+            row_id = cells[0]
+            match = re.fullmatch(r"([RFX][0-9]{2})(?:[.-][A-Za-z0-9][A-Za-z0-9_.-]*)?", row_id)
+            if match is None or match[1] not in COVERAGE_IDS:
+                errors.append(f"feature-coverage: invalid requirement row {row_id}")
+            else:
+                feature_ids.add(match[1])
+        missing = COVERAGE_IDS - feature_ids
+        if missing:
+            errors.append(f"feature-coverage: missing requirement rows {sorted(missing)}")
+    return errors
+
+
+def pdf_page_counts(root: Path) -> tuple[dict[Path, int], list[str]]:
+    """Read pinned page metadata; original byte verification is a separate check."""
+    manifest = root / "docs/reference/manifest.json"
+    try:
+        data = json.loads(manifest.read_text(encoding="utf-8"), object_pairs_hook=unique_json_object)
+        documents = data["documents"]
+        if not isinstance(documents, list):
+            raise ValueError("documents must be an array")
+        counts: dict[Path, int] = {}
+        for document in documents:
+            if not isinstance(document, dict):
+                raise ValueError("document must be an object")
+            path, count = document.get("path"), document.get("page_count")
+            if not isinstance(path, str) or type(count) is not int or count < 1:
+                raise ValueError("document needs path and positive integer page_count")
+            resolved = (root / path).resolve()
+            if not resolved.is_relative_to(root.resolve()) or resolved in counts:
+                raise ValueError("invalid or duplicate document path")
+            counts[resolved] = count
+        return counts, []
+    except (OSError, ValueError, KeyError, TypeError) as exc:
+        return {}, [f"invalid reference page metadata: {exc}"]
 
 
 def unique_json_object(pairs):
@@ -144,6 +228,9 @@ def validate(root: Path) -> list[str]:
     if len(ps) != 44:
         errors.append(f"expected 44 prompts, found {len(ps)}")
     errors.extend(validate_handoffs(docs, ps))
+    errors.extend(validate_coverage(root))
+    page_counts, page_errors = pdf_page_counts(root)
+    errors.extend(page_errors)
     ids = [x.get("id") for x in ps if isinstance(x, dict)]
     if ids != list(range(1, len(ps) + 1)):
         errors.append("IDs must be contiguous ascending positive integers")
@@ -226,11 +313,20 @@ def validate(root: Path) -> list[str]:
         raw = p.read_text(encoding="utf-8")
         no_fences = re.sub(r"```.*?```", "", raw, flags=re.S)
         for href in LOCAL_LINK.findall(no_fences):
-            href = href.strip().split("#", 1)[0]
+            href, _, fragment = href.strip().partition("#")
             if not href or href.startswith(("http://", "https://", "mailto:", "skills://")):
                 continue
             if not (p.parent / href).exists():
                 errors.append(f"broken link: {p.relative_to(root)} -> {href}")
+            target = (p.parent / href).resolve()
+            page_values = [part.partition("=")[2] for part in fragment.split("&")
+                           if part.partition("=")[0] == "page"]
+            if target.suffix.lower() == ".pdf" and page_values:
+                page = page_values[0]
+                count = page_counts.get(target)
+                if (len(page_values) != 1 or not re.fullmatch(r"[0-9]{1,6}", page) or count is None
+                        or not 1 <= int(page) <= count):
+                    errors.append(f"invalid PDF page anchor: {p.relative_to(root)} -> {href}#{fragment}")
     return errors
 
 
@@ -244,7 +340,7 @@ def main() -> int:
     if err:
         print(f"FAIL: {len(err)} promptset issue(s)")
         return 1
-    print("PASS: 44 stages, dependency DAG, producer/consumer handoffs, prose/index parity and links")
+    print("PASS: 44 stages, dependency DAG, handoffs, coverage IDs/owners, prose/index parity and links/PDF pages")
     return 0
 
 if __name__ == "__main__":

@@ -10,6 +10,16 @@ with the TI document number including its revision. For example,
 `TMP117-Evaluation-Module-Quick-Start-Guide-SNOU163.pdf`. Manifest IDs used by
 the fetcher, such as `tmp117`, remain stable when a local filename changes.
 
+The 2026-11-17 finding review reconciled manifest visual-page lists as the
+union of the recorded intake and later coverage passes: TMP117 pp.6/7/23/25/
+27/28/31/32/46, plus new checks of TMP116 p.36 and TMP119 p.4. This updates
+review metadata, not acquisition dates, technical revisions or PDF bytes.
+SDAA311 is generic portfolio guidance: its active-high output/hysteresis
+examples do not override TMP11x's exact-part open-drain and TLOW behavior.
+If a TMP117EVM becomes a fixture, SNOU161 pp.3/22 require attention to the
+onboard MSP430/GUI: establish exclusive sensor-bus ownership and record any
+prior EEPROM programming as non-factory/unknown provenance.
+
 | Source | Document revision | Purpose |
 |---|---|---|
 | [TMP117](source/TMP117-Digital-Temperature-Sensor-Datasheet-SNOSD82D.pdf) | SNOSD82D, September 2022 | First implementation and intended PCB model; includes M/N grades |

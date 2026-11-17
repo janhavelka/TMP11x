@@ -125,7 +125,8 @@
       "consumes": [
         "variant-contract",
         "register-ledger",
-        "behavior-contract"
+        "behavior-contract",
+        "register-validator"
       ]
     },
     {
@@ -214,7 +215,9 @@
       "consumes": [
         "api-contract",
         "owner-contract",
-        "build-foundation"
+        "build-foundation",
+        "variant-contract",
+        "register-ledger"
       ]
     },
     {
@@ -232,7 +235,8 @@
       ],
       "produces": [
         "register-transport",
-        "command-table"
+        "command-table",
+        "register-fake"
       ],
       "consumes": [
         "register-ledger",
@@ -262,7 +266,8 @@
         "variant-contract",
         "register-ledger",
         "value-types",
-        "register-transport"
+        "register-transport",
+        "register-fake"
       ]
     },
     {
@@ -287,7 +292,8 @@
         "owner-contract",
         "value-types",
         "register-transport",
-        "identity-engine"
+        "identity-engine",
+        "register-fake"
       ]
     },
     {
@@ -309,7 +315,8 @@
         "api-contract",
         "value-types",
         "register-transport",
-        "binding-api"
+        "binding-api",
+        "register-fake"
       ]
     },
     {
@@ -337,7 +344,8 @@
         "value-types",
         "register-transport",
         "binding-api",
-        "transport-health"
+        "transport-health",
+        "register-fake"
       ]
     },
     {
@@ -364,7 +372,8 @@
         "safety-policy",
         "value-types",
         "command-table",
-        "temperature-codec"
+        "temperature-codec",
+        "behavior-vectors"
       ]
     },
     {
@@ -395,7 +404,11 @@
         "public-identity-api",
         "transport-health",
         "temperature-codec",
-        "config-codec"
+        "config-codec",
+        "latest-read-engine",
+        "behavior-contract",
+        "behavior-vectors",
+        "register-fake"
       ]
     },
     {
@@ -419,7 +432,9 @@
         "sync-initialize-recover",
         "config-codec",
         "transport-health",
-        "safety-policy"
+        "safety-policy",
+        "behavior-vectors",
+        "register-fake"
       ]
     },
     {
@@ -444,7 +459,8 @@
         "behavior-vectors",
         "config-codec",
         "safe-apply-engine",
-        "config-trust"
+        "config-trust",
+        "register-fake"
       ]
     },
     {
@@ -470,7 +486,9 @@
         "latest-read-engine",
         "sync-initialize-recover",
         "config-trust",
-        "conversion-settings"
+        "conversion-settings",
+        "behavior-vectors",
+        "register-fake"
       ]
     },
     {
@@ -497,7 +515,9 @@
         "temperature-codec",
         "config-codec",
         "config-trust",
-        "sync-acquisition"
+        "sync-acquisition",
+        "safe-apply-engine",
+        "register-fake"
       ]
     },
     {
@@ -526,7 +546,10 @@
         "safety-policy",
         "temperature-codec",
         "config-trust",
-        "sync-acquisition"
+        "sync-acquisition",
+        "safe-apply-engine",
+        "behavior-vectors",
+        "register-fake"
       ]
     },
     {
@@ -553,7 +576,8 @@
         "safety-policy",
         "register-transport",
         "public-identity-api",
-        "config-trust"
+        "config-trust",
+        "register-fake"
       ]
     },
     {
@@ -582,13 +606,14 @@
         "sync-initialize-recover",
         "config-trust",
         "sync-acquisition",
-        "offset-feature"
+        "offset-feature",
+        "register-fake"
       ]
     },
     {
       "id": 26,
       "file": "26_diagnostic-access.md",
-      "title": "Implement read-only register snapshots and guarded raw access",
+      "title": "Implement read-only register snapshots and checked diagnostic access",
       "phase": "Features, safe measurements and diagnostics",
       "kind": "software",
       "depends_on": [
@@ -613,7 +638,8 @@
         "sync-acquisition",
         "limits-alert",
         "offset-feature",
-        "readonly-eeprom"
+        "readonly-eeprom",
+        "register-fake"
       ]
     },
     {
@@ -645,7 +671,8 @@
         "offset-feature",
         "readonly-eeprom",
         "device-reset",
-        "diagnostics"
+        "diagnostics",
+        "register-fake"
       ]
     },
     {
@@ -668,7 +695,8 @@
         "binding-api",
         "transport-health",
         "config-trust",
-        "sync-api"
+        "sync-api",
+        "register-fake"
       ]
     },
     {
@@ -691,7 +719,8 @@
         "sync-initialize-recover",
         "config-trust",
         "offset-feature",
-        "job-lifecycle"
+        "job-lifecycle",
+        "register-fake"
       ]
     },
     {
@@ -715,7 +744,8 @@
         "conversion-settings",
         "limits-alert",
         "job-lifecycle",
-        "configuration-jobs"
+        "configuration-jobs",
+        "register-fake"
       ]
     },
     {
@@ -741,7 +771,8 @@
         "device-reset",
         "job-lifecycle",
         "configuration-jobs",
-        "measurement-jobs"
+        "measurement-jobs",
+        "register-fake"
       ]
     },
     {
@@ -775,13 +806,14 @@
         "readonly-eeprom",
         "configuration-jobs",
         "measurement-jobs",
-        "fault-closure"
+        "fault-closure",
+        "register-fake"
       ]
     },
     {
       "id": 33,
       "file": "33_native-suite.md",
-      "title": "Close independent native correctness and packaging gates",
+      "title": "Close independent native correctness and source-consumer gates",
       "phase": "Cooperative operation and exhaustive native qualification",
       "kind": "software",
       "depends_on": [
@@ -809,7 +841,8 @@
         "sync-api",
         "variant-fixtures",
         "fault-closure",
-        "feature-ledger"
+        "feature-ledger",
+        "register-fake"
       ]
     },
     {
@@ -937,7 +970,8 @@
         "diagnostics",
         "configuration-jobs",
         "measurement-jobs",
-        "fault-closure"
+        "fault-closure",
+        "host-test-entrypoint"
       ]
     },
     {
@@ -1024,7 +1058,8 @@
         "firmware-cli-handoff",
         "hil-runner",
         "arduino-build-record",
-        "idf-build-record"
+        "idf-build-record",
+        "host-test-entrypoint"
       ]
     },
     {
@@ -1049,7 +1084,10 @@
         "package-doc-tools",
         "package-qualification",
         "cli-complete",
-        "hil-runner"
+        "hil-runner",
+        "host-test-entrypoint",
+        "arduino-adapter-source",
+        "firmware-cli-handoff"
       ]
     },
     {

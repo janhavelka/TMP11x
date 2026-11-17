@@ -33,7 +33,7 @@ Follow [COMMON.md](COMMON.md), [CONVENTIONS.md](CONVENTIONS.md),
 shared API/architecture, integration, progress and Git; delegate only disjoint
 read-only audits, feature tests or implementation under frozen interfaces.
 Update public Doxygen and affected guides in the same stage as source changes.
-Do not run unrelated sibling suites or remote CI (except stage 43).
+Do not run sibling suites. Follow COMMON for remote-CI dispatch/poll/wait policy; preserve automatic triggers.
 
 ## Checkpoint and report
 
@@ -41,6 +41,6 @@ For each closed software unit, run appropriate focused local checks; inspect
 both working and staged diffs; record actual commands, versions, commit and
 PASS/FAIL/NOT RUN/BLOCKED. Write `docs/reports/prompt_2.md` with sources,
 owned artifacts, named test cases and open evidence gates. Update
-`docs/prompts/PROGRESS.md`, commit and sync verified meaningful work on `main`
+`docs/prompts/PROGRESS.md`, commit and sync verified meaningful work on the existing checked-out branch
 when authenticated upstream is configured, and verify synchronization. Keep
 missing physical/SDK evidence explicit; never claim tests not run.

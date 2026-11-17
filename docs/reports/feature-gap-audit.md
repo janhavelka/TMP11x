@@ -103,3 +103,33 @@ No implementation stages were marked complete. EEPROM programming, general
 call and ARA remain excluded under the existing release scope. The final
 handoff records the resulting commit and verified upstream synchronization;
 the input SHA above is not a self-referential claim about this report's commit.
+
+## Response to each finding — 2026-11-17
+
+Rechecked against `171dbf58251e8606d3b643aa1ceddcc7e921c906`, the current
+promptset, pinned TI PDFs and the clean TMP1x2 source at `afd5088`. The table
+above records historical work; it is not evidence that those planned features
+are implemented. No driver exists and stages 4–44 remain unexecuted. The
+[later audit](../prompts/audit.md) carries individual adjudications; this
+response states what remains valid in each earlier gap claim.
+
+| Earlier gap | Review response and necessary correction |
+|---|---|
+| Broad feature list | Relevant and retained. FULL_COVERAGE enumerates facts, scope and owners; its existence does not prove all rows implemented or all promises correct. Stage 5 validates fields/policies and later owners supply actual tests. |
+| Interface limits | Relevant. The independent source review confirms explicit pointer/word transfer and 1–400 kHz scope; core callback traces cannot prove electrical timing or repeated START on real hardware. Stages 12/34/35 keep adapter enforcement separate. |
+| Recovery forgetting limits/offset | Correct for every **owned** field. The earlier wording overreached for default offset ownership: stages 8/18/19/23/29 now preserve unmanaged calibration, with offset writes/replay explicitly opt-in. TMP117 p.25 Table 7-3 and TMP119 p.32 Table 8-2 footnote 1 permit programmed offset defaults. |
+| Averaging/alert edge tests | Relevant but incomplete. The newer corrections add retained alert evidence from every CONFIG read and a guarded shutdown/application/readiness baseline before attributing results to a new profile. Routing/polarity tests remain distinct from comparator behavior and physical pin evidence. |
+| Fakes inventing silicon guarantees | Correct principle; the previous unknown list was incomplete. MOD readback during/after one-shot and non-command software-reset effects remain unknown. Do not treat all shutdown flag behavior as unknown where therm-mode HIGH has a documented conversion-end update rule. Stages 6/19/21/25/32 retain these distinctions. |
+| Reset metadata field differences | Relevant. Preserve bit-level EEPROM domains and programmed defaults. Soft_Reset cannot be asserted to relock EEPROM or reload every field solely from generic reset prose; post-reset guarded readback determines observations. |
+| Grade/application conditions | Relevant. Exact-part electrical/package evidence governs. The TMP116 example drawing leaves ALERT open but also SCL/SDA, so it does not establish a general unused-ALERT instruction; retain the conflicting grounding prose and application-owned wiring decision. |
+| Excluded functions | Relevant release policy, not silicon incapability. No EEPROM programming, shadow-data writes, general-call or ARA path is added. Typed operations and diagnostics must enforce the same exclusions. |
+| Incompatible-family fixtures | Relevant. TMP114/TMP118 remain exclusion fixtures; no mutating UID procedure or foreign-pointer discovery is permitted. The initial shared fake now has a named producer at stage 12, extended before its stage 32 consolidation. |
+| API/CLI coverage drift | Relevant. Coverage includes opt-in offset ownership, distinct acquisition requests, state gates and result provenance. Mapping a route does not prove its implementation; stages 27/33/38/39/44 still inspect actual consumers and evidence. |
+
+The source-contradiction paragraph also remains an evidence ledger, not a
+resolution. In particular, TMP119's summary table cannot override TMP116's
+own electrical supply range; summary accuracy/current comparisons must retain
+their exact competing citations. TMP119M orderable scope and the inaccessible
+E2E lead remain unresolved. Original PDF bytes and revision attribution are
+unchanged. The review corrects prompts and source commentary only; native
+driver tests, MCU linking and physical qualification are still not performed.

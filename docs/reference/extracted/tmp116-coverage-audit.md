@@ -89,10 +89,16 @@ independent of CONV. These are already substantially covered by prompts 6/20.
 No wording was found establishing the following details in this revision:
 same-value CONFIG writes restarting or preserving conversion progress; changing
 AVG/CONV mid-conversion reusing or discarding the partial block; exact DATA_READY
-or comparator-flag retention/clearing on entry to SD; read-byte latching of TEMP
+or alert-mode flag retention/clearing on entry to SD; MOD readback during/after
+one-shot or retrigger behavior while one-shot is active; read-byte latching of TEMP
 when a conversion completes between MSB and LSB; exact partial-word-write
 commit behavior. TEMP is described as the most recent completed conversion
 (p.25), but there is no separate shutdown-reset guarantee.
+Therm HIGH is narrower: p.16 says it changes only at completed conversions;
+under unchanged therm/routing/polarity/reset state an abort/SD does not clear
+it. Page 14 does not explicitly say the comparator waits for full averaging,
+unlike TMP117/TMP119; TMP116 block-end comparison is a labelled inference from
+the p.11 completed-result model, not an independently guaranteed timing fact.
 
 Keep these as **unknown source semantics**, not fake-device facts. A conservative
 generation invalidation policy, explicit shutdown-to-one-shot sequence, single
@@ -168,17 +174,42 @@ provenance; vendor content does not become MIT core code. Owners 4/34-36/40/42.
 | Priority / gap | Source-backed finding versus proposed policy | Owner prompts and acceptance evidence |
 |---|---|---|
 | P1: serial electrical/timeout coverage omitted | Facts: 1-400 kHz, no SCL drive, 20-40 ms timeout under held-line conditions. Policy: explicit documented adapter constraints, no 1-MHz default inherited from another chip; do not mistake hardware timeout for whole-operation bound | 6/12/34/35/40: literal bus limits/address mapping and physical ACK/repeated-START/clock record; adapter failure test for interface interruption without hidden reset/retry |
-| P1: conversion transitions/coherence assumed by future fake | Datasheet silence for same-CONFIG writes, mid-average setting changes, SD flags and between-byte TEMP update must remain unknown. Conservative invalidation is library policy | 6/19/20/21/32: unknown-semantics list, new-profile sample trust tests, aborted-average no-completion test; 41 records actual silicon evidence without claiming fake proves it |
+| P1: conversion transitions/coherence assumed by future fake | Datasheet silence for same-CONFIG writes, mid-average changes, DATA_READY/alert-mode SD-entry flags, OS MOD readback and between-byte TEMP update remains unknown; therm HIGH is constrained by p.16. Conservative invalidation is library policy | 6/19/20/21/32: unknown-semantics list, new-profile sample trust tests, aborted-average no-completion test; 41 records actual silicon evidence without claiming fake proves it |
 | P1: operational range conflict missing | p.4 recommended TA permits -55..150 C; p.5 guaranteed electrical conditions, p.10 specified operation and p.43 orderables are -55..125 C. Do not silently choose one or claim accuracy to 150 C | 4/5/42: explicit conflict and qualified metadata separating raw representability, recommended conditions, specified performance and actual fixture range |
 | P2: alert latch/rearm not explicit enough | pp.15/26 describe latched alert events, CONFIG acknowledgement, and next conversion evaluation; therm behavior is separate | 6/22/32: out-of-range then in-range before ack, ack while still out-of-range then next-conversion reassertion, T/nA x POL x DR/Alert matrix; 41 physical pin/flag evidence |
 | P2: EEPROM reset disagreement insufficiently enumerated | p.24 says all four data words 0000; detailed 1/2/4 say XXXX,3 says 0000; pp.17/29 describe unique data across all four. No all-zero/nonzero factory-identity invariant is justified | 5/24/32: explicit per-register conflicting defaults, arbitrary/zero shadow values accepted as observations, no certificate claim |
 | P2: field-level persistent domain missing | p.26 footnotes: MOD1 not EEPROM-stored, MOD0 and lower settings stored. Register-level R/W alone loses this distinction | 5/17/32: field/reset-domain ledger and fake reset reloads persisted subset rather than replaying MOD=11 |
 | P2: full hardware disposition incomplete | ARA arbitration/status response and synchronized general-call conversions exist but remain excluded; NVM programming statistics and flow are likewise excluded | 5/7/22/25/42: explicit excluded rows with rationale; API/CLI negative tests show no general-call/ARA/unlock traffic |
 | P2: board/accuracy applicability underspecified | Exact address straps, open-drain active-high meaning, supply/rate conditions, self-heating and TMP116 pad guidance must accompany integration/HIL | 4/22/34-36/40/42: board checklist and eight routing cases, grade-condition references; no bus or thermal result fabricated by native tests |
-| P2: ALERT wiring ambiguity missing | p.32 Figure 41 uses pullup plus MCU input, while its final sentence recommends ground without an unused-pin qualifier. p.36 Figure 44 shows unused ALERT unconnected. Do not apply the ground sentence to a used interrupt pin | 4/22/34/35/40/42: retain conflicting guidance, document functional pullup/input connection, identify unused-pin recommendation as requiring interpretation/vendor clarification |
+| P2: ALERT wiring ambiguity missing | p.32 Figure 41 uses pullup plus MCU input, while its final sentence recommends ground without an unused-pin qualifier. p.3 requires a pullup if used. p.36 Figure 44 omits ALERT, SCL and SDA connections in a power-filter illustration; it is not an explicit unused-ALERT instruction. Do not apply the ground sentence to a used interrupt pin | 4/22/34/35/40/42: retain conflicting guidance, document functional pullup/input connection, retain unused-pin disposition as requiring interpretation/vendor clarification |
 
 The earlier audit's TMP116 busy contradiction (p.17 versus 26/29), approximate
 POR timing, reserved reset bits, signed temperature format and OS-from-SD
 requirements remain valid. They are already enforced by existing prompts and
 are not new gaps here. The new evidence does not authorize EEPROM programming,
 ARA/general-call implementation, hardware alterations or running physical tests.
+
+## Response — 2026-11-17
+
+Rechecked against `171dbf5` and the pinned SBOS740A. The inventory describes
+hardware and future obligations; the repository still has no sensor driver.
+The following dispositions cover every actionable row above. Registers,
+masks, address straps, signed coding and intentional exclusions remain valid.
+This review visually rechecked p.36 Figure 44, in addition to the cited primary
+text; it does not claim a new physical or full-document qualification.
+
+| Original finding | Review and applied response |
+|---|---|
+| Serial electrical/timeout coverage | Correct; existing 6/12/34–35 requirements already capture 1–400 kHz and 20–40 ms under stated conditions. Retained without inventing a STOP-reset guarantee absent from this model's text. |
+| Conversion transitions/coherence | Partly correct. Narrowed the shutdown unknown to DATA_READY/alert-mode flags; added OS MOD/retrigger uncertainty and TMP116 comparator-after-average wording gap. Stages 6/20/21/32 use explicit SD boundaries and labelled hypotheses. |
+| Operational range conflict | Correct and still unresolved: p.4 recommended range versus pp.5/10/43 specified operation. Stage 4 retains the paired evidence; no +150°C accuracy claim. |
+| Alert latch/re-arm | Correct and already required by 22/32. Added sticky software capture of CONFIG-consumed events; a later zero or failed composite must not erase an unconsumed event. Therm status stays a separate live observation. |
+| EEPROM reset disagreement | Correct; retain map versus detailed-table defaults. Arbitrary/all-zero shadows are legal observations, not invalid identity. Stage 24 already owns this. |
+| Persistent field domains | Correct; bit 11 is not persisted, bits 10:2 are. Stage 5 keeps literal access codes separate from side effects; private write policy still denies all EEPROM data/shadow writes. |
+| Full hardware disposition | Correct and already represented by X rows. Stage 32 now explicitly consolidates no-ARA/general-call/programming assertions and external-interference cases. |
+| Board/accuracy applicability | Correct with exact-part conditions. Do not import SNIS236's inaccurate TMP116 supply summary. Stage 4 keeps the 1.9–5.5-V exact-part range, pad conditions and grade distinction. |
+| ALERT wiring ambiguity | Correct problem, overstated p.36 interpretation. Corrected above: the partial schematic leaves several signal pins open; neither it nor TMP117's prose establishes a TMP116 unused-pin recommendation. |
+
+No hardware/API scope was expanded. The earlier busy contradiction, signed
+format, no addressed reset and OS-from-SD findings remain valid. These are
+prompt corrections, not executed implementation tests or completed stages.

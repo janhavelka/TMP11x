@@ -14,8 +14,8 @@ or verify official TI references and their provenance. Improve the entry
 instructions, promptset, source/toolchain audits and supporting scripts using
 verified sibling precedents. Reuse pinned documents and clean local sibling
 checkouts; do not download or copy unrelated archives. Run the preparation
-checks and record remaining evidence gates. Stop before driver implementation
-or API freeze. Preparation is not permission to execute the full sequence.
+checks and record remaining evidence gates. Stop after prompts 1–3.
+Preparation is not permission to execute the full sequence.
 ```
 
 ## Copy/paste: execute the complete promptset
@@ -43,9 +43,9 @@ errors, docs and all assumptions for TMP116/TMP117/TMP119 silicon.
 Verify the pinned TI reference manifest; acquire missing official documents
 and record revision changes explicitly. Preserve originals/provenance,
 and build an independently checked register/field/side-effect ledger before
-writing a driver. Use TMP117 as the first implemented and physically intended
-model. Extend the same driver with explicit TMP116 and TMP119 capability
-profiles; do not create fake device identities or reuse TMP1x2 register maps.
+writing a driver. TMP117 is the primary and physically intended model; every
+relevant stage implements/tests capability gates for all six selected BOM
+models. Do not create fake identities or reuse TMP1x2 register maps.
 
 Keep portable C++17 core with injected application-owned I2C transport, one
 owner, typed Status, passive health, verified configuration, bounded
@@ -55,7 +55,7 @@ read-only EEPROM diagnostics; no nonvolatile writes/general-call reset.
 
 Implement each prompt completely with focused tests, related Doxygen/docs,
 a report under docs/reports/prompt_N.md, and a PROGRESS update. Commit and
-push verified meaningful work on the existing main branch if origin/access
+push verified meaningful work on the existing checked-out branch if origin/access
 permit; never modify sibling repositories or make per-prompt branches. Use
 subagents for bounded parallel reviews and tests when useful; the lead owns
 integration and Git. The first comprehensive remote CI checkpoint is prompt 43.
@@ -85,8 +85,9 @@ blocked, record exact outstanding requirements without fake stubs.
 Read docs/prompts/PROGRESS.md, HANDOFFS.md and SEQUENCE.json. Resume the earliest usable
 incomplete stage in ascending numeric order. Verify actual prerequisite
 artifacts, unchanged source references and local Git state before continuing.
-Complete the requested sequence without rerunning already verified unaffected
-work. Record partial/blocked hardware separately from software completion.
+Stop after that stage unless the user explicitly requested the whole remaining
+sequence. Do not rerun already verified unaffected work. Record partial/blocked
+hardware separately from software completion.
 ```
 
 **Execution:** File names use `1_...md`, `2_...md`, ... `44_...md`, not

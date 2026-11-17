@@ -21,14 +21,17 @@ Recheck exact actual PCB/BOM chip marking, board power/pullups/ADD0/ALERT/wiring
 
 ## Complete implementation work
 
-- Document physical setup, VDD, I2C lines/pullups, clock, GPIO, address, ambient probe/thermometer (if present), exact model/grade/lot, date, run command and firmware SHA.
+- Document physical setup, VDD, I2C lines/pullups, clock, GPIO, address, ambient probe/thermometer (if present), exact model/grade and lot if known, date, run command and firmware SHA. Record unreadable or unavailable markings as unknown; do not infer lot or grade from I2C ID.
+- Use the concrete fixture authorization recorded by stage 39: board/port/model/address, bus peers, upload and campaign scope. Opening a port is not permission to upload firmware. If a TMP117EVM is used, establish exclusive sensor-bus ownership by the documented snap-off arrangement or verified MSP430 isolation/reset; record any prior GUI programming as unknown/non-factory EEPROM provenance (SNOU161 pp.3,22).
 - On a user-authorized fixture, run identity, initial temperature/provenance, observations of the existing mode/averaging, safe EEPROM reads and status-flag read-to-clear checks. Use observation firmware that binds without `begin`, reset, configuration or one-shot writes, including after a serial-triggered reboot. A shutdown sensor or absent readiness evidence yields NOT READY/unknown freshness, not a request to trigger conversion. Keep calibrated accuracy testing distinct from room-temperature plausibility.
 - Capture raw transcript/JSON and per-part evidence rows; tests of one TMP117 do not qualify TMP116 or TMP119 or specific package/grade. No nonvolatile writes or bus-wide reset, even for troubleshooting.
 - On absent hardware, record stage as BLOCKED, store the ready commands/expected observations and resume only after fixture data becomes available.
 - Ensure an observation campaign never writes register data, clears factory state or labels stale raw data fresh. Pointer-write/repeated-START/read is allowed. Record that CONFIG/TEMP reads consume flags; those events cannot be restored, and repeated equal readings neither prove nor disprove a new conversion.
+- Record the boot/session-tagged `xfer` snapshot at campaign start and end. Require zero sensor data-write attempts since boot and continuous unsaturated counters; otherwise the software-instrumented no-write check fails or is unknown. Counters do not independently prove electrical traffic or exclude a second master; label logic-analyzer evidence separately. Discovery is not part of the default observation campaign.
 
 - Record the electrical/accuracy conditions from F02–F04/F16–F17: exact ADD0 strap/pinout, supply vs grade/temperature, bus rate, pullups, bypass and thermal fixture. Optional logic-analyzer evidence may qualify ACK/NACK/repeated START and timing; a printed clock setting does not.
 - Observe arbitrary EEPROM-shadow values without a zero/nonzero serial acceptance rule. State which grade/measurement-condition claims remain untested; read-only room-temperature plausibility does not close full-range accuracy, thermal settling or byte-coherence questions.
+- DATA_READY clear-on-read can be observed without writes. Alert-latch clearing requires an already asserted flag in an observation session; otherwise record that case NOT RUN and leave controlled-limit trials to stage 41. Do not create a threshold event by mutating settings in this stage.
 
 ## Verification and exit criteria
 
@@ -43,7 +46,7 @@ Follow [COMMON.md](COMMON.md), [CONVENTIONS.md](CONVENTIONS.md),
 shared API/architecture, integration, progress and Git; delegate only disjoint
 read-only audits, feature tests or implementation under frozen interfaces.
 Update public Doxygen and affected guides in the same stage as source changes.
-Do not run unrelated sibling suites or remote CI (except stage 43).
+Do not run sibling suites. Follow COMMON for remote-CI dispatch/poll/wait policy; preserve automatic triggers.
 
 ## Checkpoint and report
 
@@ -51,6 +54,6 @@ For each closed software unit, run appropriate focused local checks; inspect
 both working and staged diffs; record actual commands, versions, commit and
 PASS/FAIL/NOT RUN/BLOCKED. Write `docs/reports/prompt_40.md` with sources,
 owned artifacts, named test cases and open evidence gates. Update
-`docs/prompts/PROGRESS.md`, commit and sync verified meaningful work on `main`
+`docs/prompts/PROGRESS.md`, commit and sync verified meaningful work on the existing checked-out branch
 when authenticated upstream is configured, and verify synchronization. Keep
 missing physical/SDK evidence explicit; never claim tests not run.

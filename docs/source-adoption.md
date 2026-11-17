@@ -8,7 +8,7 @@ revision and implementation evidence are in [library-comparison.md](library-comp
 
 | TMP11x file | Source at pinned revision | Treatment |
 |---|---|---|
-| `scripts/pio.cmd` | `janhavelka/TMP1x2`, `afd50889312f6e218a6a34eca687e3e8547d8b40`, `scripts/pio.cmd` | Copied unchanged. Finds the current user's existing VS Code-managed PlatformIO; does not install another Core. |
+| `scripts/pio.cmd` | `janhavelka/TMP1x2`, `afd50889312f6e218a6a34eca687e3e8547d8b40`, `scripts/pio.cmd` | Initially copied unchanged; corrected 2026-11-17 to select `PLATFORMIO_CORE_DIR/penv/Scripts/pio.exe` when configured, otherwise the user's default `.platformio` location. Missing selected installation fails without falling back to PATH or installing another Core. |
 | `LICENSE` | Same TMP1x2 revision, `LICENSE` | Copied unchanged: MIT, copyright (c) 2026 THYMOS Solution s.r.o., Jan Havelka, with original website/contact and permission notice. |
 | `.gitignore` | Same TMP1x2 revision, `.gitignore` | Adapted development-artifact exclusions to this repository. This is not a runtime source import. |
 | `AGENTS.md` | Same TMP1x2 revision, `AGENTS.md`; compact structure also compared with `janhavelka/24Cxx` at `1bd9f969d1df55ca5819b0d290ff331869e7d5bc` | Reused general CI/Git conventions; adapted scope/navigation and project guidance to TMP11x. Detailed stage policy remains in the promptset. |

@@ -19,8 +19,11 @@ Study TMP1x2 `examples/01_basic_bringup_cli/main.cpp` (including its inline Wire
 - Implement `Wire` terminal callbacks for pointer+two-byte reads and pointer+two-byte writes. Verify repeated START and completion in the pinned Wire version; validate its `uint16_t` timeout range before narrowing. Budget application lock/route selection and transfer time explicitly, and never extend an exhausted caller deadline. Map short reads and errors without claiming an address/data NACK distinction that the backend cannot prove. Check TX-buffer acceptance before committing a write; an error cleanup must not transmit an unintended partial register value.
 - Examples demonstrate a BOM-selected TMP117/address, revision-aware identity and temperature/readiness provenance. Provide an observation startup path using bus-silent binding and approved diagnostics; no automatic `begin`, reset, one-shot or configuration write may precede a claimed read-only session. An explicit initialization demonstration may write safe volatile settings and must identify that behavior.
 - Add an optional second sensor instance on the same shared bus to demonstrate external serialization; if a TCA9548A mux is used, establish route before and hold it for each transfer only, not an entire conversion wait. Count mux-selection transfers separately in application scheduling; the driver's sensor-transfer budget does not bound external route traffic.
-- Keep any initial console harness minimal and use the canonical names in [CLI_CONTRACT](CLI_CONTRACT.md); prompt 37 owns the authoritative parser. Reading CONFIG/TEMP can acknowledge flags even when no data register is written. A fresh one-shot demonstration is an explicit mutating operation, not a read-only temperature query.
+- Deliver a fixed observation demo plus bounded byte-input/output hooks; do not build a command parser before stage 37. Stage 38 owns attaching the shared processor. Reading CONFIG/TEMP can acknowledge flags even when no data register is written. A fresh one-shot demonstration is an explicit mutating operation, not a read-only temperature query.
 - Supply application-owned firmware build identity (source revision or explicit unknown/dirty state, target, build identifier) and a per-boot session identity without sensor I2C. Library `Version.h` is a separate value. Stage 37 freezes the wire fields; stage 38 connects this metadata and the final CLI, then refreshes the linked image. This initial example image alone is not the later HIL firmware handoff.
+- Count every adapter transfer attempt from boot, including health-neutral diagnostics: pointer-only writes, sensor data writes, reads and separate mux/other-device transfers. Expose a passive snapshot for the stage 37 `xfer` command. Lost/saturated counter continuity must be explicit; library health counters alone cannot establish an observation session's write history.
+- Inspect the pinned Wire/IDF timeout implementation and actual RTOS tick rate. Reject locally before transfer when the remaining budget cannot represent a positive SDK wait plus the documented adapter margin. Never round a timeout above the caller's remaining budget; verify terminal cleanup and post-callback timing for failures. A tick count alone does not prove a hard end-to-end deadline; record backend limits and SDK-owned bus-clear behavior separately from driver retries.
+- If this stage resumes after stage 38, attach the already completed CLI, rebuild the target and update `docs/firmware-cli-handoff.md`; stage 38 need not rerun merely to recover a previously unavailable SDK.
 
 - Enforce the example-owned bus configuration within 1–400 kHz; document hardware 20–40 ms line-held/no-clock timeout separately from Wire's timeout. Show actual ADD0 mapping, package pins, supply/logic compatibility, external SDA/ALERT pullups and 100 nF bypass; active-high ALERT remains open-drain.
 - Extend stage 4's `docs/board-integration.md` with actual Arduino setup, covering exact-grade accuracy conditions, self-heating from I2C/averaging, thermal coupling/settling and package-specific pad/strain guidance. Default example setup is not proof of calibrated accuracy. Preserve the TMP116 ALERT-to-ground wording conflict; do not ground a used ALERT signal.
@@ -38,7 +41,7 @@ Follow [COMMON.md](COMMON.md), [CONVENTIONS.md](CONVENTIONS.md),
 shared API/architecture, integration, progress and Git; delegate only disjoint
 read-only audits, feature tests or implementation under frozen interfaces.
 Update public Doxygen and affected guides in the same stage as source changes.
-Do not run unrelated sibling suites or remote CI (except stage 43).
+Do not run sibling suites. Follow COMMON for remote-CI dispatch/poll/wait policy; preserve automatic triggers.
 
 ## Checkpoint and report
 
@@ -46,6 +49,6 @@ For each closed software unit, run appropriate focused local checks; inspect
 both working and staged diffs; record actual commands, versions, commit and
 PASS/FAIL/NOT RUN/BLOCKED. Write `docs/reports/prompt_34.md` with sources,
 owned artifacts, named test cases and open evidence gates. Update
-`docs/prompts/PROGRESS.md`, commit and sync verified meaningful work on `main`
+`docs/prompts/PROGRESS.md`, commit and sync verified meaningful work on the existing checked-out branch
 when authenticated upstream is configured, and verify synchronization. Keep
 missing physical/SDK evidence explicit; never claim tests not run.

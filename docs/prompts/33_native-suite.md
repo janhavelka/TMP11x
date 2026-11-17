@@ -1,9 +1,9 @@
-# 33 — Close independent native correctness and packaging gates
+# 33 — Close independent native correctness and source-consumer gates
 
 Apply [COMMON.md](COMMON.md) and root [AGENTS.md](../../AGENTS.md). Phase: **Cooperative operation and exhaustive native qualification**. Type: **software**.
 Prerequisites: [16](16_temperature-codec.md), [17](17_config-codecs.md), [18](18_safe-initialize.md), [21](21_fresh-one-shot.md), [22](22_limits-alert.md), [23](23_offset-feature.md), [24](24_readonly-eeprom.md), [25](25_per-device-reset.md), [26](26_diagnostic-access.md), [27](27_sync-helpers-cache.md), [28](28_cooperative-admission.md), [29](29_cooperative-config.md), [30](30_cooperative-measurement.md), [31](31_failure-recovery.md), [32](32_variant-model-fixtures.md).
 Produces: `native-qualification`.
-Consumes: `host-test-entrypoint`, `sync-api`, `variant-fixtures`, `fault-closure`, `feature-ledger`.
+Consumes: `host-test-entrypoint`, `sync-api`, `variant-fixtures`, `fault-closure`, `feature-ledger`, `register-fake`.
 
 ## Objective and boundaries
 
@@ -24,6 +24,7 @@ Check how TMP1x2 registers host test jobs and CMake/CTest checks (`test/`, `tool
 
 - Reconcile every R/F/X row in [FULL_COVERAGE](FULL_COVERAGE.md) with a registered test, documentation/adapter/hardware evidence gate, or justified exclusion. Check feature/variant coverage, not only a line-coverage percentage. Explicitly cover full-profile recovery after each partial-write phase, all model capability refusals and named incompatible families.
 - Assert no existing core/harness path emits general-call 0x00, ARA 0x0C, EEPROM_UL writes or EEPROM-shadow writes, including unsupported raw encodings. Stage 38 adds the corresponding CLI assertions after the parser exists. Tests must distinguish deliberate exclusions from actual silicon capability and avoid claiming electrical/thermal or unspecified timing facts from a simulator.
+- Cover every accepted audit contract through public APIs: default unmanaged offset preservation and explicit managed zero, clean/dirty acquisition gates, invalid bind preserving the prior target, guard invalidation, captured alerts surviving later reads/generation changes, clock disagreement/late success, unrelated I2C during active/retained jobs, and no new-generation freshness from a pre-change conversion. Cross-check metadata against the reviewed ledger; a fake must exercise alternate undocumented MOD/reset outcomes without asserting either as silicon fact.
 
 ## Verification and exit criteria
 
@@ -38,7 +39,7 @@ Follow [COMMON.md](COMMON.md), [CONVENTIONS.md](CONVENTIONS.md),
 shared API/architecture, integration, progress and Git; delegate only disjoint
 read-only audits, feature tests or implementation under frozen interfaces.
 Update public Doxygen and affected guides in the same stage as source changes.
-Do not run unrelated sibling suites or remote CI (except stage 43).
+Do not run sibling suites. Follow COMMON for remote-CI dispatch/poll/wait policy; preserve automatic triggers.
 
 ## Checkpoint and report
 
@@ -46,6 +47,6 @@ For each closed software unit, run appropriate focused local checks; inspect
 both working and staged diffs; record actual commands, versions, commit and
 PASS/FAIL/NOT RUN/BLOCKED. Write `docs/reports/prompt_33.md` with sources,
 owned artifacts, named test cases and open evidence gates. Update
-`docs/prompts/PROGRESS.md`, commit and sync verified meaningful work on `main`
+`docs/prompts/PROGRESS.md`, commit and sync verified meaningful work on the existing checked-out branch
 when authenticated upstream is configured, and verify synchronization. Keep
 missing physical/SDK evidence explicit; never claim tests not run.

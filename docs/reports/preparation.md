@@ -68,7 +68,8 @@ handoff; this report records its immutable input SHA above.
 
 ## Remaining evidence and next scope
 
-Stage 3 is PARTIAL because TI generated/firmware source revision and license
+Superseded stage-3 verdict from the original preparation: stage 3 was labelled
+PARTIAL because TI generated/firmware source revision and license
 could not be inspected: ASC Studio timed out and TMP116 software requires
 export approval. These are recorded access limits, not evidence of a software
 failure. No installer was run or approval bypassed.
@@ -79,7 +80,30 @@ must retain TMP119's conflicting device-ID defaults. No source ambiguity was
 resolved by guessing or assigning TMP119 identity from a revision nibble.
 
 On the next explicit implementation request, verify the source manifest and
-relevant audit revisions. Close stage 3's outstanding official-code evidence
-when accessible; independent stage 4 work can use the acquired exact-part
+relevant audit revisions. Revisit optional official-code evidence when
+accessible; independent stage 4 work can use the acquired exact-part
 PDFs once its concrete source inputs are confirmed. Stages 4–9 still own the
 checked ledger, timing/safety and API contracts before stage 10 begins code.
+
+## Revalidation response — 2026-11-17
+
+Input: `171dbf58251e8606d3b643aa1ceddcc7e921c906`. Reviewed each delivered-work
+claim and remaining gate above against the repository. The source/adoption maps,
+14 pinned originals, shared agent entry, scoped checker fixtures and reference
+integrity/no-overwrite protections remain present. Their tests establish only the
+reported tooling/evidence layer; there is still no sensor implementation.
+
+Three historical statements require qualification:
+
+1. Stage 3's PARTIAL verdict is superseded by `prompt_3.md`; optional gated TI
+   software never prevents required datasheet intake from being COMPLETE.
+2. The wrapper's 6.1.19 output was real, but its description as the active managed
+   Core was wrong. TOOL-1 selects the configured `C:\pio` penv (6.2.0) now and
+   corrects the active package inventory. Initial unchanged adoption is historical;
+   current modifications are recorded in `docs/source-adoption.md`.
+3. FieldCore's differing hashes are `rodtester` and `main` branch evidence, not a
+   demonstrated stale checkout. Neither branch grants TMP11x bench authorization.
+
+The current source-integrity checks and review responses are reported with this
+revalidation's handoff. Original suite counts remain dated facts. Implementation,
+MCU links, remote CI and physical HIL remain NOT RUN; stage status is unchanged.

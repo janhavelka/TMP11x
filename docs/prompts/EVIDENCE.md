@@ -4,7 +4,8 @@ For each documented claim and implemented bitfield:
 
 1. Identify **part/model/package/accuracy grade**, datasheet document ID,
    revision, PDF page and printed table/figure. Source data include MIN/TYP/MAX,
-   legal encodings, reset domain, access (R/W/RC), read side effects and
+   legal encodings, reset domain, documented access code (R/W/RC) separately
+   from prose read side effects, and
    timing start/end conditions. When PDF extraction is ambiguous, view the
    rendered original table, not just parsed text.
 2. Compare independently with relevant TI examples, Linux/Zephyr drivers,
@@ -18,13 +19,14 @@ For each documented claim and implemented bitfield:
    title/revision/license and acquisition date. Save immutable vendor PDFs
    under `docs/reference/source/` in the development repository; exclude
    bulky binaries from PlatformIO package/installed SDK where unnecessary.
-4. Maintain `docs/registers/tmp11x.json` or an equally narrow ledger with
+4. Maintain `docs/registers/tmp11x.json` with
    per-part register addresses, width, bit masks, source pages, reset/EEPROM
    domains, side effects, valid values, capabilities and test owner. No invented
    reserved-bit meaning. Record known discrepancies rather than hiding them.
 5. Derive numeric test vectors from the datasheet before looking at production
-   codec code. Keep documented vs implemented vs host-tested vs firmware-built
-   vs physically-qualified fields separate for each exact model.
+   codec code. Use the six canonical evidence columns from
+   [FULL_COVERAGE](FULL_COVERAGE.md) separately for each exact model, including
+   the remote-CI layer.
 6. For identity, retain raw 16-bit word, interpreted family ID and revision;
    distinguish verified address/family from selected BOM model and physically
    confirmed part. Do not equate default revision nibble with stable identity.

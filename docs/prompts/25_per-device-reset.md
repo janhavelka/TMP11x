@@ -3,7 +3,7 @@
 Apply [COMMON.md](COMMON.md) and root [AGENTS.md](../../AGENTS.md). Phase: **Features, safe measurements and diagnostics**. Type: **software**.
 Prerequisites: [5](5_register-ledger.md), [7](7_eeprom-reset-policy.md), [9](9_owner-deadline-contract.md), [14](14_binding-lifecycle.md), [18](18_safe-initialize.md), [19](19_config-trust.md), [21](21_fresh-one-shot.md), [23](23_offset-feature.md).
 Produces: `device-reset`.
-Consumes: `safety-policy`, `owner-contract`, `binding-api`, `sync-initialize-recover`, `config-trust`, `sync-acquisition`, `offset-feature`.
+Consumes: `safety-policy`, `owner-contract`, `binding-api`, `sync-initialize-recover`, `config-trust`, `sync-acquisition`, `offset-feature`, `register-fake`.
 
 ## Objective and boundaries
 
@@ -19,14 +19,13 @@ handling, not its bus-wide reset implementation.
 
 ## Complete implementation work
 
-- Record a source-verified reset capability for each part and define `softResetDevice` only when the exact datasheet proves a safe individually addressed command and write encoding.
-- If the source remains ambiguous, report capability gated and do not emit a reset write. Use `invalidateDeviceState` as the supported local operation; do not disguise it as physical reset.
-- For supported reset, establish startup readiness and EUN=0/busy=0 before writing CONFIG; reset is not a way to escape an unlocked device safely. Emit one reset-command write to the selected address, invalidate configuration/conversion/alert evidence before the attempt, and retain uncertainty if the write fails.
-- The sensor reloads its EEPROM-backed state; software must not assume factory defaults or write them back as reset proof. Honor the documented 2-ms reset interval before readiness/readback checks, using stage 6's explicit timing policy. A cleared Soft_Reset bit is not completion evidence because it always reads zero. Reapply desired volatile settings only when the caller explicitly selected that behavior.
+- Record the addressed reset capability from TMP117/TMP119's detailed field definitions; TMP116 remains unsupported. Freeze the conservative library encoding: last verified stable CONFIG with MOD=00/01, read-only bits 15:12 and reserved bit 0 zero, OR 0x0002. Never copy transient MOD=11 or stale raw flags. This is library write policy using documented fields, not proof of simultaneous non-reset-field effects. If verified stable input/startup/safety prerequisites cannot be established, emit no reset write; local invalidation is not physical reset.
+- For supported reset, establish startup readiness and EUN=0/busy=0 before writing CONFIG; reset is not a way to escape an unlocked device safely. Emit one reset-command write to the selected address and invalidate current configuration/conversion/live-alert trust before the attempt. Preserve unconsumed historical alert events with their old generation and reset/unknown provenance; reset must not silently acknowledge them. Retain uncertainty if the write fails.
+- Addressed Soft_Reset's EEPROM reload, EUN effect, companion-bit application and bus availability are not explicit in the source. General-call reset's reload/relock description does not prove them. Invalidate the old safety observation and honor a policy wait of at least the documented 2 ms before rechecking 0x04 and full profile/identity observations. Require EUN=0/busy=0 plus startup policy again before any subsequent write. A zero Soft_Reset bit is never completion proof. Keep every register untrusted until observed; no assumed factory image or silent relock. Reapply desired owned volatile settings only when the caller explicitly selected that behavior.
 - Never use I2C general-call address 0x00, global reset from TMP1x2 or TCA9548A RESET as a shortcut. No reset in begin()/recover() without explicit caller request.
 - Include reset decision in device ledger and per-variant capability matrix.
 
-- Test reset/recovery with nonfactory EEPROM-loaded CONFIG, limits and supported offset/shadows. Reload only the documented persistent CONFIG subset, never MOD1/one-shot or status flags as stored settings. A reset reload is not a factory erase; verify recovery reapplies the whole desired volatile profile.
+- Test both uncertain addressed-reset outcomes without promoting either to fact: changed/unchanged settings and EUN/busy response, including transport failure during the interval. Separate confirmed POR/general-call fixtures reload only the persistent CONFIG subset, never MOD1/one-shot/status as stored settings. Use nonfactory limits, managed/unmanaged offset and EEPROM shadows. Explicit recovery reapplies only the owned profile and must not overwrite unmanaged calibration.
 
 ## Verification and exit criteria
 
@@ -44,7 +43,7 @@ Follow [COMMON.md](COMMON.md), [CONVENTIONS.md](CONVENTIONS.md),
 shared API/architecture, integration, progress and Git; delegate only disjoint
 read-only audits, feature tests or implementation under frozen interfaces.
 Update public Doxygen and affected guides in the same stage as source changes.
-Do not run unrelated sibling suites or remote CI (except stage 43).
+Do not run sibling suites. Follow COMMON for remote-CI dispatch/poll/wait policy; preserve automatic triggers.
 
 ## Checkpoint and report
 
@@ -52,6 +51,6 @@ For each closed software unit, run appropriate focused local checks; inspect
 both working and staged diffs; record actual commands, versions, commit and
 PASS/FAIL/NOT RUN/BLOCKED. Write `docs/reports/prompt_25.md` with sources,
 owned artifacts, named test cases and open evidence gates. Update
-`docs/prompts/PROGRESS.md`, commit and sync verified meaningful work on `main`
+`docs/prompts/PROGRESS.md`, commit and sync verified meaningful work on the existing checked-out branch
 when authenticated upstream is configured, and verify synchronization. Keep
 missing physical/SDK evidence explicit; never claim tests not run.

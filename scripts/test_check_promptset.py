@@ -9,7 +9,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from check_promptset import LOCAL_LINK, validate
+from check_promptset import COVERAGE_IDS, LOCAL_LINK, validate
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -235,6 +235,80 @@ class PromptsetCheckerTests(unittest.TestCase):
         copied = destination / "include/TMP11x/TMP11x.h"
         self.assertTrue(copied.is_file())
         self.assertEqual(copied.stat().st_size, 0)
+
+    def test_coverage_missing_duplicate_and_unknown_id(self):
+        path = self.root / "docs/prompts/FULL_COVERAGE.md"
+        original = path.read_text(encoding="utf-8")
+        row = next(line for line in original.splitlines() if line.startswith("| R01 |"))
+        for replacement, expected in (("", "requirement inventory differs"),
+                                      (row + "\n" + row, "duplicate requirement ID"),
+                                      (row.replace("R01", "R99", 1), "invalid requirement ID")):
+            with self.subTest(expected=expected):
+                path.write_text(original.replace(row, replacement), encoding="utf-8")
+                self.assertTrue(any(expected in error for error in validate(self.root)))
+
+    def test_coverage_rejects_invalid_owners(self):
+        path = self.root / "docs/prompts/FULL_COVERAGE.md"
+        original = path.read_text(encoding="utf-8")
+        row = next(line for line in original.splitlines() if line.startswith("| R01 |"))
+        cells = row.split("|")
+        for owners in ("", "0", "45", "5–4", "1, 1", "1–3, 2", "²", "9" * 5000, "stage 5"):
+            with self.subTest(owners=owners[:20]):
+                cells[3] = " " + owners + " "
+                path.write_text(original.replace(row, "|".join(cells)), encoding="utf-8")
+                self.assertTrue(any("invalid or duplicate owner stages" in error for error in validate(self.root)))
+
+    def test_coverage_accepts_owner_ranges(self):
+        path = self.root / "docs/prompts/FULL_COVERAGE.md"
+        original = path.read_text(encoding="utf-8")
+        row = next(line for line in original.splitlines() if line.startswith("| X01 |"))
+        cells = row.split("|")
+        cells[3] = " 1-3/5/44 "
+        path.write_text(original.replace(row, "|".join(cells)), encoding="utf-8")
+        self.assertEqual(validate(self.root), [])
+
+    def test_future_feature_inventory_requires_rows_not_mentions(self):
+        path = self.root / "docs/feature-coverage.md"
+        path.write_text("Mentioned requirements: " + ", ".join(sorted(COVERAGE_IDS)), encoding="utf-8")
+        self.assertTrue(any("missing requirement rows" in error for error in validate(self.root)))
+        rows = "\n".join(f"| {row_id} | pending |" for row_id in sorted(COVERAGE_IDS))
+        path.write_text(rows.replace("| R01 |", "| R01.tmp116 |"), encoding="utf-8")
+        self.assertEqual(validate(self.root), [])
+        path.write_text(rows.replace("| R01 |", "| R99 |"), encoding="utf-8")
+        self.assertTrue(any("invalid requirement row" in error for error in validate(self.root)))
+
+    def test_pdf_anchor_bounds_and_syntax(self):
+        path = self.root / "docs/reference/README.md"
+        original = path.read_text(encoding="utf-8")
+        manifest = json.loads((self.root / "docs/reference/manifest.json").read_text(encoding="utf-8"))
+        document = manifest["documents"][0]
+        target = "../../" + document["path"]
+        for page in ("0", str(document["page_count"] + 1), "-1", "²", "9" * 5000, "one", "1&page=2"):
+            with self.subTest(page=page[:20]):
+                path.write_text(original + f"\n[Page]({target}#page={page})\n", encoding="utf-8")
+                self.assertTrue(any("invalid PDF page anchor" in error for error in validate(self.root)))
+        path.write_text(original + f"\n[Page]({target}#page={document['page_count']})\n", encoding="utf-8")
+        self.assertEqual(validate(self.root), [])
+        path.write_text(original + f"\n[Page]({target}#zoom=100&page=1)\n", encoding="utf-8")
+        self.assertEqual(validate(self.root), [])
+
+    def test_pdf_anchor_requires_manifest_entry(self):
+        (self.root / "docs/reference/unpinned.pdf").touch()
+        with (self.root / "docs/reference/README.md").open("a", encoding="utf-8") as output:
+            output.write("\n[Unknown PDF](unpinned.pdf#page=1)\n")
+        self.assertTrue(any("invalid PDF page anchor" in error for error in validate(self.root)))
+
+    def test_reference_page_metadata_errors_are_diagnostic(self):
+        path = self.root / "docs/reference/manifest.json"
+        original = json.loads(path.read_text(encoding="utf-8"))
+        for value in (None, [], {"documents": {}}, {"documents": [None]},
+                      {"documents": [{"path": "x.pdf", "page_count": True}]}):
+            with self.subTest(value=value):
+                path.write_text(json.dumps(value), encoding="utf-8")
+                self.assertTrue(any("invalid reference page metadata" in error for error in validate(self.root)))
+        original["documents"][0]["path"] = "../outside.pdf"
+        path.write_text(json.dumps(original), encoding="utf-8")
+        self.assertTrue(any("invalid reference page metadata" in error for error in validate(self.root)))
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

@@ -54,7 +54,7 @@ not. This is a persistence inventory, not authorization to program EEPROM.
 | pp.8–9,22–24: bus speed and timeout | Supported SCL 1–400 kHz; device never drives SCL. STOP resets interface state, START is needed to resume. Serial timeout is 20–40 ms, 35 ms typical, for documented held-low conditions; it resets the interface, not sensor configuration. Distinguish it from callback timeout and conversion/job deadline. Stages 6,12,31,34–36,42. |
 | pp.18–19,24,26: SMBus alert response | Hardware supports ARA at seven-bit address 0x0C (read byte 0x19); response includes address and threshold-direction bit, lowest address wins arbitration. Winner deasserts ALERT in alert mode; therm does not clear through ARA. First-release ARA traffic remains explicitly excluded. External ARA can change pin observation independently of CONFIG acknowledgement. Stages 7,22,32. |
 | pp.24,26,29: general-call reset and synchronized sampling | Hardware supports broadcast reset and a synchronization example involving programmed startup settings. Both broadcast reset and that synchronization recipe are excluded; independent sequential one-shots are not simultaneous sampling. Stages 7,25,34–36,42. |
-| pp.15–16,27–31: application precision and layout | Strain tolerance has no register switch. Self-heating, shared-bus traffic, pullups, decoupling, PCB thermal paths and mounting govern system accuracy/response. Avoid I2C during active conversion for best precision; use bounded polling, not aggressive status loops as an accuracy claim. 100 nF bypass and application-specific pullups are board responsibilities. Surface, moving-air and still-air layouts serve different goals. Stages 34–36,40–42. |
+| pp.15–16,23,27–31: application precision and layout | Strain tolerance has no register switch. Self-heating, shared-bus traffic, pullups, decoupling, PCB thermal paths and mounting govern system accuracy/response. Avoid I2C during active conversion for best precision; use bounded sparse polling, not aggressive status loops as an accuracy claim. Stages 6/21/30 own poll policy; 34–36/40–42 own physical integration/evidence. 100 nF bypass and application-specific pullups are board responsibilities. Surface, moving-air and still-air layouts serve different goals. |
 | pp.40–48: support, package, notices | Source revision/support provenance and package/orderable/assembly metadata belong in reference/BOM docs. They introduce no core API. Preserve vendor terms and exclude PDFs from runtime packages. Stages 3,4,42. |
 
 ## Remaining discrepancies and TMP119M scope
@@ -67,14 +67,28 @@ need explicit entries rather than guessed defaults:
   example −40°C is 0.11°C in the comparison but 0.12°C in §6.5, and 85°C
   is 0.15°C versus the −25..85°C range's 0.09°C. Use exact §6.5 with its
   conditions for TMP119 metadata; do not copy cross-family comparison cells.
+- The same p.4 summary gives TMP116/N supply 3.0–3.6 V versus SBOS740A p.4's
+  1.9–5.5 V, and TMP119 shutdown 0.25 µA versus p.8's 0.15 µA typical.
+  Exact-part electrical conditions govern every model, not just accuracy.
 - Shutdown prose p.17 says 250 nA; p.8 specifies 150 nA typical and 350 nA
   maximum at 25°C with stated input conditions. Preserve the difference.
 - A 1-MHz current-characterization curve on p.11 does not override the
   400-kHz protocol limit on p.22.
 - EEPROM2 p.38 heading says reset 0x0000, while its figure/table and p.32
   show unknown contents. Do not assume zero or synthesize factory UID data.
-- p.35 labels CONV as standby-related while its cycle table and pp.16–17
+- p.34 Table 8-5 labels CONV as standby-related while p.35's cycle table and pp.16–17
   describe active plus standby. Helpers must use the cycle interpretation.
+- The p.20 stored-field list omits DR/Alert and OFFSET, while pp.32/34–35
+  mark them EEPROM-backed. Four-word EEPROM references also occur in p.22
+  Figure 7-9 and p.37; the actual three-word map plus offset remains decisive.
+- Page 35 defines the addressed reset bit/duration, but does not explicitly
+  establish its EEPROM reload, EUN effect, companion-bit application or bus
+  availability. Page 20's explicit general-call relock is not proof of these
+  addressed-reset outcomes. Observe them after a conservative wait.
+- OS physically returns to SD (p.17), but MOD readback during/after OS and
+  retrigger during active OS are not specified. Therm HIGH changes at completed
+  conversions (p.19); only DATA_READY/alert-mode SD-entry flags remain unknown
+  under an otherwise unchanged therm/routing/polarity/reset state.
 
 p.7 has TMP119M-specific accuracy rows, but p.45's pinned orderable addendum
 lists TMP119AIYBGR and TMP119AIYBGR.A only. TI's current
@@ -96,3 +110,23 @@ and require authoritative BOM/orderable mapping before adding an M model.
 
 No implementation, firmware build, remote CI, or physical HIL was performed
 by this reference audit. It supplies stage inputs only.
+
+## Response — 2026-11-17
+
+Rechecked each actionable row and retained discrepancy against `171dbf5`,
+current prompts and pinned SNIS236. The map, masks, address straps, signed
+encoding, grade uncertainty and excluded functions remain valid. Page 4's
+comparison table was visually rechecked for the supply/current discrepancies.
+
+| Original actionable finding | Review and applied response |
+|---|---|
+| Complete serial electrical/protocol contract | Correct and already covered by 5–6/12/adapters. Preserve 1–400 kHz, explicit pointer/word framing and hardware-timeout distinction; no 1-MHz operating claim from a characterization curve. |
+| Source conflicts contaminate defaults | Correct. Extended exact-spec precedence from accuracy to supply/current, fixed the CONV citation, and retained EEPROM/ID/reset-drawing conflicts. Added persistence-domain and addressed-reset uncertainty rather than inventing defaults. |
+| Application conditions omitted | Correct and already in board/HIL owners, with a real integration gap: stages 6/21/30 now carry sparse default OS polling after the derived maximum active interval. Typical-time polling is not a guarantee of avoiding active conversion; accuracy remains physical evidence. |
+| Persistence/averaging fixtures | Correct. Keep all 32 continuous timing pairs and four OS AVG cases plus CONV independence. Separate POR reload from uncertain addressed-reset outcomes; preserve unmanaged offset, and test explicit managed zero/guard refusal. |
+| Exclusions not complete rows | Already addressed by X rows. Stage 32 explicitly consolidates no-ARA/general-call/programming/foreign-feature checks and disclosed external-interference effects. No new excluded-function API is needed. |
+| TMP119M scope | Still unresolved from the pinned orderables; the historical dated webpage observation is not fresh availability evidence. Keep the selected TMP119 model without silently adding M. |
+
+All original named discrepancies remain evidence obligations, with the
+corrections above. These changes update instructions and source interpretation;
+they do not implement a driver, run physical HIL or establish component accuracy.

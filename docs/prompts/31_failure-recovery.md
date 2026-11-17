@@ -3,7 +3,7 @@
 Apply [COMMON.md](COMMON.md) and root [AGENTS.md](../../AGENTS.md). Phase: **Cooperative operation and exhaustive native qualification**. Type: **software**.
 Prerequisites: [15](15_passive-health.md), [19](19_config-trust.md), [25](25_per-device-reset.md), [28](28_cooperative-admission.md), [29](29_cooperative-config.md), [30](30_cooperative-measurement.md).
 Produces: `fault-closure`.
-Consumes: `transport-health`, `config-trust`, `device-reset`, `job-lifecycle`, `configuration-jobs`, `measurement-jobs`.
+Consumes: `transport-health`, `config-trust`, `device-reset`, `job-lifecycle`, `configuration-jobs`, `measurement-jobs`, `register-fake`.
 
 ## Objective and boundaries
 
@@ -19,7 +19,8 @@ Revisit TMP1x2 owner/dirty/health/timeout fault tests, ADS1115 indeterminate wri
 - Distinguish tracked bus health, whole-operation timeout, failed precondition, unsupported variant, EEPROM unsafe, and configuration dirty status. Counter saturation and last error preservation must be deterministic.
 - Harden the synchronous recovery delivered in stage 18 and cooperative recovery from 29 after outside reset/power interruption: require identity/locked-state proof before writes; preserve desired settings; do not automatically reset the I2C bus. This stage adds adversarial closure, not the first working recover API.
 - Cancellation retains terminal result and uncertain write effects, plus possible destructive-read consumption. Failed CONFIG/TEMP reads can lose status evidence without altering settings. Keep those two uncertainties separate; no automatic retrigger, write replay or fake rollback.
-- Verify polling/reading does not silently consume an already retained terminal result; overflowed time domain and bad deadline are explicitly rejected.
+- Verify polling/reading does not silently consume a retained terminal result; unrelated I2C stays BUSY until consumption. Reject invalid relative deadlines. Unsigned elapsed >= timeout expires, including an apparent backward step; a gap of 2^32 ms or more cannot be detected from a 32-bit clock and is an owner obligation, not a claimed runtime check.
+- Exercise late physical successes for every phase: retain transport health, observed words, sticky alert/possible-loss records and possible write effects, while refusing timely sample/cache publication, initialization or dirty-state clearance. Include mismatched caller nowMs values to prove the authoritative hook controls deadlines.
 
 ## Verification and exit criteria
 
@@ -34,7 +35,7 @@ Follow [COMMON.md](COMMON.md), [CONVENTIONS.md](CONVENTIONS.md),
 shared API/architecture, integration, progress and Git; delegate only disjoint
 read-only audits, feature tests or implementation under frozen interfaces.
 Update public Doxygen and affected guides in the same stage as source changes.
-Do not run unrelated sibling suites or remote CI (except stage 43).
+Do not run sibling suites. Follow COMMON for remote-CI dispatch/poll/wait policy; preserve automatic triggers.
 
 ## Checkpoint and report
 
@@ -42,6 +43,6 @@ For each closed software unit, run appropriate focused local checks; inspect
 both working and staged diffs; record actual commands, versions, commit and
 PASS/FAIL/NOT RUN/BLOCKED. Write `docs/reports/prompt_31.md` with sources,
 owned artifacts, named test cases and open evidence gates. Update
-`docs/prompts/PROGRESS.md`, commit and sync verified meaningful work on `main`
+`docs/prompts/PROGRESS.md`, commit and sync verified meaningful work on the existing checked-out branch
 when authenticated upstream is configured, and verify synchronization. Keep
 missing physical/SDK evidence explicit; never claim tests not run.

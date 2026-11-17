@@ -30,6 +30,10 @@ Feature and protocol differences:
 - pp.1,3–7,13: four pins only, no ALERT or ADD0; 1.08–1.98 V supply,
   static low-voltage logic. TMP114 A/B/C/D orderables select 0x48–0x4B;
   TMP114N D/C/B/A select 0x4C–0x4F. Selection is factory supplied.
+- Page 4 limits SCL/SDA to 1.98 V recommended and 2.1 V absolute maximum.
+  A direct 3.3-V bus can damage it. A coexistence fixture needs compatible
+  supplies and pullup/input thresholds for every participant or appropriate
+  level shifting; an upper pullup limit alone is insufficient.
 - pp.13–18,32–36: separate alert status/events, positive slew warning,
   independent high/low hysteresis, selectable ADC times 6.4/3.5/2.0/1.2 ms,
   one-or-eight averaging, and different periods. OS restarts an in-flight
@@ -40,6 +44,10 @@ Feature and protocol differences:
   final XOR zero. CRC-enable takes effect after STOP. Burst CONFIG writes
   have a documented limitation, so TI recommends single-register writes.
   These are not TMP11x register transactions.
+- Page 24 explicitly returns zero for a non-indexed read, including 0x0F with
+  CRC disabled. Page 26 documents bad-CRC detection followed by NACK and FFh
+  if clocking continues. It does not explicitly establish every missing-CRC
+  sequence; transport-error and 0xFFFF adverse fixtures must retain that scope.
 - p.27: general-call reset, 30-ms typical serial timeout and I3C mixed-bus
   coexistence exist. Mixed-bus coexistence is not native I3C support and
   must not be transferred to TMP119 without its own evidence.
@@ -104,11 +112,13 @@ boundary evidence above to stages 4–5 and explicit negative fixtures to
    CONFIG write. Probe only the supported family's 0x0F ID location;
    transport failure or incompatible content remains failure. Do not
    traverse foreign register maps to identify or configure them.
-2. A fake TMP118 returning its documented zero at unsupported 0x0F must
-   reject before any data-register mutation. For TMP114, model unsupported
-   pointer behavior as a fixture assumption, not a guaranteed silicon
-   response. Pointer writes used by an attempted read are distinct from
-   data-register mutations.
+2. Both TMP114 (CRC disabled, p.24) and TMP118 (p.23) document zero for a
+   non-indexed 0x0F read. Reject before any data-register mutation. Add
+   CRC-enabled TMP114 transport-failure/0xFFFF adverse fixtures with no retry;
+   distinguish documented bad-CRC behavior from an omitted-CRC assumption.
+   Pointer writes used by an attempted read are distinct from data-register
+   mutations. A multi-register dump checks 0x0F first and stops on mismatch,
+   before reading foreign 0x02 alert status.
 3. Invalid/unsupported public model selection rejects locally with zero
    I2C. Raw diagnostics cannot bypass model/pointer checks or invoke
    foreign UID, CRC, burst, fault-queue, or reset behavior.
@@ -124,3 +134,23 @@ The probe cannot prove physical identity against an unrelated device that
 happens to return compatible bits; BOM selection remains authoritative.
 These are planned tests and documentation gates. No excluded-family driver,
 hardware operation, CI run, or scope expansion was performed.
+
+## Response — 2026-11-17
+
+Reviewed the two maps, listed protocol differences, internal source conflicts
+and all five proposed boundary fixes against `171dbf5`, the current prompts
+and pinned SNIS214E/SNIS237A. The register exclusions remain correct; similar
+temperature coding and address overlap do not establish compatibility.
+
+| Original finding | Review and applied response |
+|---|---|
+| 1: Same-address responder must not authorize writes | Correct and already required. Added exact TMP114 electrical/address qualifications in stage 4: only A–D overlap 0x48–0x4B; N D/C/B/A use 0x4C–0x4F. Host mismatch tests do not authorize a 3.3-V physical substitution. |
+| 2: Unsupported pointer observations | Partly incorrect for TMP114: p.24 explicitly specifies zero, just as TMP118 p.23 does. Corrected the row and added bounded CRC-error fixtures plus ID-first dumps in 26/32. No foreign-ID/UID scan or CRC fallback is permitted. |
+| 3: Invalid model/raw bypass | Correct. Invalid model selection remains zero-I2C; first release exposes no arbitrary register-data write API. Diagnostics retain checked pointers and cannot add UID-write/reset/CRC escape paths. |
+| 4: Independent supported-family literals | Correct and already assigned to codec/transport/variant fixtures. Stage 32 retains negative controls, THIGH/TLOW order, model-dependent 0x07 and differing ID layouts. |
+| 5: Explicit exclusion rows | Already addressed in FULL_COVERAGE. Stage 32 consolidates X03/X08 absence/interference checks; stage 42 still owns final user-facing support boundaries. |
+| Internal datasheet mismatches | TMP114 reserved-row overlap, ready-clear wording, copied slew labels and TMP118 rate-note disagreement remain documented source limitations; none authorizes adding these devices to TMP11x. |
+
+No excluded-family driver, physical fixture operation or stronger hardware
+identity claim was introduced. The earlier “missing” labels describe the
+historical baseline; current prompt coverage is not implementation evidence.

@@ -106,9 +106,12 @@ DP8382x was observed at `ced8b1ce5418aec044eb156b507ea78573302576` with unrelate
 dirty implementation work; MotorControl-CAN at
 `60bcefe5f2bd29429b8019361374e1776a2b5972` with unrelated dirty bench work.
 Their source/progress patterns do not grant TMP11x hardware authorization.
-FieldCore-node local `c40ea8341edf8d665460b902cafefbe857a7f73f` differs from
-remote `eccdbdcc0e9ce22beee4f54494c6c179a320d3aa`; local consumer evidence is
-labelled as such. None is a required runtime dependency of TMP11x.
+FieldCore-node local `rodtester` at `c40ea8341edf8d665460b902cafefbe857a7f73f`
+and `main` at `eccdbdcc0e9ce22beee4f54494c6c179a320d3aa` are different branches,
+each matching its recorded remote-tracking branch. The original comparison to
+remote HEAD did not establish that the checked-out branch was stale. Local
+consumer evidence is labelled by branch. None is a required runtime dependency
+of TMP11x.
 
 ## Validation and remaining limits
 
@@ -136,3 +139,36 @@ PARTIAL verdict incorrectly treated optional TI code access as mandatory.
 Stages 4-44 remain NOT STARTED as implementation stages. The final handoff
 records the resulting commit and upstream synchronization; the input SHA at
 the top is not claimed as the commit containing these changes.
+
+## Response to revalidation — 2026-11-17
+
+Review input: `171dbf58251e8606d3b643aa1ceddcc7e921c906`. The 44 individual
+prompt dispositions above describe the 2026-11-15 patch, not a permanent claim
+that each prompt is now flawless. The later [68-finding audit](../prompts/audit.md)
+and its individual responses govern residual corrections. No driver exists, so
+these findings are checked against executable repository tooling, current
+instructions and the pinned originals rather than invented C++ behavior.
+
+Each original main finding was rechecked:
+
+| Original finding | Current disposition and response |
+|---|---|
+| TMP116 busy-clear as startup proof | Retained. The p.17 versus pp.26/29 conflict still prevents using busy-clear alone as universal startup proof; stage 6 retains timing-origin/policy evidence. |
+| MOD alias and command replay | Retained with BEH-1 qualification. MOD=10 normalizes to continuous, but physical return to shutdown does not prove the MOD readback value after a one-shot. Never replay one-shot/reset as stable settings. |
+| Cadence versus conversion duration | Retained. Minimum/typical/maximum conditions and AVG remain distinct from nominal cycle; further BEH polling corrections cannot replace DATA_READY with elapsed-time freshness. |
+| TEMP/CONFIG/therm flag effects | Retained with BEH-2/BEH-3 extension. Successful CONFIG reads need owner-visible retained alert observations; the old text established clear-on-read facts but did not fully specify retention or uncertainty. |
+| EEPROM reads versus immutable factory/NVM | Retained. All words are shadow observations and first-release writes remain denied. SAF-2/SAF-4 make the mutation guard's register and cadence explicit. |
+| Reset/offset edges | Partially complete. Guards and saturation distinctions remain valid; SAF-5 corrects unsupported addressed-reset effects and API-2/SAF-3 close offset preservation/guard gaps. A reset interval does not prove EEPROM reload or relock. |
+| Entry-only timestamp/late transfers | Retained. A post-callback clock is required; TOOL-5 additionally requires actual backend budget/terminal-lifetime assessment rather than treating tick conversion as a timing proof. |
+| Short transfers with Status-only callbacks | Retained. The adapter must validate complete transfer; the core cannot infer byte counts from Status or sentinel contents. |
+| Read-only HIL writing at boot | Retained and strengthened. Bound-only startup remains required. TOOL-2/TOOL-4 add concrete fixture scope and all-attempt adapter counters, with software instrumentation distinguished from independent electrical capture. |
+| CLI grammar/restoration | Partially complete. Stable-field-only restoration is retained; TOOL-3 adds omitted lifecycle/job pacing/stop framing and defines shutdown as an exact alias rather than a separate mode policy. |
+| Adapter/P4/soak evidence | Retained with tighter limits. IDF component checks need a linking app; backend cleanup/quantization is version-specific; P4 and physical research cannot inherit unsupported build/accuracy claims. |
+| Stage order/optional source gates | Retained with CON-3/CON-5/CON-6/CON-12 refinements. Private engines, fixture/test producers and late firmware integration now have explicit owners; optional TI software still does not block original-datasheet intake. |
+
+Source SHAs and test counts above remain historical checkpoint evidence.
+Different dated sibling SHAs are not by themselves contradictory; current
+adoption must identify which revision and branch actually supplied each file.
+The FieldCore branch wording above is corrected. The full staged requirement
+set, code/test existence and physical limitations are checked again at execution;
+an earlier audit's COMPLETE label completes its review scope, not the product.

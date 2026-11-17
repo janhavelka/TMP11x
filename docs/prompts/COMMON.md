@@ -11,7 +11,8 @@ Preparatory evidence may be reused later after checking its hashes/revisions.
 1. Read root AGENTS, active prompt, its prerequisites/reports and relevant
    [CONVENTIONS](CONVENTIONS.md), [ENGINEERING](ENGINEERING.md),
    [EVIDENCE](EVIDENCE.md), [SILICON](SILICON.md),
-   [FULL_COVERAGE](FULL_COVERAGE.md), [HANDOFFS](HANDOFFS.md), [SOURCE_MAP](SOURCE_MAP.md),
+   [FULL_COVERAGE](FULL_COVERAGE.md), [COVERAGE](COVERAGE.md),
+   [CLI_CONTRACT](CLI_CONTRACT.md), [HANDOFFS](HANDOFFS.md), [SOURCE_MAP](SOURCE_MAP.md),
    [VERIFICATION](VERIFICATION.md) and [DELEGATION](DELEGATION.md).
 2. Inspect Git branch/HEAD/upstream/dirty status. Preserve unrelated work and
    verify actual prerequisite artifacts/tests. `NOT_STARTED`, `PARTIAL`,
@@ -61,7 +62,8 @@ Preparatory evidence may be reused later after checking its hashes/revisions.
   simulator rule. Full profile trust/recovery includes limits and supported
   offset as well as stable CONFIG fields.
 - Use meaningful public Doxygen and readable source comments. Keep README,
-  CHANGELOG, feature matrix, architecture, example guides and tests current.
+  CHANGELOG (once created), feature matrix, architecture, example guides and
+  tests current. Research stages update existing evidence documents only.
 
 ## Delegate / review
 
@@ -83,14 +85,16 @@ reference verifier; reference tooling changes also require
 commands before the relevant sources exist. Native simulator results do not prove
 hardware or ESP-IDF linking; no hardware is *not* a software failure.
 Once stage 5 creates `tools/check_register_ledger.py`, run it for changed ledger
-facts/policies and their consumers. Once stage 10 establishes the host test
+facts/policies and their consumers; run its regressions with
+`python tools/test_check_register_ledger.py`. Stage 10 registers both in the
+host entrypoint named in `docs/testing.md`. Once stage 10 establishes that host test
 entrypoint, register each later suite there, including CLI/runner tests from
 37–39. An earlier stage's PASS does not cover subsequently introduced tests.
 
 Update `docs/reports/prompt_N.md` with: input revisions and selected source
 pages, exact work, accepted/rejected sibling patterns, tests/commands/results,
-known gaps, current commit and upstream sync status. Update PROGRESS and
-coverage at this checkpoint. A preparation report may be separate from stage
+known gaps, current commit and upstream sync status. Update PROGRESS, coverage
+and `docs/reports/index.md` at this checkpoint. A preparation report may be separate from stage
 reports; distinguish complete intake from still-open stage obligations.
 Record consumed/produced artifact IDs with actual paths, revision/check evidence
 and next integration owner. Changes to public contracts or producer ownership
@@ -103,6 +107,14 @@ SHA; do not force-push.
 
 ## Blocked tasks and the final verdict
 
+Physical work uses concrete fixture authorization already supplied by the user
+in the session or a fixture record: board/port, exact part/address, bus/mux
+participants, upload permission and allowed observe/volatile/power-cycle scope.
+Do not infer a target from port enumeration or flash another project's bench.
+A user-written JSON file is optional, not an extra approval prerequisite.
+If essential target/scope information is missing, keep dependent physical work
+BLOCKED and continue independent software work. Existing authorization persists.
+
 A blocked stage keeps its exact remaining scope and required evidence. In a
 whole-set invocation, continue independent later work whose concrete inputs
 are satisfied; return if the dependency becomes available. An absent physical
@@ -111,9 +123,11 @@ can still complete and report the overall product as hardware-unqualified.
 No stage can be marked COMPLETE with required owned work missing; a final
 review/report can complete while reporting a PARTIAL overall qualification.
 
-Remote CI: for the first sequence, only prompt 43 deliberately triggers/checks
-the comprehensive remote CI checkpoint, unless required automated triggers
-already run on push. Existing automation triggers and protection remain intact;
-do not dispatch or poll them after each minor prompt. If final-audit fixes
-change CI-covered inputs, reopen checkpoint 43 for the new SHA rather than
-claiming the earlier run covers those changes.
+Remote CI: stages 1–42 do not deliberately dispatch, poll or wait on remote CI;
+this overrides the generic major-change dispatch rule during this sequence.
+Stage 10 creates local test scaffolding; stage 43 creates the initial workflow
+and runs the comprehensive checkpoint. Preserve any automatic triggers and
+required protection already present; automatic runs are not forbidden. If
+stage 44 changes CI-covered inputs, execute the stage 43 checkpoint procedure
+for the resulting SHA within stage 44 and record its terminal result or BLOCKED
+before closing the final report. An older green SHA does not cover later edits.

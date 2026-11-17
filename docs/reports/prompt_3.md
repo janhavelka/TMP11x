@@ -34,3 +34,18 @@ See [preparation report](preparation.md) for commands and handoff rules.
 Register/field ledger, timing proof, model-grade freeze and safety contracts
 remain owned by stages 4–7. No MCU build, CI or physical test was run. Acquisition
 is not a claim of implemented sensor support or closed silicon ambiguities.
+
+## Revalidation response — 2026-11-17
+
+Input: `171dbf58251e8606d3b643aa1ceddcc7e921c906`. Required intake remains
+COMPLETE: all 14 archived PDFs retain their pinned byte hashes, and their renamed
+paths resolve through the manifest. The optional TI code/license and E2E access
+gaps remain honest limits, not missing mandatory intake. Register interpretation,
+timing, model-grade and safety decisions remain stage 4–7 work; the later
+coverage audits do not execute those stages.
+
+Consumes `ecosystem-audit`, `tooling-plan`; produces `ti-archive` via
+`docs/reference/manifest.json` and original PDFs, with the supporting catalog at
+`docs/reference/public-code-catalog.md`. Source notes and individual audit responses
+must use exact revision/page links; the new page-anchor check enforces the pinned
+page range, not the truth of a citation. Vendor payloads and licenses are unchanged.

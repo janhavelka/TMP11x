@@ -102,7 +102,7 @@ already required by existing prompts and are not newly missing features.
 | Source topic and evidence | Required behavior / disposition | Coverage finding |
 |---|---|---|
 | Power-up, pp.7,12,18 | Typical/approximate 1.5-ms startup, EEPROM busy during loading, CONFIG/limit writes ignored during POR, TEMP initial sentinel; S bounded guard/readback | Already covered by 6,18,25; never treat timing as guaranteed maximum |
-| Reset domains, pp.18,25,27–32 | EEPROM reload can restore custom CONFIG/limits/offset/shadows, clears EUN; no assumed factory image; S explicit addressed reset, A external reset notification | Covered broadly; add explicit nonfactory offset/limit reload fixture |
+| Reset domains, pp.18,25,27–32 | POR reloads custom CONFIG/limits/offset/shadows; p.18 explicitly attributes EUN clearing to general-call reset. Addressed Soft_Reset's reload/EUN/companion-bit/bus effects are not explicit; no assumed factory image | S guarded addressed-reset policy with postwait observations; separate POR/general-call fixtures from uncertain addressed-reset outcomes |
 | Averaging, pp.12,27 | Block accumulation of 1/8/32/64 conversions, not running average; update TEMP/readiness/comparators only when result completes | Counts/timing covered; independent non-overlapping-average fixture missing |
 | Continuous mode, p.14/Table7-7 p.28 | Active averaging plus standby; no standby when active period occupies cycle; S | Covered by 6,20 |
 | Shutdown, p.14 | Entering SD immediately aborts active conversion; S; no new completed sample from aborted work | Covered by 20; add partial-averaging abort fixture |
@@ -167,6 +167,13 @@ The complete pinned datasheet does **not** specify:
   transactions. Conversions and comparator decisions may occur between writes.
   State the library's apply ordering/intermediate-alert policy, and test partial
   failure; do not promise glitch-free paired thresholds or automatic rollback.
+- MOD readback during/after one-shot and a MOD=11 write during a running OS.
+  The physical return to SD is documented, but no MOD readback value proves
+  it. The managed sequence explicitly writes guarded SD, establishes a CONFIG
+  baseline and triggers once; no elapsed-time-only completion or retrigger.
+- DATA_READY/alert-mode flag effects on SD entry and inverted therm limits.
+  Therm HIGH itself is constrained by p.17's conversion-end-only rule while
+  therm mode, routing/polarity and reset state remain unchanged.
 
 The datasheet also exposes no conversion sequence counter, sensor conversion
 timestamp, CRC/PEC register, running-average mode, or fault queue. No such
@@ -194,6 +201,9 @@ defaults while staying within the existing read-only EEPROM policy.
 
 - p.18 and p.20 prose/diagram refer to four EEPROM locations; p.25 map and
   pp.30–32 descriptions expose three plus OFFSET. Already retained by prompts.
+- The p.18 stored-field list omits DR/Alert and OFFSET, but p.27's footnote and
+  p.25's offset default footnote mark them EEPROM-backed. Detailed fields
+  govern persistence domains. Page 30 also repeats the four-word reference.
 - **New explicit conflict:** p.31 EEPROM2 heading says reset `0000h`, whereas
   Table7-12/Fig.7-19 and Table7-3 p.25 say unknown (`xxxxh`). Do not fabricate
   a zero factory traceability word.
@@ -213,3 +223,28 @@ defaults while staying within the existing read-only EEPROM policy.
 No implementation, host C++ tests, MCU build, CI or physical measurements were
 performed in this audit. The gaps above are prompt obligations for the lead to
 integrate; the register/API feature set is already substantially covered.
+
+## Response — 2026-11-17
+
+Reviewed all T117-G rows and the source conflicts against `171dbf5`, current
+prompts and pinned SNOSD82D. The register/grade tables remain valid; they are
+not claims of implemented support. This review visually rechecked pp.6–7:
+the DRV pad condition spans all grades and `tRESET=1.5 ms` is TYP, not MAX.
+
+| Finding | Review and applied response |
+|---|---|
+| T117-G1 | Correct and already required by stage 4's matrix. Clarified that all grades offer DRV/YBG and the DRV condition spans them; M remains 0–85°C. |
+| T117-G2 | Correct and largely addressed by 5/12/adapter obligations. Exact word/pointer framing and no burst/CRC fallback remain required; address acknowledgement alone proves no family identity. |
+| T117-G3 | Correct and already represented by 6/9/12. Kept hardware line timeout separate from callback/job deadlines, and one-shot-conditioned conversion bounds separate from continuous estimates. |
+| T117-G4 | Correct but incomplete. Added undocumented OS MOD/retrigger and addressed-reset effects; explicit SD/baseline boundaries replace MOD-only assumptions. Multi-register writes still cannot promise atomicity or rollback. |
+| T117-G5 | Correct. All 32 continuous pairs remain; OS needs four AVG cases plus CONV independence. Stage 23 preserves unmanaged calibration by default, honors explicit managed zero and checks EUN/busy before offset writes. Saturation vectors remain independent of comparator-order uncertainty. |
+| T117-G6 | Correct and already in the relevant stages. Added sticky capture for all CONFIG-consumed alert events, explicit therm inversion refusal, and X03/X08 negative-test consolidation. No ARA/broadcast/programming API was added. |
+| T117-G7 | Correct and already assigned. Default maximum-based sparse OS polling now carries the bus-activity/precision concern into 6/21/30, without claiming a software schedule proves system accuracy. |
+| T117-G8 | Correct; EEPROM2 heading and current-prose conflicts remain. Added the omitted DR/Alert/OFFSET persistence and four-word diagram/detail citations. |
+| Reset-domain row | Partly incorrect: corrected its blanket EUN-clear/reload claim. General-call/POR evidence does not explicitly establish all addressed Soft_Reset effects. Stage 25 uses a labelled conservative encoding, wait, fresh 0x04 check and full observed readback. |
+| Existing retained conflicts | EEPROM count, EEPROM2 default, reset access drawing, one-shot ALERT wording, current prose and address-table reference were rechecked and remain valid. No conflicting summary overrides an exact field/electrical table. |
+
+The former “missing” labels describe the historical audit baseline. Their
+prompt obligations now exist; production driver, MCU and physical evidence
+remain unexecuted. No additional supported chip or nonvolatile write path is
+authorized by this response.
