@@ -69,7 +69,7 @@ values is EEPROM-loaded, so manufacturing values do not prove current state.
 | `0x01` LOW_Alert[14] | `0x4000`; reset0; alert-mode read-to-clear; therm mode always0 | S; 6,17,19,22 |
 | `0x01` DATA_READY[13] | `0x2000`; reset0; set by result update; CONFIG or TEMP read consumes it | S; 6,19,21,26,30 |
 | `0x01` EEPROM_Busy[12] | `0x1000`; reset0 in table; busy during programming/POR; mirror of `0x04[14]` | R; 7,18,24,25 |
-| `0x01` MOD[11:10] | `0x0C00`; factory 00; 00=CC,01=SD,10=CC/readback00,11=OS; bit11 not EEPROM-persisted | S stable CC/SD, explicit OS operation; 17–21,30 |
+| `0x01` MOD[11:10] | `0x0C00`; factory 00; 00=CC,01=SD,10=CC/readback00,11=OS; bit 11 not EEPROM-persisted | S stable CC/SD, explicit OS operation; 17–21,30 |
 | `0x01` CONV[9:7] | `0x0380`; factory 100; eight cycle selectors, with AVG-dependent effective periods | S; 6,17,20 |
 | `0x01` AVG[6:5] | `0x0060`; factory 01; 00/01/10/11 select 1/8/32/64 accumulated conversions | S; 6,17,20,21 |
 | `0x01` T/nA[4] | `0x0010`; factory 0; 0=alert/window,1=therm/hysteresis | S; 17,22 |
@@ -93,7 +93,7 @@ values is EEPROM-loaded, so manufacturing values do not prove current state.
 Sources: pp.20,22–23 and Tables7-3 through 7-15, pp.25–32. CONFIG factory word
 is `0x0220`. Its ordinary writable bit positions are `0x0FFC`, with additional
 semantic restrictions on MOD: the mask alone must not authorize OS as a stable
-setting. Persistable CONFIG positions are bits10:2 (`0x07FC`); first-release
+setting. Persistable CONFIG positions are bits 10:2 (`0x07FC`); first-release
 firmware does not program them into EEPROM. Read effects and commands are
 already required by existing prompts and are not newly missing features.
 

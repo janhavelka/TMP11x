@@ -140,8 +140,10 @@ stages 4–7, not new implemented capabilities:
 TMP114 negative hardware fixtures require compatible low-voltage logic or
 level shifting; a pullup ≤1.98 V alone does not ensure every bus participant's
 VIH/VIL requirements. Never attach it directly to a 3.3 V pullup bus. TMP118
-has different I/O limits (SNIS237A p.6). Identity at 0x0F reads zero on these
-excluded parts with the documented ordinary protocol; TMP114 CRC-enabled
+has different I/O limits (SNIS237A p.6). A read of 0x0F is expected to return zero
+under the ordinary protocol, inferred from the non-indexed-read rules
+(TMP114 p.24; TMP118 p.23) and register maps (pp.29/26). CRC-disabled TMP114 is
+fixture policy, not a condition stated in that rule. TMP114 CRC-enabled
 error behavior needs separate fixtures (bad-CRC NACK/FF is documented, omitted
 CRC is not assumed identical). Identity-first dumps must stop on mismatch.
 

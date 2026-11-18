@@ -39,6 +39,17 @@ START/STOP timing and named controller/interrupt-service allowances. Record
 their numerical/configured values and assumptions, using overflow-safe
 arithmetic. Nominal SCL and tick conversion alone are not worst-case evidence.
 
+Before passing a finite millisecond argument to the SDK, clip it in wider
+checked arithmetic to the remaining budget, signed-int range and the selected
+conversion's safe range. The pinned v5.5.5 `FreeRTOS-Kernel` macro
+(`CONFIG_FREERTOS_SMP=n`, including the default dual-core S3 kernel) multiplies
+32-bit TickType_t operands before division, so also require
+`sdkTimeoutMs <= UINT32_MAX / configTICK_RATE_HZ`. The alternate
+`FreeRTOS-Kernel-SMP` macro uses a uint64_t product; verify the actual selected
+macro/overrides and final tick range. A wide local calculation alone cannot fix
+the SDK's later overflow. Test the safe cap and one millisecond above it without
+sensor I2C; never round a clipped timeout beyond the remaining deadline.
+
 After subtracting actual owner lock/route time, require `t * P <= remainingMs`
 and `Bbackend(t) + cleanupReserve <= remainingMs`. `Bbackend` must include all
 potentially sequential SDK semaphore/event/NACK waits, SDK recovery and
@@ -48,6 +59,14 @@ Calculate it as the maximum over reachable backend paths of
 with finite source-derived counts and numerical/configured reserves. A normal
 tick wait contributes up to `t * P` before scheduling delay; the pinned strict-`>`
 NACK loop needs another tick. Do not hide missing evidence in an unnamed margin.
+On pinned v5.5.5 S2/S3, the hardware-clear recovery loop has a fixed 50-ms
+setting independent of the caller timeout. Account for
+`(pdMS_TO_TICKS(50) + 1) * P` per reachable clear, plus bounded setup/scheduling
+costs and the maximum call count on a path. The extra tick follows its strict
+`>` test; 50 ms is not an exact wall-time maximum. Recovery may run before a
+new transfer on a previously busy/timed-out bus or during error handling.
+Reject budgets that cannot cover the full reachable path, even when the normal
+register transaction would fit; a smaller SDK timeout does not clip this loop.
 Check admission before route activity and remaining time again after it. An
 exhausted budget returns a typed error without sensor I2C; any already completed
 mux write remains separately counted. Test 0/1/2 ticks, tick-phase edges,

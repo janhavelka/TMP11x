@@ -196,3 +196,40 @@ the already verified preparation work.
   must not be silently replaced with today's HEAD or called simultaneously
   current. This table remains the preparation selection; each later source
   adoption records its own actual revision and dirty state.
+
+## Second follow-up: SDK timeout evidence, 2026-11-18
+
+Finding 17 is supported with two qualifications. The immutable v5.5.5 source at
+`b774170ff46c393eeb5e495ea37936038d3f4f4f` was read with `git show`; the installed
+working tree now reports modifications, including port/capability files, so this
+is evidence about that commit rather than a claim that the installation is clean.
+
+- In `components/esp_driver_i2c/i2c_master.c`, line 51 sets a 50-ms bus-clear
+  timeout and lines 95–98 convert it and poll with a strict `>` tick test.
+  Both S2/S3 `soc_caps.h` files enable `SOC_I2C_SUPPORT_HW_CLR_BUS`. Calls from
+  lines 554, 602 and 686–688 reach that hardware-clear branch through
+  `s_i2c_hw_fsm_reset(..., true)`. The caller's timeout does not cap this fixed
+  setting. Each reachable clear needs a tick term of
+  `(pdMS_TO_TICKS(50) + 1) * tickPeriod`, plus bounded setup/scheduling costs;
+  include path multiplicity. At 1000/100 Hz the tick terms are 51/60 ms, not an
+  exact 50-ms wall-time bound. The error cleanup at line 1036 passes false and
+  must not itself be counted as a bus clear. See the
+  [pinned official I2C source](https://github.com/espressif/esp-idf/blob/b774170ff46c393eeb5e495ea37936038d3f4f4f/components/esp_driver_i2c/i2c_master.c).
+- `FreeRTOS-Kernel/include/freertos/projdefs.h` line 46 multiplies TickType_t
+  operands before dividing by 1000; the selected Xtensa configuration uses
+  uint32_t ticks. Clip the SDK argument before conversion to at most
+  `UINT32_MAX / configTICK_RATE_HZ`, the API parameter limit and the remaining
+  budget, then verify the complete path bound. For 1000 Hz the multiplication
+  limit is 4,294,967 ms; the next millisecond wraps the product. Wire's uint16_t
+  timeout range is already smaller on this configuration. The
+  [alternate kernel macro](https://github.com/espressif/esp-idf/blob/b774170ff46c393eeb5e495ea37936038d3f4f4f/components/freertos/FreeRTOS-Kernel-SMP/include/freertos/projdefs.h)
+  uses uint64_t multiplication, unlike the
+  [default IDF kernel macro](https://github.com/espressif/esp-idf/blob/b774170ff46c393eeb5e495ea37936038d3f4f4f/components/freertos/FreeRTOS-Kernel/include/freertos/projdefs.h).
+  Here “non-SMP” names `CONFIG_FREERTOS_SMP=n`, not single-core execution:
+  Kconfig explicitly says both kernel variants are SMP-capable. Audit actual
+  macro overrides/widths; a wider calculation in adapter code does not alter
+  the SDK's subsequent conversion.
+
+Stages 34/35 now require these checks and boundary cases. This source review
+does not establish a finite complete callback bound, terminal buffer lifetime,
+linked firmware or physical behavior; those qualification gates remain open.

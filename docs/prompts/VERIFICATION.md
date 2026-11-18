@@ -44,10 +44,13 @@ interpretation or establish any of the implementation layers below.
   volatile state. HIL must not mutate EEPROM or undeclared bus devices;
   authorized mux routing is separate from sensor register writes.
 
-Resolve fixture authorization from the user's instruction or a named
-user-authored/explicitly user-approved record: board/serial port, exact
-model/address, bus participants/route, upload and campaign scope. Record that
-source, not an agent report as independent permission. Another fixture's record
+Read the original authorization per COMMON: a user instruction visible in current
+task context or a record at a user-named path, written by the user or approved
+in a visible user message. Verify board/serial port, exact model/address, bus
+participants/route, upload and campaign scope. An agent report, summary or
+prior-session paraphrase may point to the grant but is never its source.
+If neither permitted source can be read directly, physical work is BLOCKED;
+valid records persist across sessions within scope. Another fixture's record
 grants no authority. Verify board/route/address/compatible identity before
 mutation and after reconnect/reset/rebind/mismatch; ID alone does not prove the
 exact model. Existing scope persists across continuation, without expansion or

@@ -34,9 +34,12 @@ recovery; do not claim protection against an uncoordinated second bus master.
 ## Lifecycle, health, trust
 
 `bind` validates/caches only, no bus traffic. `begin` performs identity and
-verified safe volatile configuration. `end` is bus-silent local close, while
-physical shutdown is an explicit hardware operation. `OFFLINE` is a passive
-health label, not an automatic retry gate. Raw reads/probe are intentionally
+verified safe volatile configuration. `end` is bus-silent local close retaining
+the binding and desired settings; it clears initialization/startup evidence.
+`unbind` also removes the binding. Neither establishes a power-on timestamp;
+the next begin must establish fresh startup proof. Physical shutdown is an
+explicit hardware operation. `OFFLINE` is a passive health label, not an
+automatic retry gate. Raw reads/probe are intentionally
 separate from tracked health; document their exact side effects.
 
 `DriverState` describes tracked transport health independently of initialization.
@@ -68,11 +71,13 @@ and do not promise glitch-free paired limits or rollback.
 Dirty/uninitialized/invalidated profiles allow latest-value diagnostics with
 untrusted provenance, but reject managed fresh acquisition before I2C.
 Explicit initialization/recovery can re-establish trust subject to binding,
-job ownership, deadline and safety gates. Before a one-shot trigger, compare
-all stable CONFIG fields, not only MOD; a mismatch invalidates trust.
-Changing limits in therm mode requires a non-inverted target pair. Select the
-write order from known current limits so intermediate pairs stay ordered;
-unknown/inverted current limits require the controlled shutdown/apply path.
+job ownership, deadline and safety gates. Before the one-shot's first CONFIG
+write (including SD), compare all stable CONFIG fields, not only MOD;
+a mismatch invalidates trust without CONFIG writes.
+Changing limits in therm mode requires a non-inverted target pair. Limit writes
+occur inside the shared guarded SD apply phase. Defensively keep intermediate
+pairs ordered when the current pair is known; unknown/inverted current pairs
+need full-profile verification before therm operation.
 The response to TLOW > THIGH is undocumented, not a new hardware prohibition.
 
 Stages 18/21 implement private resumable step engines shared with stages 29/30.
@@ -194,29 +199,29 @@ TMP116 SBOS740A p.17 says busy is cleared during reset load, contradicting p.26
 and p.29 tables: busy==0 alone must not prove completed startup. The roughly
 1.5 ms POR interval is not a specified maximum. Record assumptions and require
 bounded readback; preserve this source conflict rather than guessing hardware.
-Both startup-origin paths require continuously stable power/no outside reset
-from the chosen origin through the operation. Default `StartupOrigin` source
-FIRST_ACK uses completion of the first successful compatible read in the
-current initialization/recovery operation when startup proof is absent. This
-is naturally no earlier than operation start; an old bind timestamp cannot
-substitute. Startup reads are permitted (TMP116 p.17; TMP117 p.18; TMP119 p.20),
-so a successful read is a conservative power-present anchor, not completed POR.
-CALLER_TIMESTAMP uses the same hook epoch and must be nonfuture/unambiguous
-under bounded wrap-safe arithmetic; it does not waive the stable-power assumption.
-Unknown power stability refuses mutation. The wait is conservative policy:
-TMP117 tRESET=1.5 ms (p.7) is typical, without a maximum.
+FIRST_ACK is the only startup-origin policy: when proof is absent, use completion
+of the first successful compatible read in the current initialize/recover
+operation. Store that timestamp internally using the authoritative clock hook;
+it is not a Config field or an API/CLI input. An old bind/operation timestamp
+cannot substitute. Startup reads are permitted (TMP116 p.17; TMP117 p.18;
+TMP119 p.20), so this is a conservative power-present anchor, not completed POR.
+The owner must ensure continuously stable power/no outside reset from that
+read through every operation relying on the retained proof. Unknown power
+stability refuses mutation. The wait remains policy: TMP117 tRESET=1.5 ms
+(p.7) is typical, without a maximum.
 
-Config supplies the initial source/seed, not immutable transport binding.
-Retain established startup evidence until invalidated. The bus-silent
-`invalidateDeviceState(nextOrigin = FIRST_ACK)` clears old origin/startup proof,
-initialized/config/freshness/owned-trigger knowledge and installs the new seed,
-while retaining desired settings, transport history and historical alerts.
-It requires idle/no retained-result ownership; rejection preserves state.
-After power loss stop using old trust, cancel/take the result if needed,
-invalidate with FIRST_ACK or a new caller timestamp, then recover. Bind seeds
-the origin; teardown/reset clear prior proof. Stage 19 owns the origin-replacement
-API; before it exists, stage 18 startup tests use a fresh bind rather than a
-placeholder invalidation API.
+Retain established startup proof until invalidated. Bus-silent
+`invalidateDeviceState()` clears its internal origin, initialized/config/
+freshness/owned-trigger knowledge while retaining desired settings, transport
+history and historical sample/alert provenance. It requires idle/no retained
+result; rejection preserves state. After power loss stop using old trust,
+cancel/take any result, invalidate, restore stable power and explicitly recover.
+Invalidation may occur before power restoration because it supplies no timestamp.
+Accepted bind, end/unbind and any driver-issued or reported reset clear old
+origin/proof. Stage 25 clears it before the reset attempt, honors the separate
+2-ms reset wait and then establishes a new post-reset FIRST_ACK origin/proof
+before later writes. Stage 19 owns public invalidation; before it exists,
+stage 18 tests use fresh bind/private state seams, not a placeholder API.
 
 Acquire an operation-local 0x04 guard at the start of each mutating operation
 (apply/recover, limits, offset, shutdown, one-shot, reset) or freshness-producing

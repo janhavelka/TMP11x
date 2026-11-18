@@ -36,7 +36,9 @@ Run lifecycle/invalidation integration tests from stages 14/19/28 against real
 measurement jobs, not only the private state-transition component.
 
 Test interleaved two-sensor fake transport, one transfer per poll, 32-bit wrap, invalid/no clock, same temperature consecutive one-shots, missed ready and late successful read not published as timely result.
-Include EUN/busy/startup refusal without CONFIG writes or fresh results,
+Include immediate EUN refusal, busy-through-deadline/startup refusal without
+CONFIG writes or fresh results, and timed busy-to-safe guard progression without
+premature writes; retain per-poll transfer/work bounds. Also cover
 both compatible post-OS MOD outcomes, residual conversion after cancellation,
 continuous first-baseline suppression and one-time alert consumption.
 Also test MOD=01/11 during readiness polling and after timeout/cancel under

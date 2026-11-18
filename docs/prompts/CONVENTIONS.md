@@ -48,12 +48,14 @@ protocol authority. Stage 8 freezes any needed exact signatures in
   guarded SD write, CONFIG baseline, one trigger, readiness polls, TEMP.
   Mismatch or unowned MOD=11 latches dirty with zero CONFIG writes. Desired
   shutdown stays unchanged. Owned-trigger provenance permits MOD=01/11 during
-  the shot and after cancellation/timeout until successful SD or invalidation,
+  the shot and after completion/cancellation/timeout until successful SD or invalidation,
   without proving completion. Cancellation never restores or retriggers.
-- StartupOrigin defaults to FIRST_ACK; CALLER_TIMESTAMP is optional. It is
-  mutable device evidence, not transport binding. Both require stable power/no
-  reset; bind time alone is not a power origin. Stage 19's bus-silent
-  invalidateDeviceState(nextOrigin = FIRST_ACK) clears old proof before recovery.
+- FIRST_ACK is the only startup policy: internally timestamp the first
+  successful compatible read in the current initialization/recovery operation
+  when proof is absent. Require stable power/no reset; bind time alone is no
+  origin. No Config seed or caller timestamp exists. Stage 19's bus-silent
+  invalidateDeviceState() clears old proof before recovery; end/reset also
+  clear it, and a later begin/recover must establish a new origin.
 - Acquisition kinds are explicit: latest register read, continuous try-fresh
   (and its bounded wait), or owned one-shot. No mode-dependent read silently
   triggers a conversion. Dirty/uninitialized profiles reject fresh requests;

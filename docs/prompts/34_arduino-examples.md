@@ -40,6 +40,17 @@ allowances. These are example policy assumptions, not a datasheet deadline.
 Name the numerical/configured allowance inputs and use overflow-safe arithmetic;
 do not silently use nominal SCL as a guaranteed maximum transfer time.
 
+Clip the finite millisecond argument before the SDK performs its conversion,
+not only after computing ticks locally. In pinned IDF v5.5.5's
+`FreeRTOS-Kernel` (`CONFIG_FREERTOS_SMP=n`), the 32-bit TickType_t product can
+overflow before division: require `sdkTimeoutMs <= UINT32_MAX / configTICK_RATE_HZ`
+as well as Wire's uint16_t range and the remaining-budget bound. Calculate
+admission in wider checked arithmetic, then apply the actual SDK conversion;
+never round up beyond remaining time. Recheck the selected backend/macro rather
+than applying this path-specific cap blindly; the alternate kernel uses a
+uint64_t product. Test the conversion cap and one millisecond above it wherever
+the backend's parameter range can reach that edge.
+
 After lock/route time, also require `t * P <= remainingMs` and the stronger
 `Bbackend(t) + cleanupReserve <= remainingMs`, where the pinned source's
 whole-path bound includes every potentially sequential SDK wait, recovery and
@@ -49,7 +60,14 @@ the bound calculation as the maximum over reachable backend paths of
 The source audit must supply finite counts and numerical/configured reserves;
 normal tick waits contribute up to `t * P` before scheduling delay, while the
 pinned IDF strict-`>` NACK loop needs an additional tick. These are not unnamed
-"sufficient margin" constants. Perform
+"sufficient margin" constants. For the pinned v5.5.5 S2/S3 path, hardware bus
+clear uses a fixed 50-ms setting independent of the caller timeout. Each
+reachable clear contributes `(pdMS_TO_TICKS(50) + 1) * P` to the tick bound
+because its loop also tests strict `>`; add bounded setup/scheduling costs and
+count possible repeated clears. A short caller timeout does not shorten that
+recovery path. Verify whether the pinned Wire backend reaches this SDK path;
+do not transfer its constants to a different implementation without source proof.
+Perform
 an initial admission check before route traffic and recheck remaining time after
 the owner lock/route; a later rejection performs no sensor transfer, though an
 already completed mux selection remains separately counted. Test 0/1/2 ticks,

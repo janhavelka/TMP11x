@@ -109,14 +109,18 @@ SHA; do not force-push.
 
 ## Blocked tasks and the final verdict
 
-Physical work requires authorization traceable to the user's instruction or a
-named user-authored or explicitly user-approved fixture record: board/port,
-exact part/address, bus/mux participants, upload permission and permitted
-observe/volatile/power-cycle actions. An agent report may record that source;
-it cannot grant authority itself or inherit authority from another fixture's
-record. Do not infer a target from port enumeration. A mandatory JSON file or
-repeated confirmation is unnecessary when existing user authorization covers
-the named fixture/actions. Verify board/route/address and compatible identity
+Physical work requires directly readable authorization: either a user instruction
+visible in the current task context, or a record at a user-named path that the
+user wrote or approved in a user message visible in the current context. Read
+the instruction/record itself and verify its scope: board/port, exact part/address,
+bus/mux participants, upload and permitted observe/volatile/power-cycle actions.
+An agent report, summary or prior-session paraphrase is never the source of a
+grant; it may point to the original, which must be checked directly. A claim
+that a record was approved is not approval evidence. If neither authorized
+source can be read directly, physical work is BLOCKED. A valid record persists
+across sessions within its scope; no expiry or repeat confirmation is required.
+Do not infer a target from port enumeration or another fixture's grant. No
+mandatory JSON format is required. Verify board/route/address and compatible identity
 before a mutating campaign and again after reconnect/reset/rebind/mismatch;
 ID bits alone do not prove exact BOM model. An unexplained target change stops
 dependent work until its scope is resolved.

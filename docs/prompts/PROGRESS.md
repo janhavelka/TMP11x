@@ -6,7 +6,8 @@
 **Preparation input HEAD:** `6c5e4496d5c896af689228d4bee4382a53c20626` (clean and synchronized at entry).
 **Hardware:** Physical TMP11x board and test wiring NOT CONFIRMED.
 **Last completed stage:** 3 (intake scope clarified by the full promptset audit).
-**Last update:** 2026-11-17; see the [cb73740 follow-up](../reports/audit-followup-cb73740.md#response--2026-11-17),
+**Last update:** 2026-11-18; see the [6b173cc second follow-up](../reports/audit-followup-6b173cc.md),
+the [cb73740 follow-up](../reports/audit-followup-cb73740.md#response--2026-11-17),
 [individual audit responses](audit.md#response--2026-11-17),
 [full promptset audit](../reports/promptset-audit.md)
 and [datasheet/functionality gap audit](../reports/feature-gap-audit.md).
@@ -44,7 +45,7 @@ firmware source/link evidence and physical gates now have explicit boundaries
 in [HANDOFFS](HANDOFFS.md). No implementation-stage status changed.
 
 The 2026-11-17 review rechecked all 68 later findings and every earlier audit,
-with responses in each report. Current metadata has 61 producer IDs and 263
+with responses in each report. That checkpoint had 61 producer IDs and 263
 required-input links, including the stage 12 reusable register fake. Shared
 safety, acquisition, offset and integration contracts are reconciled; the
 checker now validates coverage IDs/owners and pinned PDF page anchors.
@@ -57,8 +58,16 @@ The cb73740 follow-up checks all 42 submitted top-level items and their nested
 requests. It reconciles startup-origin defaults/invalidation, one-shot order
 and provenance, bounded guard polling, SDK tick/budget admission, fixture
 authority and CLI producer boundaries. Prior response overclaims and auditor
-citation errors are explicitly corrected. No new implementation stage was run;
-61 producer IDs and 263 required-input links remain unchanged.
+citation errors are explicitly corrected. No new implementation stage was run.
+That checkpoint retained 61 producer IDs and 263 required-input links.
+
+The 2026-11-18 second follow-up checks all 17 new findings. Startup now uses
+only internal FIRST_ACK evidence; Config seeds/caller timestamps are deferred.
+Lifecycle/reset, no-wait guard paths and all-settings SD wording agree across
+consumers. Fixture grants must be read directly. Stage 10's register-validator
+input brings current metadata to 61 producer IDs and 264 required-input links.
+SDK evidence names the fixed bus-clear wait and pre-conversion overflow cap.
+No implementation, MCU, CI or physical qualification stage was executed.
 
 The [report index](../reports/index.md) separates completed preparation from
 stage-owned evidence. Final commit/upstream synchronization is recorded in the

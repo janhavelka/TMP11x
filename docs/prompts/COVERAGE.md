@@ -16,7 +16,7 @@ row disappears merely because it is application-owned or lacks hardware.
 | Framework-independent C++17, I2C ownership | 8–12; 28–30; 42 | Native linked no-SDK/installed consumer |
 | No EEPROM writes or global reset | 7; 18; 23–26; 31–33; 44 | Forbidden I2C patterns zero callback on denial |
 | Correct signed measurement and thresholds | 16–17; 21–22; 32–33 | Independent raw literal vectors |
-| Startup and EEPROM-busy lock | 6–9; 18–21; 23–25; 29–32 | Operation-local 0x04 guard, startup origin and deterministic I2C traces |
+| Startup and EEPROM-busy lock | 6–9; 14; 18–21; 23–25; 29–32; 41 | Operation-local 0x04 guard, internal FIRST_ACK/lifecycle invalidation and deterministic I2C traces; fixture evidence stays separate |
 | Conversion cycle, average, mode, one-shot | 6; 20–21; 30 | Correct register/timing and fresh samples |
 | Alert DATA_READY and destructive-read semantics | 6; 21–22; 26; 30 | Event-flag consumption and stale-negative tests |
 | TMP117/119 offset, not TMP116 offset | 4–5; 7–8; 16; 23; 25–26; 29; 32; 38; 41 | Opt-in management, unmanaged preservation, guard and TMP116 zero-I2C refusal |

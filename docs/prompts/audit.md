@@ -2035,6 +2035,8 @@ TMP1x2 provides `xfer_stats`/`counters` and `xfer_assert` for exactly this
 ## Response — 2026-11-17
 
 These response rows incorporate the subsequent [review of cb73740](../reports/audit-followup-cb73740.md).
+The [second follow-up](../reports/audit-followup-6b173cc.md) updates the current
+startup/authorization contracts and metadata on 2026-11-18.
 That report preserves the follow-up and records each correction/qualification;
 the original findings above remain unchanged as historical reviewer claims.
 
@@ -2108,7 +2110,7 @@ severity/counts describe the auditor's baseline, not a count of confirmed bugs.
 | API-4 | PARTIAL | Only TEMP/CONFIG consume DATA_READY, not ID/EEPROM. Nevertheless stages 28/30 use a uniform all-unrelated-I2C BUSY gate while active or a result is pending, simplifying ownership and preserving results. |
 | API-5 | ACCEPT | Stage 8/19 gates fresh requests on clean initialized trust while allowing untrusted latest diagnostics. Recovery still requires binding, available slot, deadline and safety; "always allowed" was too broad. Pre-trigger stable-field comparison now precedes SD/trigger writes, so drift cannot be silently repaired before checking it. |
 | API-6 | ACCEPT | The clock hook is authoritative; retained `nowMs` cannot override it. Stage 9 supplies per-API clock requirements and rejects missing required clocks before I2C. Untimed finite reads may omit the hook and cannot fabricate timestamps/deadline evidence. |
-| API-7 | ACCEPT, qualified | Startup reads can ACK before POR completes (TMP116 p.17; TMP117 p.18). FIRST_ACK now defaults to completion of the first compatible read in the current initialize/recover operation; waiting from it is conservative, without proving completed POR or exact power-on time. A caller timestamp is optional. Both sources always require stable power/no outside reset. Stages 8/11/14/18/19 define the Config seed, validation and bus-silent replacement via invalidateDeviceState; stages 31/37/38/41 carry tests/CLI/power-loss flow. Typical POR duration remains no guaranteed maximum. This supersedes the former bind-time anchor. |
+| API-7 | ACCEPT, simplified 2026-11-18 | Startup reads can ACK before POR completes (TMP116 p.17; TMP117 p.18; TMP119 p.20). FIRST_ACK is now the sole policy: completion of the first successful compatible read in the current initialize/recover operation anchors an internal wait when proof is absent. Stable power/no outside reset remains required; typical POR timing is no maximum. Removed the optional caller timestamp, Config seed and CLI option because they introduced configure/lifecycle hazards without a current consumer. Argument-free invalidateDeviceState, end and reset clear old proof; tests/CLI/HIL use explicit invalidate, stable-power restoration and recovery. |
 | API-8 | PARTIAL | Stage 14 intentionally predates codecs; stage 18 now extends bus-silent full-profile validation. Rejected bind preserves the old state; accepted rebind creates unknown hardware trust. Bind installs its target directly, distinct from setters' first-write commitment. This is an explicit improvement, not identical TMP1x2 behavior. |
 | API-9 | PARTIAL | Three descriptions were not evidence of three existing implementations. Stages 11/12 now specify one capability source/access-policy seam with ledger cross-checks; later stages extend it. Added the missing variant/register source inputs at stage 11. |
 | API-10 | PARTIAL | Optional API is not automatically a defect, but current scope has no caller needing arbitrary register-data writes. Excluded those in X04; kept one diagnostic route and private manual-trigger/readiness helpers. Aliases require a named consumer; shutdown is the documented CLI alias of mode shutdown. |
@@ -2133,7 +2135,7 @@ severity/counts describe the auditor's baseline, not a count of confirmed bugs.
 | CON-9 | ACCEPT bounded checks | Checker now validates all 46 requirement IDs, explicit owner ranges, future feature-table ID preservation and pinned PDF page anchors, with seven additional regression cases. HANDOFFS accurately names the Produced IDs comparison. Rejected arbitrary prose regex/path equality as supposed semantic proof; wording is reviewed directly. |
 | CON-10 | PARTIAL | Size is not itself a correctness defect. Added useful sub-checkpoints without removing requested targets or moving backend wiring out of its agreed stage 38 owner. Stage 33 title now says native correctness/source-consumer gates; package/install qualification remains stage 42. |
 | CON-11 | ACCEPT | Rewrote glued stage references and compressed register/timing language in HANDOFFS/FULL_COVERAGE and affected numbered prompts; the follow-up closes remaining bit 11/bits 9:2 spacing in stage 5/SILICON. No broad false-positive prose checker was introduced. |
-| CON-12 | ACCEPT, evidence-based | Added missing validator, behavior, apply, host-entrypoint, adapter and firmware-handoff inputs. Stage 18 really integrates latest reads in its exit tests, so its latest-read-engine input is justified. Added applicable behavior-vector consumers and removed stale ad-hoc consumer lists from handoff explanations. Current metadata: 61 produced IDs, 263 input links. |
+| CON-12 | ACCEPT, evidence-based | Added missing validator, behavior, apply, host-entrypoint, adapter and firmware-handoff inputs. Stage 18 really integrates latest reads in its exit tests, so its latest-read-engine input is justified. Added applicable behavior-vector consumers and removed stale ad-hoc consumer lists from handoff explanations. The second follow-up adds stage 10's missing register-validator consumption; current metadata is 61 produced IDs, 264 input links. |
 | CON-13 | PARTIAL | Existing footer already limited authorization. Made copy/paste templates explicit: preparation stops after 1–3; resume stops after the selected stage unless a whole-set request authorizes continuation. |
 | CON-14 | ACCEPT | Named the test option/entrypoint owner and `docs/testing.md`, HIL runner and Doxyfile producers; removed the alternative ledger-path ambiguity and limited CHANGELOG upkeep to after creation. Future paths remain plans, not invented files. |
 | CON-15 | ACCEPT | One stage-44 report, COMMON report-index upkeep, canonical state/evidence vocabulary, current-branch wording and producer-versus-explanation ownership. Continuous encoders must emit MOD=00. |
@@ -2144,7 +2146,7 @@ severity/counts describe the auditor's baseline, not a count of confirmed bugs.
 | ID | Verdict | Evidence, correction and disposition |
 |---|---|---|
 | TOOL-1 | ACCEPT, reproduced | Original launcher selected Core 6.1.19; the configured `C:\pio` installation is Core 6.2.0. `pio.cmd` now uses `PLATFORMIO_CORE_DIR` or the default directory and fails when that chosen executable is absent, with no PATH fallback/install. Updated adoption and active package evidence. Verified actual invocation, unset-variable fallback and missing configured path with spaces. |
-| TOOL-2 | PARTIAL | Concrete target/upload/campaign scope and provenance were needed. COMMON/VERIFICATION/CLI and stages 39–41 require a user instruction or named user-authored/explicitly user-approved record. Agent reports can cite authority, not create it. Existing permission persists only within its named fixture/actions/constraints, with target checks before campaigns and after reconnect/reset/rebind/mismatch. Rejected arbitrary task expiry, mandatory JSON and repeated approval within authorized scope. No port/upload was used in this review. |
+| TOOL-2 | PARTIAL | Concrete target/upload/campaign scope and directly readable provenance are required. COMMON/VERIFICATION/CLI and stages 39–41 require a user instruction visible in current context or a record at a user-named path written by the user or approved in a visible user message. Agent reports/summaries/paraphrases may point to the grant, never substitute for reading it. If neither source is directly readable, physical work is BLOCKED. Valid scoped records persist without expiry/reconfirmation; target checks still apply. No port/upload was used in these reviews. |
 | TOOL-3 | ACCEPT | Added canonical lifecycle, job kinds/automatic pacing, stop, attempt counters and request framing requirements. `shutdown` is an exact `mode shutdown` alias, including desired state. Stage 37 freezes grammar; 38 owns final routes/backend wiring. |
 | TOOL-4 | PARTIAL | Added boot/session-wide adapter **attempt** counters including health-neutral traffic, sensor data writes and separate mux routing. Software counters are not independent hardware proof; logic traces remain a separate evidence layer. Failed attempts and saturation must not hide activity. |
 | TOOL-5 | PARTIAL | Pinned ESP-IDF v5.5.5 confirms tick truncation and repeated SDK waits. Stages 34/35 now require a conservative two-tick floor, transfer-time/tick-budget inequalities, 0/1/2-tick tests and a separate source-derived whole-path bound including lock/route/recovery/cleanup/scheduling. Missing finite evidence leaves adapter qualification BLOCKED. Two ticks or a 1000-Hz scheduler alone cannot guarantee a callback deadline. Corrected line 1011 to pre-transfer timeout conversion; bus-lock take is line 1012. |
@@ -2161,7 +2163,7 @@ Checked again against the pinned sources and historical files during the
 [cb73740 follow-up](../reports/audit-followup-cb73740.md):
 
 - SAF-4: EUN can only be **set** by a write to 0x04; POR and general-call reset
-  clear it (TMP116 p.29; TMP117 p.30; TMP119 p.37). General-call traffic remains
+  clear it (TMP116 pp.17/29; TMP117 pp.18/30; TMP119 pp.20/37). General-call traffic remains
   excluded from this library.
 - SIL-1: TMP114 supply is 1.08–1.98 V; SCL/SDA I/O range is **0–1.98 V**
   (SNIS214E p.4). These are different limits.
@@ -2212,7 +2214,8 @@ TMP114 0x0F zero is inferred for the ordinary protocol from the unsupported-poin
 rule and register map; p.24 does not explicitly condition it on CRC state. Pointer
 traffic must not be called harmless to arbitrary foreign devices; installed
 SDKs and historical tool observations are not built firmware. Its counts
-60/226 and 27+9 are historical; current declarations are 61/263 and the
+60/226 and 27+9 are historical; current declarations after the second follow-up
+are 61/264 (61/263 at `6b173cc`) and the
 checker suite has 34 cases plus nine reference cases.
 
 Open silicon questions above remain open. Stage 41 must not deliberately
@@ -2222,12 +2225,13 @@ need permitted fixture conditions or further TI evidence; unsupported physical
 experiments are not required exit criteria. Negative/adverse host fixtures
 test library conservatism without proving the silicon's unknown behavior.
 
-Validation on the integrated change (Python 3.12.10):
+Historical validation on the 2026-11-17 integrated change (Python 3.12.10):
 
 - `python scripts/check_promptset.py`: PASS, 44 stages, coverage IDs/owners,
   dependency/handoff consistency and local links/PDF page anchors. Counts of
   61 producer IDs and 263 inputs were computed separately from SEQUENCE.json;
-  the checker does not print those counts.
+  the checker does not print those counts. The 2026-11-18 follow-up separately
+  verifies the current 264 inputs; that later change does not alter this run.
 - `python scripts/test_check_promptset.py`: PASS, 34 cases.
 - `python scripts/check_references.py`: PASS, all 14 pinned PDFs.
 - `python scripts/test_check_references.py`: PASS, nine cases.

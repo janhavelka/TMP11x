@@ -6,6 +6,10 @@ The submitted review is retained below; individual responses follow it.
 No driver implementation, physical operation or stage completion is implied.
 
 Attachment SHA-256: `f5a4fe7e6630b2da045c7e92428d23d8a4841492706d8e072c72d8da5e029389`.
+Reproduce from the Submitted review text only (exclude its heading and the
+Response section): UTF-8 without BOM, normalize line endings to CRLF, remove
+blank lines at the end and append exactly one trailing CRLF. This hashes the
+original attachment bytes, not the entire committed LF Markdown file.
 
 ## Submitted review
 
@@ -193,6 +197,11 @@ git diff --check; update the affected Response rows; commit and push.
 
 ## Response — 2026-11-17
 
+This is the dated disposition delivered at `6b173cc`. The
+[2026-11-18 second follow-up](audit-followup-6b173cc.md) supersedes the caller
+timestamp/seed design in A3 and tightens direct authorization evidence in A4.
+It also corrects the A6 propagation and response-edit descriptions below.
+
 The attachment targets the actual input HEAD, so it is relevant. All seven A
 items, nine B bullets, 22 C bullets and four D bullets were checked, including
 their nested requests and eight original-auditor errata. IDs below follow that
@@ -219,7 +228,7 @@ historical files checked at the auditor's baseline. No sibling was modified.
 | A3 | ACCEPT, qualified | TMP116 p.17, TMP117 p.18 and TMP119 p.20 permit reads during startup. A successful compatible read proves power existed by its completion, so waiting from that point is conservative under uninterrupted power. FIRST_ACK defaults to the first such read in the current initialization/recovery operation, inherently later than operation start, not an old bind time. It does not prove POR complete or turn typical startup timing into a maximum. CALLER_TIMESTAMP is optional; both sources always require stable power/no outside reset. |
 | A4 | PARTIAL | A fixture record needed explicit authorship/approval and bounded scope. COMMON, VERIFICATION, CLI_CONTRACT, START_HERE and stages 39–41 now accept a user instruction or named user-authored/explicitly approved record. Agent reports may cite but never create authority; another fixture's record cannot authorize this target. Rejected automatic current-task expiry and mandatory renewed confirmation: existing permission remains valid within its granted fixture/actions/constraints. Verify target/route/address/compatible identity before a campaign and after reconnect/reset/rebind/mismatch; check continuity before writes without repeating identity reads before every low-level transfer. Compatible ID cannot prove the exact BOM model. No physical operation was performed. |
 | A5 | PARTIAL | Stages 34/35 now specify actual tick conversion, a conservative floor of two ticks, `(ticks-1)*P >= Ttransfer`, `ticks*P <= remainingMs` after lock/route, named numerical allowances and 0/1/2-tick tests. This is a chosen admission policy, not a universal sensor rule. The suggested inequalities alone do not bound a complete SDK call: repeated waits, NACK loops, recovery, scheduling and cleanup also require a finite source-derived whole-path bound. Precheck before routing and recheck afterward; refusal performs zero sensor I2C, with any completed mux traffic separately counted. Missing bound/terminal-buffer evidence leaves qualification BLOCKED. Corrected the line-1011 citation as described below. |
-| A6 | ACCEPT | Stages 7/18/19/21/29/30 and ENGINEERING now apply the guard to every mutation, explicitly including apply/recover/limits/offset/SD/one-shot/reset, and fresh acquisition. EUN=1 refuses immediately. EUN=0/busy=1 permits paced successful 0x04 re-reads within deadline/work cap; no transport-failure retries or writes before a safe word. Untimed try-fresh returns busy/not-ready instead of entering a wait. Guard reuse is restricted to one uninterrupted exclusive operation. |
+| A6 | ACCEPT, propagation corrected 2026-11-18 | ENGINEERING and the shared guard policy required every mutation/fresh acquisition, but stage 21 still had narrower wording at 6b173cc. The second follow-up now explicitly carries the full rule into stage 21 and the untimed busy/not-ready return into stages 7/21. EUN=1 refuses immediately; timed EUN=0/busy=1 permits only bounded successful guard re-reads, never transport retries or writes before a safe word. Guard reuse remains limited to one exclusive operation. |
 | A7 | ACCEPT | COMMON now permits research stages to create/update their named evidence artifacts, including stage 5's ledger checker/regressions, while omitting unrelated README/CHANGELOG/user-guide churn. This matches stages 4–7 and HANDOFFS. |
 
 A3 is carried through stages 8/11/14/18/19/29/31/37/38/41 and the shared
@@ -267,9 +276,10 @@ claimed from this source review alone.
 | B8 / CON-7 | ACCEPT | Stage 44 now refers to FULL_COVERAGE's six exact evidence columns. |
 | B9 / SAF-5 | ACCEPT | Stage 38 routes reset through stage 25's typed guarded TMP117/TMP119 operation; TMP116 rejects before I2C. Undocumented reset effects remain unknown. |
 
-The corresponding original response rows have been updated. This follow-up
-acknowledges missing edits instead of claiming that every correction was already
-present at cb73740.
+At `6b173cc`, the B-related original response rows changed were CON-6, CON-8,
+CON-11 and SIL-6. CON-12, CON-15, CON-7, SIL-10 and SAF-5 were unchanged;
+their claims became true through the missing prompt edits. This follow-up
+acknowledges those missing edits, not that they were already present at cb73740.
 
 ### C. Remaining prompt and tooling details
 
@@ -302,7 +312,7 @@ present at cb73740.
 
 | ID | Verdict | Disposition |
 |---|---|---|
-| D1 | ACCEPT | Updated the affected CON-6/11/12/15 and SIL-6/10 response claims alongside their now-present edits. Other changed rows also point to the refined startup/guard/flag/SDK/authorization rules. Original submitted findings remain historical text. |
+| D1 | ACCEPT, description corrected 2026-11-18 | The B-related response rows actually edited at 6b173cc were CON-6/8/11 and SIL-6. CON-12/15/7, SIL-10 and SAF-5 stayed byte-identical to cb73740; prompt edits made those claims true. Other response rows changed for startup/guard/flag/SDK/authorization rules. Original submitted findings remain historical text. |
 | D2 | ACCEPT | API-15 is PARTIAL: unused early scaffolding was removed, while the producer move remains rejected. BEH-7 is PARTIAL: sparse-polling clarification accepted, fallback/time-only/GPIO freshness claims rejected. |
 | D3 | ACCEPT | Validation now distinguishes the checker's PASS output from independently computed 61 producer IDs/263 required-input links. |
 | D4 | ACCEPT, qualified | All eight errata were checked and added to audit.md. SAF-4 EUN can only be set by writing 0x04 but POR/general call clear it; TMP114 supply and I/O limits differ; TMP116 lacks the claimed RC legend; original stage 13 did not claim Linux confirmed revision bits; the API-9/API-10/TOOL-5 citations were corrected; TMP1x2 preserves dirty across bind, unlike the intentional TMP11x policy. The earlier TMP117 audit already cited startup timing and p.7, but did not literally name the tRESET symbol at that line. |
@@ -313,7 +323,9 @@ EEPROM maintenance route or repeated approval requirement was introduced.
 
 ## Validation and remaining evidence
 
-Executed with Python 3.12.10 against the integrated working tree:
+Historical results: executed with Python 3.12.10 against the integrated working
+tree committed as `6b173cc`. The next review separately verifies 264 inputs;
+this run correctly measured 263 and is not retroactively rewritten.
 
 - `python scripts/check_promptset.py`: PASS for 44 stages, dependency DAG,
   handoffs, coverage IDs/owners, prose/index parity and links/PDF pages.

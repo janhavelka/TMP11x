@@ -37,7 +37,7 @@ At execution, inspect actual artifacts and their required evidence.
 
 Exact consumers are in SEQUENCE; descriptions below explain boundaries rather
 than duplicating every transitive consumer list. There are 61 produced IDs and
-263 declared input links after the 2026-11-17 finding review.
+264 declared input links after the 2026-11-18 follow-up review.
 
 | Stage | Produced IDs | Usable output and boundary |
 |---:|---|---|
@@ -50,7 +50,7 @@ than duplicating every transitive consumer list. There are 61 produced IDs and
 | 7 | `safety-policy` | `docs/eeprom-and-reset-policy.md` and refined stage 5 access/reset policy; guards/exclusions; consumers: see SEQUENCE. |
 | 8 | `api-contract` | `docs/api-contracts.md` and architecture; one-shot/binding/settings/failure contracts for all code. Declarations alone are not implementations. |
 | 9 | `owner-contract` | `docs/owner-operations.md`; immutable binding, clock, admission/result/cancellation rules; consumers: see SEQUENCE. |
-| 10 | `build-foundation`, `version-tools`, `host-test-entrypoint` | Real CMake library/test skeleton, scripts/generate_version.py, tools/check_version_sync.py and docs/testing.md; later stages add tests to this host entrypoint. |
+| 10 | `build-foundation`, `version-tools`, `host-test-entrypoint` | Real CMake library/test skeleton, scripts/generate_version.py, tools/check_version_sync.py and docs/testing.md; registers stage 5's validator and regressions, then later stages add tests to this host entrypoint. |
 | 11 | `value-types` | Pure Status/Config/model/value types and single capability table; consumers: see SEQUENCE. No I2C or device-success placeholders. |
 | 12 | `register-transport`, `command-table`, `register-fake` | Private checked transport, include/TMP11x/CommandTable.h and initial reusable test/support/FakeTmp11xDevice.{h,cpp}; literal ledger-derived test behavior, extended by later owners. Public unbound guards integrate at stage 14. |
 | 13 | `identity-engine` | Private identity engine using stage 12's binding view. Public identity/probe integration belongs to stage 14. |
@@ -76,13 +76,13 @@ than duplicating every transitive consumer list. There are 61 produced IDs and
 | 33 | `native-qualification` | Native correctness and source-consumer qualification; stages 37–39 extend the registered host suite with CLI/runner tests. |
 | 34 | `arduino-adapter-source`, `arduino-build-record` | Arduino fixed demo/byte-I/O adapter, identity, attempt counters and build record. Stage 38 attaches final CLI; resumed backend work refreshes the current handoff. |
 | 35 | `idf-adapter-source`, `idf-build-record` | Independent IDF fixed demo/byte-I/O adapter, identity, counters and build record. No Arduino dependency; stage 38 attaches CLI, resumed backend work refreshes it. |
-| 36 | `p4-consumer-source`, `p4-build-record` | P4 consumer source and build record using 35; no physical board needed for linking. Missing SDK/target remains explicit. |
+| 36 | `p4-consumer-source`, `p4-build-record` | P4 consumer source and build record using 35; no physical board needed for linking. Reuses an existing stage-42 coexistence sample if resuming later; missing SDK/target remains explicit. |
 | 37 | `cli-baseline`, `cli-protocol` | Shared observation CLI, docs/cli-protocol.md and golden transcripts in test/cli; complete grammar but only implemented help/routes. Host tests independent of MCU SDKs. |
 | 38 | `cli-complete`, `firmware-cli-handoff` | Complete CLI/jobs/help, host tests and docs/firmware-cli-handoff.md; attach available stage 34/35 adapters and refresh links, retaining pending target gates. |
 | 39 | `hil-runner` | tools/hil_tmp11x_runner.py and host unit/subprocess tests against the actual stage 37/38 fixture; concrete physical target/scope validation, optional physical-mode pyserial. |
 | 40 | `readonly-hil-record` | Read-only physical evidence or blocked record. Requires authorized fixture and one current CLI-integrated stage 34 or 35 image after stage 38. |
 | 41 | `volatile-hil-record` | Volatile/restore/soak evidence or blocked record; physical work requires stage 40's actual fixture qualification, not merely a report. |
-| 42 | `package-qualification`, `package-doc-tools` | Package/relocation/coexistence/docs qualification and tools/check_package.py + tools/check_doxygen.py; consumes available firmware sources separately from target link evidence. |
+| 42 | `package-qualification`, `package-doc-tools` | Package/relocation/coexistence/docs qualification and tools/check_package.py + tools/check_doxygen.py; reuses actual stage-36 coexistence source if available, otherwise creates the shared sample independently. Target links remain separate evidence. |
 | 43 | `ci-record` | Exact-SHA remote CI record including current CLI/Python suites and final firmware sources; absent access remains blocked, no physical port by default. |
 | 44 | `final-audit` | docs/reports/prompt_44.md audits all rows and available stage 36/40/41/43 evidence. After CI-covered fixes, run stage 43's procedure within this stage before closing; missing gates remain explicit. |
 

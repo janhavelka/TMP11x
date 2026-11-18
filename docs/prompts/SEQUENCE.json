@@ -195,7 +195,8 @@
       "consumes": [
         "tooling-plan",
         "api-contract",
-        "owner-contract"
+        "owner-contract",
+        "register-validator"
       ]
     },
     {

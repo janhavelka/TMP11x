@@ -49,16 +49,15 @@ unrelated I2C commands return BUSY while a job/result owns the instance.
 Stage 37 freezes a bounded request-ID envelope; responses echo that ID and
 session. No additional marker/alias command is needed solely for correlation.
 
-Stage 37 freezes optional `--startup first-ack` and
-`--startup at:<firmware_monotonic_ms>` for bind/begin/recover/invalidate.
-Bind defaults to FIRST_ACK; bare begin/recover use the existing valid seed or
-establish missing proof from FIRST_ACK. An explicit begin/recover option uses
-the same bus-silent `invalidateDeviceState(nextOrigin)` transition before
-starting, with BUSY/invalid-input rejection preserving prior state. Bare
-invalidate clears old proof to FIRST_ACK. Caller timestamps use the firmware
-hook epoch, never host wall time; both paths require stable power/no reset.
-After external power loss stop polling stale state, cancel/take any result,
-invalidate with a new seed, restore stable power and explicitly recover.
+There is no startup timestamp/seed argument or `--startup` option. Stage 37
+defines `invalidate` as stage 19's bus-silent `invalidateDeviceState()`;
+stage 38 wires it. Begin/recover reuse valid internal startup proof or establish
+missing proof with FIRST_ACK in the current operation. After external power
+loss stop using stale state, cancel/take any result, invalidate, restore stable
+power and explicitly recover. End keeps binding/desired settings but clears
+startup proof; unbind also removes binding. The firmware clock hook timestamps
+the first successful compatible read, requiring stable power/no outside reset
+from that read through dependent operations. Host timestamps are never inputs.
 
 Temporary test campaigns snapshot restorable settings and verify restoration
 or report failure. Restore only writable stable fields, with reset commands
@@ -76,12 +75,14 @@ would leave the temporary calibration in hardware. If the original value is
 unknown, refuse the campaign; if restoration cannot complete, report failure
 and remaining state instead of reporting a clean restore.
 
-Physical selection uses authorization traceable to the user's instruction or
-a named user-authored/explicitly user-approved record: board/port, exact
-part/address, bus/mux participants, upload and campaign scope. Agent reports
-can cite that authority but cannot create it; another fixture's record cannot
-authorize this one. Authorization persists within its granted scope, without
-automatic expiry or repeated confirmation. Stage 39 validates resolved inputs;
+Physical selection requires the directly readable authority defined in COMMON:
+a user instruction visible in current task context, or a record at a user-named
+path that the user wrote or approved in a visible user message. Read the grant
+itself, including board/port, exact part/address, bus/mux participants, upload
+and campaign scope. Agent reports, summaries and prior-session paraphrases
+cannot substitute for the grant. If neither source can be read directly,
+physical work is BLOCKED. A valid record persists across sessions within scope;
+no expiry or repeated confirmation is added. Stage 39 validates resolved inputs;
 verify target/route/address/compatible identity before mutation and after
 reconnect/reset/rebind/mismatch. Port enumeration and ID alone are insufficient.
 No mandatory user-written JSON file is needed. Default
