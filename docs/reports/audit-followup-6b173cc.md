@@ -7,7 +7,7 @@ No driver implementation or physical qualification is implied.
 
 Submitted-text SHA-256: `ffb4cb433c01450d646827a0a32451948ba8f28b95449bc9fe4cdd466df2c81b`. Hash only the text between
 the Submitted review and Response headings, UTF-8 without BOM, LF endings,
-trailing blank lines removed and exactly one final LF.
+leading and trailing blank lines removed and exactly one final LF.
 
 ## Submitted review
 
@@ -135,6 +135,12 @@ and push.
 
 ## Response - 2026-11-18
 
+The third check of `43ec747` accepted all 17 dispositions below. Both follow-ups
+were confirmed. COMMON and its fixture instructions now reserve authorization
+record edits for the user. A message-only grant applies while the user message
+is visible. Both reports now specify trimming leading and trailing blank lines
+when reproducing their submitted-review digests.
+
 The review targets the actual input HEAD and is relevant. ACCEPT denotes a
 supported correction; PARTIAL means the gap is valid but its remedy needs the
 qualification recorded below. Conditional findings 7/8 were assessed against
@@ -168,7 +174,7 @@ treated as evidence for that commit. No sibling or SDK source was changed.
 | 11 | ACCEPT | SILICON now labels the excluded-parts 0x0F zero expectation as an inference from generic non-indexed-read rules (TMP114 p.24; TMP118 p.23) plus maps (pp.29/26). Those rule sentences do not name 0x0F. CRC-disabled TMP114 remains fixture policy, not a quoted condition. |
 | 12 | ACCEPT | Added TMP116 p.17, TMP117 p.18 and TMP119 p.20 to SAF-4's erratum alongside reset-value register pages 29/30/37. The added pages explicitly describe general-call clearing of EUN. This citation correction does not permit general-call traffic in the driver. |
 | 13 | ACCEPT | Comparing cb73740 with 6b173cc confirms the named rows stayed byte-identical. Reworded the former report: B-related rows actually changed were CON-6/8/11 and SIL-6; CON-12/15/7, SIL-10 and SAF-5 became true through prompt edits. The report no longer claims every response row itself was edited. |
-| 14 | ACCEPT | Reproduced the old digest exactly from Submitted review text encoded as UTF-8 without BOM, CRLF line endings, no trailing blank lines and one final CRLF. Its header now states that scope/normalization. This report instead explicitly hashes its submitted section with LF endings; both are reproducible without access to an attachment directory. |
+| 14 | ACCEPT | Reproduced the old digest exactly from Submitted review text encoded as UTF-8 without BOM, CRLF line endings, leading and trailing blank lines removed and one final CRLF. Its header now states that scope/normalization. This report instead explicitly hashes its submitted section with LF endings; both are reproducible without access to an attachment directory. |
 | 15 | ACCEPT | Removed stage 36's unconditional forward packaging claim. Stage 42 reuses actual stage-36 coexistence application source if available; otherwise it creates the shared sample independently of P4/SDK availability. A later/resumed stage 36 reuses that source with P4 glue. HANDOFFS records conditional reuse, not a new required backward dependency or duplicate sample. |
 | 16 | ACCEPT | Corrected bit 11 and bits 10:2 spacing in the TMP117 extracted audit. No register mask or PDF bytes changed. |
 | 17 | ACCEPT, qualified | Immutable v5.5.5 source confirms the S2/S3 fixed bus-clear loop and default-kernel multiplication hazard. Stages 34/35 and the toolchain plan now require the separate recovery allowance and pre-SDK conversion cap, with boundary tests. “50 ms” is a fixed setting, not an exact wall-time maximum: strict `>` adds a tick, and setup/scheduling plus reachable call multiplicity remain bounded separately. CONFIG_FREERTOS_SMP=n identifies the default kernel source, not necessarily single-core execution; default dual-core S3 is affected. |

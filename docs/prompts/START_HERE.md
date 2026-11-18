@@ -61,9 +61,9 @@ subagents for bounded parallel reviews and tests when useful; the lead owns
 integration and Git. The first comprehensive remote CI checkpoint is prompt 43.
 No user-authorized physical TMP11x fixture means hardware stages 40–41 remain
 BLOCKED/NOT RUN, not falsely PASS; continue independent software work.
-Read the original authorization per COMMON: a user instruction visible in
-current context or a record at a user-named path written by the user or
-approved in a visible user message. Agent reports/summaries/prior-session
+Read the original grant per COMMON. A message-only grant applies while the
+user message is visible. To persist it, the user writes the grant into the record
+at a path they name. Agents never create or modify that record. Agent reports/summaries/prior-session
 paraphrases cannot substitute. If neither source is directly readable, physical
 work is BLOCKED; valid scoped records persist without repeated confirmation.
 

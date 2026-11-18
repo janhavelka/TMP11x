@@ -109,9 +109,10 @@ SHA; do not force-push.
 
 ## Blocked tasks and the final verdict
 
-Physical work requires directly readable authorization: either a user instruction
-visible in the current task context, or a record at a user-named path that the
-user wrote or approved in a user message visible in the current context. Read
+A fixture grant given only in a user message applies while that message is
+visible in the current task context. To persist the grant across sessions,
+the user writes it into the authorization record at a path they name. Agents
+never create or modify the authorization record. Read
 the instruction/record itself and verify its scope: board/port, exact part/address,
 bus/mux participants, upload and permitted observe/volatile/power-cycle actions.
 An agent report, summary or prior-session paraphrase is never the source of a
@@ -125,9 +126,7 @@ before a mutating campaign and again after reconnect/reset/rebind/mismatch;
 ID bits alone do not prove exact BOM model. An unexplained target change stops
 dependent work until its scope is resolved.
 If essential target/scope information is missing, keep dependent physical work
-BLOCKED and continue independent software work. Existing authorization persists
-only within its granted fixture/actions and constraints; a continuation or
-new report neither expands it nor automatically revokes it.
+BLOCKED and continue independent software work.
 
 A blocked stage keeps its exact remaining scope and required evidence. In a
 whole-set invocation, continue independent later work whose concrete inputs

@@ -75,9 +75,9 @@ would leave the temporary calibration in hardware. If the original value is
 unknown, refuse the campaign; if restoration cannot complete, report failure
 and remaining state instead of reporting a clean restore.
 
-Physical selection requires the directly readable authority defined in COMMON:
-a user instruction visible in current task context, or a record at a user-named
-path that the user wrote or approved in a visible user message. Read the grant
+Per COMMON, a message-only fixture grant applies while the user message is
+visible. To persist it, the user writes the grant into the authorization record
+at a path they name. Agents never create or modify that record. Read the grant
 itself, including board/port, exact part/address, bus/mux participants, upload
 and campaign scope. Agent reports, summaries and prior-session paraphrases
 cannot substitute for the grant. If neither source can be read directly,

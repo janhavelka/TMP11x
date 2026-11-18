@@ -7,8 +7,8 @@ No driver implementation, physical operation or stage completion is implied.
 
 Attachment SHA-256: `f5a4fe7e6630b2da045c7e92428d23d8a4841492706d8e072c72d8da5e029389`.
 Reproduce from the Submitted review text only (exclude its heading and the
-Response section): UTF-8 without BOM, normalize line endings to CRLF, remove
-blank lines at the end and append exactly one trailing CRLF. This hashes the
+Response section): remove leading and trailing blank lines, use UTF-8 without
+BOM, normalize line endings to CRLF and append exactly one trailing CRLF. This hashes the
 original attachment bytes, not the entire committed LF Markdown file.
 
 ## Submitted review

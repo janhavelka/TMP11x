@@ -44,17 +44,17 @@ interpretation or establish any of the implementation layers below.
   volatile state. HIL must not mutate EEPROM or undeclared bus devices;
   authorized mux routing is separate from sensor register writes.
 
-Read the original authorization per COMMON: a user instruction visible in current
-task context or a record at a user-named path, written by the user or approved
-in a visible user message. Verify board/serial port, exact model/address, bus
+Per COMMON, a message-only grant applies while the user message is visible.
+To persist the grant, the user writes it into the record at a path they name.
+Agents never create or modify the authorization record. Read the source and
+verify board/serial port, exact model/address, bus
 participants/route, upload and campaign scope. An agent report, summary or
 prior-session paraphrase may point to the grant but is never its source.
 If neither permitted source can be read directly, physical work is BLOCKED;
 valid records persist across sessions within scope. Another fixture's record
 grants no authority. Verify board/route/address/compatible identity before
 mutation and after reconnect/reset/rebind/mismatch; ID alone does not prove the
-exact model. Existing scope persists across continuation, without expansion or
-automatic expiry. Missing essentials block only dependent physical work; no
+exact model. Missing essentials block only dependent physical work; no
 mandatory JSON file or repeated approval when valid authorization exists.
 Default campaigns omit discovery; even an identity pointer byte may affect an
 unrelated device, so every candidate needs a known compatible protocol.
