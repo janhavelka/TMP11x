@@ -4,7 +4,7 @@ A new, framework-neutral C++17 driver project for TI TMP116 / TMP116N,
 TMP117 / TMP117M / TMP117N, and TMP119. TMP117 is the primary intended sensor.
 
 **The sensor driver is not implemented yet.** This
-repository contains the 44-stage implementation plan, source audits, pinned
+repository contains the 55-stage implementation and audit plan, source audits, pinned
 TI reference documents, and local preparation tools. There are no completed
 sensor, MCU build, or physical qualification claims.
 
@@ -12,7 +12,7 @@ sensor, MCU build, or physical qualification claims.
 
 - [Agent and execution guide](docs/prompts/START_HERE.md)
 - [Current progress](docs/prompts/PROGRESS.md) and [preparation report](docs/reports/preparation.md)
-- [Audit of all 44 prompts](docs/reports/promptset-audit.md)
+- [Audit of the original 44 prompts](docs/reports/promptset-audit.md)
 - [Review and responses to the 68-finding audit](docs/prompts/audit.md#response--2026-11-17)
 - [Datasheet/functionality gap audit](docs/reports/feature-gap-audit.md) and [complete feature requirements](docs/prompts/FULL_COVERAGE.md)
 - [Prompt handoff audit](docs/reports/handoff-audit.md) and [producer/consumer inventory](docs/prompts/HANDOFFS.md)

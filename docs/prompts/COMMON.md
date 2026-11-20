@@ -27,10 +27,10 @@ Preparatory evidence may be reused later after checking its hashes/revisions.
    A secondary library's API name alone does not establish semantic equivalence.
 4. At entry identify owned files, exact source evidence, tests, hardware
    availability and this stage's only delivered outcome.
-5. Check the active prompt's `Consumes` against actual producer artifacts and
-   required evidence, not numeric order alone. A planned ID or report is not
-   working code. Source can be usable while its producer's MCU link is blocked;
-   retain that missing gate and consume only the verified artifact scope.
+5. Follow the `prompts` array in SEQUENCE for execution order. Check the active
+   prompt's `Consumes` against actual producer artifacts and required evidence.
+   Verify the underlying artifacts directly. If a producer's MCU link is
+   blocked, retain that gate and consume only its verified source artifacts.
 
 ## Implement a complete work unit
 
@@ -74,6 +74,14 @@ review when it reduces risk. The lead owns shared public API, state machine,
 architecture, integration, exact-source decisions and all Git mutations. Have
 independent reviewers challenge precision, EEPROM safety and destructive reads.
 Do not require a specific model or paid account feature to do the work.
+
+Stages of type `audit` require parallel subagent review. Re-read the specified
+original prompts in full and have reviewers examine disjoint aspects of the
+actual change. The lead verifies findings directly, fixes confirmed in-scope
+gaps, repeats the affected verification and records the reviewed revisions,
+findings, fixes and final results. If a fix invalidates evidence from another
+stage, record the stale evidence and its owner in the handoff. If a run cannot
+use parallel reviewers, record the outstanding review and keep the audit gate open.
 
 ## Verify / checkpoint
 
@@ -131,13 +139,15 @@ BLOCKED and continue independent software work.
 A blocked stage keeps its exact remaining scope and required evidence. In a
 whole-set invocation, continue independent later work whose concrete inputs
 are satisfied; return if the dependency becomes available. An absent physical
-TMP116/TMP117/TMP119 fixture leaves stages 40–41 BLOCKED; software stages 42–44
-can still complete and report the overall product as hardware-unqualified.
+TMP116/TMP117/TMP119 fixture leaves stages 40–41 and audit 54 BLOCKED. Package,
+CI and final-review work can proceed on its own prerequisites and report the
+overall product as hardware-unqualified.
 No stage can be marked COMPLETE with required owned work missing; a final
 review/report can complete while reporting a PARTIAL overall qualification.
 
-Remote CI: stages 1–42 do not deliberately dispatch, poll or wait on remote CI;
-this overrides the generic major-change dispatch rule during this sequence.
+Remote CI: every stage before 43 in the execution sequence, including the
+interleaved audits, skips deliberate remote dispatch, polling and waiting.
+This overrides the generic major-change dispatch rule during this sequence.
 Stage 10 creates local test scaffolding; stage 43 creates the initial workflow
 and runs the comprehensive checkpoint. Preserve any automatic triggers and
 required protection already present; automatic runs are not forbidden. If

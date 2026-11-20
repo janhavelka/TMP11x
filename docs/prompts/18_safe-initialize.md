@@ -1,9 +1,9 @@
 # 18 — Implement EEPROM-safe initialization and configuration writes
 
 Apply [COMMON.md](COMMON.md) and root [AGENTS.md](../../AGENTS.md). Phase: **Portable device protocol, identity and trustworthy configuration**. Type: **software**.
-Prerequisites: [7](7_eeprom-reset-policy.md), [8](8_api-architecture.md), [9](9_owner-deadline-contract.md), [12](12_i2c-register-transport.md), [13](13_identity-selection.md), [14](14_binding-lifecycle.md), [16](16_temperature-codec.md), [17](17_config-codecs.md).
+Prerequisites: [7](7_eeprom-reset-policy.md), [8](8_api-architecture.md), [9](9_owner-deadline-contract.md), [12](12_i2c-register-transport.md), [13](13_identity-selection.md), [14](14_binding-lifecycle.md), [16](16_temperature-codec.md), [17](17_config-codecs.md), [47](47_audit-10-17.md).
 Produces: `safe-apply-engine`, `sync-initialize-recover`.
-Consumes: `safety-policy`, `api-contract`, `owner-contract`, `binding-api`, `public-identity-api`, `transport-health`, `temperature-codec`, `config-codec`, `latest-read-engine`, `behavior-contract`, `behavior-vectors`, `register-fake`.
+Consumes: `safety-policy`, `api-contract`, `owner-contract`, `binding-api`, `public-identity-api`, `transport-health`, `temperature-codec`, `config-codec`, `latest-read-engine`, `behavior-contract`, `behavior-vectors`, `register-fake`, `audit-10-17`.
 
 ## Objective and boundaries
 

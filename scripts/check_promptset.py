@@ -20,6 +20,8 @@ REQUIRED_SHARED = (
 LOCAL_LINK = re.compile(r"(?<!!)\[[^\]]*\]\(([^)]+)\)")
 PREREQUISITE_LINK = re.compile(r"\[([0-9]+)\]\(([^)]+)\)")
 ARTIFACT_ID = re.compile(r"[a-z][a-z0-9-]*")
+ORIGINAL_STAGE_COUNT = 44
+STAGE_IDS = set(range(1, 56))
 COVERAGE_IDS = {f"{prefix}{number:02d}" for prefix, count in (("R", 18), ("F", 20), ("X", 8))
                 for number in range(1, count + 1)}
 
@@ -58,7 +60,7 @@ def validate_coverage(root: Path) -> list[str]:
                 valid = False
                 break
             first, last = int(match[1]), int(match[2] or match[1])
-            if not 1 <= first <= last <= 44:
+            if not 1 <= first <= last <= ORIGINAL_STAGE_COUNT:
                 valid = False
                 break
             parsed.extend(range(first, last + 1))
@@ -115,11 +117,9 @@ def unique_json_object(pairs):
     return result
 
 
-def validate_handoffs(docs: Path, prompts: list) -> list[str]:
+def validate_handoffs(docs: Path, stages: dict[int, dict], positions: dict[int, int]) -> list[str]:
     """Validate planned ownership/reachability without requiring future files."""
     errors: list[str] = []
-    stages = {p["id"]: p for p in prompts if isinstance(p, dict)
-              and type(p.get("id")) is int and 1 <= p["id"] <= 44}
     declared: dict[tuple[int, str], list[str]] = {}
     producers: dict[str, int] = {}
     for n, item in stages.items():
@@ -157,7 +157,7 @@ def validate_handoffs(docs: Path, prompts: list) -> list[str]:
             if actual != [expected]:
                 errors.append(f"prompt {n}: prose {field} differs from SEQUENCE.json")
 
-    for n, item in stages.items():
+    for n in stages:
         ancestors: set[int] = set()
         pending = [n]
         while pending:
@@ -168,14 +168,15 @@ def validate_handoffs(docs: Path, prompts: list) -> list[str]:
             for dep in deps:
                 # Ignore malformed/forward edges here; the main validator reports
                 # them. Never recurse through invalid graphs or boolean IDs.
-                if type(dep) is int and dep in stages and dep < current and dep not in ancestors:
+                if (type(dep) is int and dep in positions
+                        and positions[dep] < positions[current] and dep not in ancestors):
                     ancestors.add(dep)
                     pending.append(dep)
         for artifact in declared.get((n, "consumes"), []):
             owner = producers.get(artifact)
             if owner is None:
                 errors.append(f"prompt {n}: consumed artifact {artifact} has no producer")
-            elif owner >= n:
+            elif positions[owner] >= positions[n]:
                 errors.append(f"prompt {n}: artifact {artifact} producer {owner} is not an earlier stage")
             elif owner not in ancestors:
                 errors.append(f"prompt {n}: artifact {artifact} producer {owner} is outside dependency closure")
@@ -193,8 +194,10 @@ def validate_handoffs(docs: Path, prompts: list) -> list[str]:
                 if n in rows:
                     errors.append(f"duplicate stage {n} in HANDOFFS inventory")
                 rows[n] = cells[1]
-        if set(rows) != set(range(1, 45)):
-            errors.append("HANDOFFS inventory must contain stages 1 through 44 exactly once")
+        if set(rows) != STAGE_IDS:
+            errors.append("HANDOFFS inventory must contain every stage exactly once")
+        elif list(rows) != list(stages):
+            errors.append("HANDOFFS inventory order differs from SEQUENCE.json")
         for (n, field), values in declared.items():
             if field == "produces" and rows.get(n) != ", ".join(f"`{v}`" for v in values):
                 errors.append(f"prompt {n}: HANDOFFS outputs differ from SEQUENCE.json")
@@ -220,23 +223,22 @@ def validate(root: Path) -> list[str]:
         return errors + [f"invalid SEQUENCE.json: {exc}"]
     if not isinstance(seq, dict):
         return errors + ["SEQUENCE.json must be an object"]
-    if type(seq.get("version")) is not int or seq["version"] != 1:
-        errors.append("SEQUENCE.json version must be 1")
+    if type(seq.get("version")) is not int or seq["version"] != 2:
+        errors.append("SEQUENCE.json version must be 2")
     ps = seq.get("prompts")
     if not isinstance(ps, list):
         return errors + ["SEQUENCE.json prompts must be an array"]
-    if len(ps) != 44:
-        errors.append(f"expected 44 prompts, found {len(ps)}")
-    errors.extend(validate_handoffs(docs, ps))
+    stages = {item["id"]: item for item in ps if isinstance(item, dict)
+              and type(item.get("id")) is int and item["id"] in STAGE_IDS}
+    if set(stages) != STAGE_IDS or len(ps) != len(STAGE_IDS):
+        errors.append("manifest must contain every stage ID exactly once")
+    positions = {n: position for position, n in enumerate(stages)}
+    errors.extend(validate_handoffs(docs, stages, positions))
     errors.extend(validate_coverage(root))
     page_counts, page_errors = pdf_page_counts(root)
     errors.extend(page_errors)
-    ids = [x.get("id") for x in ps if isinstance(x, dict)]
-    if ids != list(range(1, len(ps) + 1)):
-        errors.append("IDs must be contiguous ascending positive integers")
     allnames: set[str] = set()
-    filenames = {x.get("id"): x.get("file") for x in ps
-                 if isinstance(x, dict) and type(x.get("id")) is int}
+    filenames = {n: item.get("file") for n, item in stages.items()}
     index_path = docs / "README.md"
     index_rows = {}
     if index_path.is_file():
@@ -250,8 +252,10 @@ def validate(root: Path) -> list[str]:
                 if row_id in index_rows:
                     errors.append(f"duplicate stage {row_id} in README index")
                 index_rows[row_id] = cells[1:]
-    if set(index_rows) != set(range(1, 45)):
-        errors.append("README index must contain stages 1 through 44 exactly once")
+    if set(index_rows) != STAGE_IDS:
+        errors.append("README index must contain every stage exactly once")
+    elif list(index_rows) != list(stages):
+        errors.append("README index order differs from SEQUENCE.json")
     for item in ps:
         if not isinstance(item, dict):
             errors.append("non-object manifest item")
@@ -260,7 +264,8 @@ def validate(root: Path) -> list[str]:
         name = item.get("file")
         deps = item.get("depends_on")
         kind = item.get("kind")
-        if type(n) is not int or not isinstance(name, str) or not re.fullmatch(rf"{n}_[a-z0-9-]+\.md", name):
+        if (type(n) is not int or n not in positions or not isinstance(name, str)
+                or not re.fullmatch(rf"{n}_[a-z0-9-]+\.md", name)):
             errors.append(f"invalid prompt id or filename: {n!r} {name!r}")
             continue
         if name in allnames:
@@ -287,9 +292,10 @@ def validate(root: Path) -> list[str]:
                 errors.append(f"prompt {n}: missing heading {heading}")
         if f"docs/reports/prompt_{n}.md" not in t:
             errors.append(f"prompt {n}: missing stage report path")
-        if not isinstance(kind, str) or kind not in {"software", "physical", "ci"}:
+        if not isinstance(kind, str) or kind not in {"software", "physical", "ci", "audit"}:
             errors.append(f"prompt {n}: unrecognized kind: {kind!r}")
-        if not isinstance(deps, list) or any(type(d) is not int or d < 1 or d >= n for d in deps):
+        if not isinstance(deps, list) or any(
+                type(d) is not int or d not in positions or positions[d] >= positions[n] for d in deps):
             errors.append(f"prompt {n}: bad dependencies: {deps!r}")
         if isinstance(deps, list) and len(deps) != len(set(map(str,deps))):
             errors.append(f"prompt {n}: duplicate dependencies")
@@ -340,7 +346,8 @@ def main() -> int:
     if err:
         print(f"FAIL: {len(err)} promptset issue(s)")
         return 1
-    print("PASS: 44 stages, dependency DAG, handoffs, coverage IDs/owners, prose/index parity and links/PDF pages")
+    print(f"PASS: {len(STAGE_IDS)} stages, execution order, dependency DAG, handoffs, "
+          "coverage IDs/owners, prose/index parity and links/PDF pages")
     return 0
 
 if __name__ == "__main__":

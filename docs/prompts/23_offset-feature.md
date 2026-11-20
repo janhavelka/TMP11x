@@ -1,9 +1,9 @@
 # 23 — Implement hardware offset for TMP117/TMP119 only
 
 Apply [COMMON.md](COMMON.md) and root [AGENTS.md](../../AGENTS.md). Phase: **Features, safe measurements and diagnostics**. Type: **software**.
-Prerequisites: [4](4_family-identity.md), [5](5_register-ledger.md), [7](7_eeprom-reset-policy.md), [11](11_status-values.md), [12](12_i2c-register-transport.md), [16](16_temperature-codec.md), [17](17_config-codecs.md), [19](19_config-trust.md), [21](21_fresh-one-shot.md).
+Prerequisites: [4](4_family-identity.md), [5](5_register-ledger.md), [7](7_eeprom-reset-policy.md), [11](11_status-values.md), [12](12_i2c-register-transport.md), [16](16_temperature-codec.md), [17](17_config-codecs.md), [19](19_config-trust.md), [21](21_fresh-one-shot.md), [49](49_audit-20-21.md).
 Produces: `offset-feature`.
-Consumes: `variant-contract`, `register-ledger`, `safety-policy`, `temperature-codec`, `config-trust`, `sync-acquisition`, `safe-apply-engine`, `behavior-vectors`, `register-fake`.
+Consumes: `variant-contract`, `register-ledger`, `safety-policy`, `temperature-codec`, `config-trust`, `sync-acquisition`, `safe-apply-engine`, `behavior-vectors`, `register-fake`, `audit-20-21`.
 
 ## Objective and boundaries
 

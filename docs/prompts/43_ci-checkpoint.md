@@ -1,9 +1,9 @@
 # 43 — Run one dedicated remote CI integration checkpoint
 
 Apply [COMMON.md](COMMON.md) and root [AGENTS.md](../../AGENTS.md). Phase: **Package, CI and final review**. Type: **ci**.
-Prerequisites: [33](33_native-suite.md), [35](35_idf-examples.md), [42](42_package-docs.md).
+Prerequisites: [33](33_native-suite.md), [35](35_idf-examples.md), [42](42_package-docs.md), [55](55_audit-42.md).
 Produces: `ci-record`.
-Consumes: `native-qualification`, `idf-adapter-source`, `register-validator`, `version-tools`, `package-doc-tools`, `package-qualification`, `cli-complete`, `hil-runner`, `host-test-entrypoint`, `arduino-adapter-source`, `firmware-cli-handoff`.
+Consumes: `native-qualification`, `idf-adapter-source`, `register-validator`, `version-tools`, `package-doc-tools`, `package-qualification`, `cli-complete`, `hil-runner`, `host-test-entrypoint`, `arduino-adapter-source`, `firmware-cli-handoff`, `audit-42`.
 
 ## Objective and boundaries
 

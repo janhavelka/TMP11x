@@ -1,12 +1,15 @@
 # TMP11x implementation progress
 
 **State:** Repository preparation complete; sensor implementation NOT_STARTED.
-**Target:** 44 ordered prompts; TMP117 is primary, with all six selected BOM-model capability gates covered by every relevant stage.
+**Target:** 55 stages in manifest order, including 11 new audit checkpoints. TMP117 is primary, with all six selected BOM-model capability gates covered by every relevant stage.
 **Repository:** `main`, tracking `origin/main` at `https://github.com/janhavelka/TMP11x.git`.
 **Preparation input HEAD:** `6c5e4496d5c896af689228d4bee4382a53c20626` (clean and synchronized at entry).
 **Hardware:** Physical TMP11x board and test wiring NOT CONFIRMED.
 **Last completed stage:** 3 (intake scope clarified by the full promptset audit).
-**Last update:** 2026-11-18; see the [6b173cc second follow-up](../reports/audit-followup-6b173cc.md),
+**Last update:** 2026-11-20. The plan now interleaves independent audits with
+the original stages. Next eligible stage is 4.
+
+Preparation evidence includes the [6b173cc second follow-up](../reports/audit-followup-6b173cc.md),
 the [cb73740 follow-up](../reports/audit-followup-cb73740.md#response--2026-11-17),
 [individual audit responses](audit.md#response--2026-11-17),
 [full promptset audit](../reports/promptset-audit.md)
@@ -20,15 +23,32 @@ every planned deliverable a producer and checks consumer dependencies.
 | 2 | Toolchain/package/prompt workflow audit | COMPLETE — [report](../reports/prompt_2.md) |
 | 3 | Official source intake | COMPLETE — [report](../reports/prompt_3.md); optional TI code access gaps retained |
 | 4–7 | Model identity, field/timing ledger, safety policy | NOT_STARTED |
-| 8–15 | Architecture, package foundation, transport/identity/health | NOT_STARTED |
-| 16–27 | Temperature, config, fresh conversions, limits, offset, EEPROM-read, diagnostics | NOT_STARTED |
+| [45](45_audit-1-7.md) | Audit prompts 1–7 before freezing the API | NOT_STARTED |
+| 8–9 | Public API and owner contracts | NOT_STARTED |
+| [46](46_audit-8-9.md) | Audit prompts 8–9 before production code starts | NOT_STARTED |
+| 10–17 | Package foundation, transport, identity, health and codecs | NOT_STARTED |
+| [47](47_audit-10-17.md) | Audit prompts 10–17 before initialization writes | NOT_STARTED |
+| 18–19 | Safe initialization and configuration trust | NOT_STARTED |
+| [48](48_audit-18-19.md) | Audit prompts 18–19 before adding settings and acquisition | NOT_STARTED |
+| 20–21 | Conversion settings, fresh acquisition and one-shot | NOT_STARTED |
+| [49](49_audit-20-21.md) | Audit prompts 20–21 before extending synchronous features | NOT_STARTED |
+| 22–27 | Limits, offset, EEPROM reads, reset, diagnostics and synchronous API | NOT_STARTED |
+| [50](50_audit-22-27.md) | Audit prompts 22–27 before cooperative work | NOT_STARTED |
 | 28–33 | Cooperative owner operations and adversarial native tests | NOT_STARTED |
-| 34–39 | Arduino/IDF/P4 integration, CLI and Python runner | NOT_STARTED |
+| [51](51_audit-28-33.md) | Audit prompts 28–33 before firmware and CLI integration | NOT_STARTED |
+| 34–36 | Arduino, ESP-IDF and P4 integration | NOT_STARTED |
+| [52](52_audit-34-36.md) | Audit prompts 34–36 with P4 evidence where available | NOT_STARTED |
+| 37–39 | Shared CLI and Python HIL runner | NOT_STARTED |
+| [53](53_audit-37-39.md) | Audit prompts 37–39 before physical qualification and packaging | NOT_STARTED |
 | 40–41 | Physical HIL qualification (fixture-dependent) | NOT_STARTED; physical evidence NOT RUN |
-| 42–44 | Package/docs, one CI checkpoint, independent final audit | NOT_STARTED |
+| [54](54_audit-40-41.md) | Audit prompts 40–41 once physical evidence exists | NOT_STARTED; fixture-dependent |
+| 42 | Package and documentation | NOT_STARTED |
+| [55](55_audit-42.md) | Audit prompt 42 before CI and final closure | NOT_STARTED |
+| 43 | First remote CI checkpoint | NOT_STARTED |
+| 44 | Final independent audit | NOT_STARTED |
 
-All 44 prompts and shared contracts were audited; this does not execute their
-implementation work. Next implementation stage: 4, after verifying archive
+The planning review covered the original 44 prompts and shared contracts.
+Begin stage 4 after verifying archive
 integrity and relevant source revisions. Optional inaccessible TI source code
 does not gate datasheet research. Stage 6 retains the unreadable E2E DATA_READY
 race lead and stage 4 the exact-grade scope question. Do not infer implemented

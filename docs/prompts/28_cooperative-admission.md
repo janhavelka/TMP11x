@@ -1,9 +1,9 @@
 # 28 — Implement bus-silent jobs and exactly-once results
 
 Apply [COMMON.md](COMMON.md) and root [AGENTS.md](../../AGENTS.md). Phase: **Cooperative operation and exhaustive native qualification**. Type: **software**.
-Prerequisites: [9](9_owner-deadline-contract.md), [14](14_binding-lifecycle.md), [15](15_passive-health.md), [27](27_sync-helpers-cache.md).
+Prerequisites: [9](9_owner-deadline-contract.md), [14](14_binding-lifecycle.md), [15](15_passive-health.md), [27](27_sync-helpers-cache.md), [50](50_audit-22-27.md).
 Produces: `job-lifecycle`.
-Consumes: `owner-contract`, `binding-api`, `transport-health`, `config-trust`, `sync-api`, `register-fake`.
+Consumes: `owner-contract`, `binding-api`, `transport-health`, `config-trust`, `sync-api`, `register-fake`, `audit-22-27`.
 
 ## Objective and boundaries
 

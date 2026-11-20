@@ -25,8 +25,9 @@ You are the lead coding agent in my new TMP11x repository.
 Read root AGENTS.md, README.md, docs/prompts/START_HERE.md,
 docs/prompts/README.md, docs/prompts/COMMON.md, HANDOFFS.md, SEQUENCE.json, and relevant
 shared contracts before changing implementation. Verify existing preparation
-and implementation artifacts. Follow prompts 1–44 in ascending numeric order,
-resuming from PROGRESS.md if prior work exists. Do not run later prompts if
+and implementation artifacts. Follow the prompts array in SEQUENCE.json in
+its listed order, including the interleaved audits. Resume from PROGRESS.md if
+prior work exists. Do not run later prompts if
 specific required inputs are unavailable; preserve exact blocked obligations
 and proceed with independent eligible work. Do not ask for routine approval.
 
@@ -56,11 +57,11 @@ read-only EEPROM diagnostics; no nonvolatile writes/general-call reset.
 Implement each prompt completely with focused tests, related Doxygen/docs,
 a report under docs/reports/prompt_N.md, and a PROGRESS update. Commit and
 push verified meaningful work on the existing checked-out branch if origin/access
-permit; never modify sibling repositories or make per-prompt branches. Use
-subagents for bounded parallel reviews and tests when useful; the lead owns
-integration and Git. The first comprehensive remote CI checkpoint is prompt 43.
-No user-authorized physical TMP11x fixture means hardware stages 40–41 remain
-BLOCKED/NOT RUN, not falsely PASS; continue independent software work.
+permit; never modify sibling repositories or make per-prompt branches. Run
+parallel subagent reviews wherever an audit prompt requires them. The lead
+owns integration and Git. The first comprehensive remote CI checkpoint is
+prompt 43. If physical stages 40–41 and audit 54 lack required physical
+evidence, record BLOCKED/NOT RUN and continue independent software work.
 Read the original grant per COMMON. A message-only grant applies while the
 user message is visible. To persist it, the user writes the grant into the record
 at a path they name. Agents never create or modify that record. Agent reports/summaries/prior-session
@@ -87,18 +88,18 @@ blocked, record exact outstanding requirements without fake stubs.
 ## Copy/paste: resume
 
 ```text
-Read docs/prompts/PROGRESS.md, HANDOFFS.md and SEQUENCE.json. Resume the earliest usable
-incomplete stage in ascending numeric order. Verify actual prerequisite
+Read docs/prompts/PROGRESS.md, HANDOFFS.md and SEQUENCE.json. Resume the first
+eligible unfinished stage in the prompts array. Verify actual prerequisite
 artifacts, unchanged source references and local Git state before continuing.
 Stop after that stage unless the user explicitly requested the whole remaining
 sequence. Do not rerun already verified unaffected work. Record partial/blocked
 hardware separately from software completion.
 ```
 
-**Execution:** File names use `1_...md`, `2_...md`, ... `44_...md`, not
-lexicographic order. Only a deliberate whole-set instruction authorizes
-continuing through all stages in one agent task. A single-stage instruction
-ends after one stage. The [handoff inventory](HANDOFFS.md) distinguishes source
-artifacts from build/fixture evidence and assigns forward integration owners;
-verify it at each boundary instead of assuming every earlier stage delivered
-every later API or tool.
+Stage numbers are stable identifiers for prompt files, reports and numeric
+completion markers. Use the manifest order when choosing the next stage for
+a manual or unattended run. A run instruction that requires working alone
+can prepare an audit, but completion requires a run that permits its parallel
+review. Keep the outstanding review in the handoff and continue eligible work
+where the dependency graph allows. The [handoff inventory](HANDOFFS.md)
+distinguishes source artifacts from build and fixture evidence.

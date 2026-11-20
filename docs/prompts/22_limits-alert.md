@@ -1,9 +1,9 @@
 # 22 — Implement temperature limits, therm/alert and ALERT pin
 
 Apply [COMMON.md](COMMON.md) and root [AGENTS.md](../../AGENTS.md). Phase: **Features, safe measurements and diagnostics**. Type: **software**.
-Prerequisites: [5](5_register-ledger.md), [6](6_timing-status.md), [7](7_eeprom-reset-policy.md), [16](16_temperature-codec.md), [17](17_config-codecs.md), [19](19_config-trust.md), [21](21_fresh-one-shot.md).
+Prerequisites: [5](5_register-ledger.md), [6](6_timing-status.md), [7](7_eeprom-reset-policy.md), [16](16_temperature-codec.md), [17](17_config-codecs.md), [19](19_config-trust.md), [21](21_fresh-one-shot.md), [49](49_audit-20-21.md).
 Produces: `limits-alert`.
-Consumes: `register-ledger`, `behavior-vectors`, `temperature-codec`, `config-codec`, `config-trust`, `sync-acquisition`, `safe-apply-engine`, `register-fake`.
+Consumes: `register-ledger`, `behavior-vectors`, `temperature-codec`, `config-codec`, `config-trust`, `sync-acquisition`, `safe-apply-engine`, `register-fake`, `audit-20-21`.
 
 ## Objective and boundaries
 

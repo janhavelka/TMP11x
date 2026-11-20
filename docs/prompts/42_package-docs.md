@@ -1,9 +1,9 @@
 # 42 — Finish packaged consumers, public Doxygen and user documentation
 
 Apply [COMMON.md](COMMON.md) and root [AGENTS.md](../../AGENTS.md). Phase: **Package, CI and final review**. Type: **software**.
-Prerequisites: [33](33_native-suite.md), [34](34_arduino-examples.md), [35](35_idf-examples.md), [38](38_cli-device-operations.md), [39](39_python-hil-runner.md).
+Prerequisites: [33](33_native-suite.md), [34](34_arduino-examples.md), [35](35_idf-examples.md), [38](38_cli-device-operations.md), [39](39_python-hil-runner.md), [52](52_audit-34-36.md), [53](53_audit-37-39.md).
 Produces: `package-qualification`, `package-doc-tools`.
-Consumes: `native-qualification`, `version-tools`, `board-guide`, `arduino-adapter-source`, `idf-adapter-source`, `cli-complete`, `firmware-cli-handoff`, `hil-runner`, `arduino-build-record`, `idf-build-record`, `host-test-entrypoint`.
+Consumes: `native-qualification`, `version-tools`, `board-guide`, `arduino-adapter-source`, `idf-adapter-source`, `cli-complete`, `firmware-cli-handoff`, `hil-runner`, `arduino-build-record`, `idf-build-record`, `host-test-entrypoint`, `audit-34-36`, `audit-37-39`.
 
 ## Objective and boundaries
 

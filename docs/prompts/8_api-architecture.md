@@ -1,9 +1,9 @@
 # 8 — Freeze public API and variant architecture
 
 Apply [COMMON.md](COMMON.md) and root [AGENTS.md](../../AGENTS.md). Phase: **Architecture and package foundation**. Type: **software**.
-Prerequisites: [1](1_ecosystem-core-audit.md), [2](2_tooling-peer-audit.md), [4](4_family-identity.md), [5](5_register-ledger.md), [6](6_timing-status.md), [7](7_eeprom-reset-policy.md).
+Prerequisites: [1](1_ecosystem-core-audit.md), [2](2_tooling-peer-audit.md), [4](4_family-identity.md), [5](5_register-ledger.md), [6](6_timing-status.md), [7](7_eeprom-reset-policy.md), [45](45_audit-1-7.md).
 Produces: `api-contract`.
-Consumes: `ecosystem-audit`, `tooling-plan`, `variant-contract`, `register-ledger`, `behavior-contract`, `safety-policy`, `feature-ledger`.
+Consumes: `ecosystem-audit`, `tooling-plan`, `variant-contract`, `register-ledger`, `behavior-contract`, `safety-policy`, `feature-ledger`, `audit-1-7`.
 
 ## Objective and boundaries
 

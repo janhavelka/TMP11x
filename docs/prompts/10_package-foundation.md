@@ -1,9 +1,9 @@
 # 10 — Create the independent buildable library skeleton
 
 Apply [COMMON.md](COMMON.md) and root [AGENTS.md](../../AGENTS.md). Phase: **Architecture and package foundation**. Type: **software**.
-Prerequisites: [2](2_tooling-peer-audit.md), [8](8_api-architecture.md), [9](9_owner-deadline-contract.md).
+Prerequisites: [2](2_tooling-peer-audit.md), [8](8_api-architecture.md), [9](9_owner-deadline-contract.md), [46](46_audit-8-9.md).
 Produces: `build-foundation`, `version-tools`, `host-test-entrypoint`.
-Consumes: `tooling-plan`, `api-contract`, `owner-contract`, `register-validator`.
+Consumes: `tooling-plan`, `api-contract`, `owner-contract`, `register-validator`, `audit-8-9`.
 
 ## Objective and boundaries
 
@@ -24,7 +24,7 @@ Inspect TMP1x2 and OPT4001 CMake, metadata, tests-OFF consumer, generated Versio
 
 ## Verification and exit criteria
 
-Stages 1–42 add no initial `.github/workflows/*`; stage 43 owns their creation.
+Stage 43 owns creation of the initial `.github/workflows/*`.
 Preserve any workflows/triggers/protection already present rather than deleting
 them to enforce this sequencing rule. Local test scaffolding is required now.
 

@@ -23,7 +23,8 @@ source of project guidance; `CLAUDE.md` imports it.
 
 For numbered prompt execution, follow the checkpoint policy in
 [COMMON.md](docs/prompts/COMMON.md); it overrides deliberate remote-CI dispatch,
-polling and waiting under the major-change rule for stages 1–42. Stage 43 owns
+polling and waiting under the major-change rule for every stage before 43 in
+the execution sequence, including the interleaved audits. Stage 43 owns
 the first workflow/checkpoint; stage 44 reruns that procedure for CI-covered
 fixes before final closure. Keep existing automatic workflow triggers intact.
 
@@ -54,8 +55,9 @@ fixes before final closure. Keep existing automatic workflow triggers intact.
   [PROGRESS](docs/prompts/PROGRESS.md) for current evidence. Read COMMON and the
   selected prompt before stage work. Verify actual artifacts; plans are not
   implemented behavior or passing tests.
-- [SEQUENCE](docs/prompts/SEQUENCE.json) owns ordering, dependencies and
-  producer/consumer IDs; [HANDOFFS](docs/prompts/HANDOFFS.md) explains artifact
+- The [SEQUENCE](docs/prompts/SEQUENCE.json) `prompts` array defines execution
+  order. Stage IDs stay stable for filenames, reports and completion markers.
+  [HANDOFFS](docs/prompts/HANDOFFS.md) explains artifact
   boundaries and integration owners. Update connected contracts together.
 - Prefer small, direct changes to existing owners. Add abstractions only for
   a concrete current caller or test. Do not introduce speculative frameworks,

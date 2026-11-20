@@ -1,9 +1,9 @@
 # 37 — Create one shared bounded diagnostic CLI engine
 
 Apply [COMMON.md](COMMON.md) and root [AGENTS.md](../../AGENTS.md). Phase: **Firmware, CLI and runner integrations**. Type: **software**.
-Prerequisites: [27](27_sync-helpers-cache.md), [28](28_cooperative-admission.md), [30](30_cooperative-measurement.md), [33](33_native-suite.md).
+Prerequisites: [27](27_sync-helpers-cache.md), [28](28_cooperative-admission.md), [30](30_cooperative-measurement.md), [33](33_native-suite.md), [51](51_audit-28-33.md).
 Produces: `cli-baseline`, `cli-protocol`.
-Consumes: `sync-api`, `job-lifecycle`, `measurement-jobs`, `native-qualification`, `host-test-entrypoint`, `version-tools`.
+Consumes: `sync-api`, `job-lifecycle`, `measurement-jobs`, `native-qualification`, `host-test-entrypoint`, `version-tools`, `audit-28-33`.
 
 ## Objective and boundaries
 

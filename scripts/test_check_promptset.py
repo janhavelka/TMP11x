@@ -70,6 +70,32 @@ class PromptsetCheckerTests(unittest.TestCase):
         path.write_text(json.dumps(info), encoding="utf-8")
         self.assertTrue(any("bad dependencies" in s for s in validate(self.root)))
 
+    def test_audit_gate_uses_execution_order(self):
+        path = self.root / "docs/prompts/SEQUENCE.json"
+        info = json.loads(path.read_text(encoding="utf-8"))
+        prompts = info["prompts"]
+        audit = next(i for i, item in enumerate(prompts) if item["id"] == 45)
+        self.assertEqual([item["id"] for item in prompts[audit - 1:audit + 2]], [7, 45, 8])
+        self.assertIn(45, prompts[audit + 1]["depends_on"])
+        prompts[audit], prompts[audit + 1] = prompts[audit + 1], prompts[audit]
+        path.write_text(json.dumps(info), encoding="utf-8")
+        errors = validate(self.root)
+        self.assertTrue(any("prompt 8: bad dependencies" in error for error in errors))
+        self.assertTrue(any("artifact audit-1-7 producer 45 is not an earlier stage" in error
+                            for error in errors))
+
+    def test_stage_tables_follow_manifest_order(self):
+        for filename, message in (("README.md", "README index"), ("HANDOFFS.md", "HANDOFFS inventory")):
+            with self.subTest(file=filename):
+                path = self.root / "docs/prompts" / filename
+                original = path.read_text(encoding="utf-8")
+                lines = original.splitlines()
+                audit = next(i for i, line in enumerate(lines) if line.startswith("| 45 |"))
+                lines[audit], lines[audit + 1] = lines[audit + 1], lines[audit]
+                path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+                self.assertEqual(validate(self.root), [f"{message} order differs from SEQUENCE.json"])
+                path.write_text(original, encoding="utf-8")
+
     def test_missing_required_section(self):
         path = self.root / "docs/prompts/1_ecosystem-core-audit.md"
         path.write_text(path.read_text(encoding="utf-8").replace("## Source audit", "## Sources"), encoding="utf-8")
@@ -131,7 +157,7 @@ class PromptsetCheckerTests(unittest.TestCase):
     def edit_handoff(self, stage, field, value, sync_prose=True):
         path = self.root / "docs/prompts/SEQUENCE.json"
         info = json.loads(path.read_text(encoding="utf-8"))
-        item = info["prompts"][stage - 1]
+        item = next(item for item in info["prompts"] if item["id"] == stage)
         item[field] = value
         path.write_text(json.dumps(info), encoding="utf-8")
         if sync_prose:
@@ -152,8 +178,8 @@ class PromptsetCheckerTests(unittest.TestCase):
                 self.assertTrue(any("not an earlier stage" in s for s in validate(self.root)))
 
     def test_handoff_requires_dependency_path(self):
-        # Stage 34 precedes host CLI37 numerically but is deliberately not a
-        # mandatory host prerequisite. Simply naming it cannot add that edge.
+        # Stage 34 precedes host CLI37 in the sequence but is deliberately
+        # optional for host work. Naming its artifact cannot add that edge.
         self.edit_handoff(37, "consumes", ["arduino-adapter-source"])
         self.assertTrue(any("outside dependency closure" in s for s in validate(self.root)))
 

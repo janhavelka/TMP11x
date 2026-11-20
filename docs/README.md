@@ -2,7 +2,7 @@
 
 The project is in preparation; driver implementation has not started.
 
-- [Execution guide](prompts/START_HERE.md), [44-stage index](prompts/README.md),
+- [Execution guide](prompts/START_HERE.md), [55-stage index](prompts/README.md),
   and [current progress](prompts/PROGRESS.md)
 - [Preparation evidence](reports/preparation.md) and [report index](reports/index.md)
 - [Full promptset audit and remaining source conflicts](reports/promptset-audit.md)

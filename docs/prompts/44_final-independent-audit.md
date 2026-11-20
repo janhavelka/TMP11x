@@ -1,19 +1,31 @@
 # 44 — Perform independent silicon/API/safety/consumer closure
 
-Apply [COMMON.md](COMMON.md) and root [AGENTS.md](../../AGENTS.md). Phase: **Package, CI and final review**. Type: **software**.
-Prerequisites: [31](31_failure-recovery.md), [32](32_variant-model-fixtures.md), [33](33_native-suite.md), [38](38_cli-device-operations.md), [39](39_python-hil-runner.md), [42](42_package-docs.md).
+Apply [COMMON.md](COMMON.md) and root [AGENTS.md](../../AGENTS.md). Phase: **Package, CI and final review**. Type: **audit**.
+Prerequisites: [31](31_failure-recovery.md), [32](32_variant-model-fixtures.md), [33](33_native-suite.md), [38](38_cli-device-operations.md), [39](39_python-hil-runner.md), [42](42_package-docs.md), [55](55_audit-42.md).
 Produces: `final-audit`.
-Consumes: `fault-closure`, `variant-fixtures`, `native-qualification`, `cli-complete`, `hil-runner`, `package-qualification`, `feature-ledger`.
+Consumes: `fault-closure`, `variant-fixtures`, `native-qualification`, `cli-complete`, `hil-runner`, `package-qualification`, `feature-ledger`, `audit-42`.
 
 ## Objective and boundaries
 
-Review the completed implementation from first principles, fix substantive defects and close software scope with precise evidence-based status by exact variant.
+Re-read original prompts 1–43 in full using the [ordered index](README.md)
+and perform a fresh, independent audit of the completed work. Close software
+scope with precise evidence-based status by exact variant.
 
 ## Source audit
 
-Ask an independent reviewer to trace original TI PDF register fields and side effects against actual production source, literal tests and package consumers. Recheck TMP1x2 public naming/ownership and the complete accepted TMP11x requirement/feature matrix. Audit the stage 43 CI record and stage 40/41 physical records if available without treating them as unconditional software prerequisites.
+Trace original TI PDF register fields and side effects against actual production
+source, literal tests and package consumers. Recheck TMP1x2 public naming and
+ownership and the accepted TMP11x requirement matrix. Review available stage 43
+CI evidence and stage 40/41 physical evidence, including stage 54 findings if
+available. Apply COMMON's separate evidence gates to final qualification.
 
 ## Complete implementation work
+
+Use subagents in parallel to inspect requirements coverage, implementation
+correctness, edge cases, tests, scope, and code simplicity. Verify their findings
+against the actual code, diff, original sources and tests independently of
+earlier summaries. Fix every confirmed gap or bug within the original scope.
+Prefer simple, readable corrections and remove unnecessary complexity.
 
 - Review device ID/revision policy, TMP116 0x07 versus TMP117/TMP119 0x07, EEPROM lock/busy and blocked programming, DATA_READY/ALERT destructive reads, threshold order, signed temperature arithmetic and 32-bit timing wrap.
 - Reconcile the canonical FULL_COVERAGE evidence columns row-by-row for TMP116/TMP116N, TMP117/M/N and TMP119, including stage 36's P4 evidence or recorded limitation. Software/hardware suffix grades are not equivalent to individually measured accuracy qualifications. EEPROM traceability content and a readable ID do not establish calibrated system accuracy.
@@ -27,7 +39,11 @@ Ask an independent reviewer to trace original TI PDF register fields and side ef
 
 ## Verification and exit criteria
 
-Run final focused/integrated software tests and docs/package checks affected by findings; report the six canonical FULL_COVERAGE evidence columns separately, with the exact SHA for remote-CI evidence. Overall status remains PARTIAL if required physical/model evidence remains unavailable.
+Repeat required verification and continue until the implementation satisfies
+the original prompts. Run the affected focused and integrated software tests
+and docs/package checks. Report the six canonical FULL_COVERAGE evidence columns
+separately, with the exact SHA for remote CI. Overall status remains PARTIAL if
+required physical or model evidence remains unavailable.
 
 ## Documentation and delegation
 
@@ -44,8 +60,10 @@ Do not run sibling suites. Follow COMMON for remote-CI dispatch/poll/wait policy
 
 For each closed software unit, run appropriate focused local checks; inspect
 both working and staged diffs; record actual commands, versions, commit and
-PASS/FAIL/NOT RUN/BLOCKED. Write `docs/reports/prompt_44.md` with sources,
-owned artifacts, named test cases and open evidence gates. Update
+PASS/FAIL/NOT RUN/BLOCKED. Finish with a concise report in
+`docs/reports/prompt_44.md` covering audit findings, fixes made, and final
+verification results. Include sources, owned artifacts, named test cases and
+open evidence gates. Update
 `docs/prompts/PROGRESS.md`, commit and sync verified meaningful work on the existing checked-out branch
 when authenticated upstream is configured, and verify synchronization. Keep
 missing physical/SDK evidence explicit; never claim tests not run.

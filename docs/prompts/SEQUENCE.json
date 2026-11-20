@@ -1,7 +1,7 @@
 {
-  "version": 1,
+  "version": 2,
   "scope": "New standalone TMP11x C++17 library: TMP116/TMP116N, TMP117/TMP117M/TMP117N, TMP119",
-  "execution_order": "Ascending numeric order among ready prompts. Blocked physical/SDK evidence remains open; proceed with independent work.",
+  "execution_order": "Read prompts in array order among eligible stages. IDs are stable identifiers. Blocked physical or SDK evidence remains open; proceed with independent work.",
   "state": "PLANNED; no implementation or hardware evidence shipped by this promptset",
   "prompts": [
     {
@@ -130,6 +130,38 @@
       ]
     },
     {
+      "id": 45,
+      "file": "45_audit-1-7.md",
+      "title": "Audit preparation and silicon evidence (prompts 1–7)",
+      "phase": "Independent review",
+      "kind": "audit",
+      "depends_on": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ],
+      "produces": [
+        "audit-1-7"
+      ],
+      "consumes": [
+        "ecosystem-audit",
+        "tooling-plan",
+        "ti-archive",
+        "variant-contract",
+        "board-guide",
+        "register-ledger",
+        "feature-ledger",
+        "register-validator",
+        "behavior-contract",
+        "behavior-vectors",
+        "safety-policy"
+      ]
+    },
+    {
       "id": 8,
       "file": "8_api-architecture.md",
       "title": "Freeze public API and variant architecture",
@@ -141,7 +173,8 @@
         4,
         5,
         6,
-        7
+        7,
+        45
       ],
       "produces": [
         "api-contract"
@@ -153,7 +186,8 @@
         "register-ledger",
         "behavior-contract",
         "safety-policy",
-        "feature-ledger"
+        "feature-ledger",
+        "audit-1-7"
       ]
     },
     {
@@ -177,6 +211,24 @@
       ]
     },
     {
+      "id": 46,
+      "file": "46_audit-8-9.md",
+      "title": "Audit API and owner contracts (prompts 8–9)",
+      "phase": "Independent review",
+      "kind": "audit",
+      "depends_on": [
+        8,
+        9
+      ],
+      "produces": [
+        "audit-8-9"
+      ],
+      "consumes": [
+        "api-contract",
+        "owner-contract"
+      ]
+    },
+    {
       "id": 10,
       "file": "10_package-foundation.md",
       "title": "Create the independent buildable library skeleton",
@@ -185,7 +237,8 @@
       "depends_on": [
         2,
         8,
-        9
+        9,
+        46
       ],
       "produces": [
         "build-foundation",
@@ -196,7 +249,8 @@
         "tooling-plan",
         "api-contract",
         "owner-contract",
-        "register-validator"
+        "register-validator",
+        "audit-8-9"
       ]
     },
     {
@@ -378,6 +432,42 @@
       ]
     },
     {
+      "id": 47,
+      "file": "47_audit-10-17.md",
+      "title": "Audit library foundation and read path (prompts 10–17)",
+      "phase": "Independent review",
+      "kind": "audit",
+      "depends_on": [
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17
+      ],
+      "produces": [
+        "audit-10-17"
+      ],
+      "consumes": [
+        "build-foundation",
+        "version-tools",
+        "host-test-entrypoint",
+        "value-types",
+        "register-transport",
+        "command-table",
+        "register-fake",
+        "identity-engine",
+        "binding-api",
+        "public-identity-api",
+        "transport-health",
+        "temperature-codec",
+        "latest-read-engine",
+        "config-codec"
+      ]
+    },
+    {
       "id": 18,
       "file": "18_safe-initialize.md",
       "title": "Implement EEPROM-safe initialization and configuration writes",
@@ -391,7 +481,8 @@
         13,
         14,
         16,
-        17
+        17,
+        47
       ],
       "produces": [
         "safe-apply-engine",
@@ -409,7 +500,8 @@
         "latest-read-engine",
         "behavior-contract",
         "behavior-vectors",
-        "register-fake"
+        "register-fake",
+        "audit-10-17"
       ]
     },
     {
@@ -439,6 +531,25 @@
       ]
     },
     {
+      "id": 48,
+      "file": "48_audit-18-19.md",
+      "title": "Audit safe initialization and configuration trust (prompts 18–19)",
+      "phase": "Independent review",
+      "kind": "audit",
+      "depends_on": [
+        18,
+        19
+      ],
+      "produces": [
+        "audit-18-19"
+      ],
+      "consumes": [
+        "safe-apply-engine",
+        "sync-initialize-recover",
+        "config-trust"
+      ]
+    },
+    {
       "id": 20,
       "file": "20_conversion-settings.md",
       "title": "Implement continuous operation, averaging and cycle timing",
@@ -450,7 +561,8 @@
         16,
         17,
         18,
-        19
+        19,
+        48
       ],
       "produces": [
         "conversion-settings"
@@ -461,7 +573,8 @@
         "config-codec",
         "safe-apply-engine",
         "config-trust",
-        "register-fake"
+        "register-fake",
+        "audit-18-19"
       ]
     },
     {
@@ -493,6 +606,24 @@
       ]
     },
     {
+      "id": 49,
+      "file": "49_audit-20-21.md",
+      "title": "Audit conversion settings and freshness (prompts 20–21)",
+      "phase": "Independent review",
+      "kind": "audit",
+      "depends_on": [
+        20,
+        21
+      ],
+      "produces": [
+        "audit-20-21"
+      ],
+      "consumes": [
+        "conversion-settings",
+        "sync-acquisition"
+      ]
+    },
+    {
       "id": 22,
       "file": "22_limits-alert.md",
       "title": "Implement temperature limits, therm/alert and ALERT pin",
@@ -505,7 +636,8 @@
         16,
         17,
         19,
-        21
+        21,
+        49
       ],
       "produces": [
         "limits-alert"
@@ -518,7 +650,8 @@
         "config-trust",
         "sync-acquisition",
         "safe-apply-engine",
-        "register-fake"
+        "register-fake",
+        "audit-20-21"
       ]
     },
     {
@@ -536,7 +669,8 @@
         16,
         17,
         19,
-        21
+        21,
+        49
       ],
       "produces": [
         "offset-feature"
@@ -550,7 +684,8 @@
         "sync-acquisition",
         "safe-apply-engine",
         "behavior-vectors",
-        "register-fake"
+        "register-fake",
+        "audit-20-21"
       ]
     },
     {
@@ -566,7 +701,8 @@
         11,
         12,
         13,
-        19
+        19,
+        49
       ],
       "produces": [
         "readonly-eeprom"
@@ -578,7 +714,8 @@
         "register-transport",
         "public-identity-api",
         "config-trust",
-        "register-fake"
+        "register-fake",
+        "audit-20-21"
       ]
     },
     {
@@ -677,6 +814,32 @@
       ]
     },
     {
+      "id": 50,
+      "file": "50_audit-22-27.md",
+      "title": "Audit synchronous features and diagnostics (prompts 22–27)",
+      "phase": "Independent review",
+      "kind": "audit",
+      "depends_on": [
+        22,
+        23,
+        24,
+        25,
+        26,
+        27
+      ],
+      "produces": [
+        "audit-22-27"
+      ],
+      "consumes": [
+        "limits-alert",
+        "offset-feature",
+        "readonly-eeprom",
+        "device-reset",
+        "diagnostics",
+        "sync-api"
+      ]
+    },
+    {
       "id": 28,
       "file": "28_cooperative-admission.md",
       "title": "Implement bus-silent jobs and exactly-once results",
@@ -686,7 +849,8 @@
         9,
         14,
         15,
-        27
+        27,
+        50
       ],
       "produces": [
         "job-lifecycle"
@@ -697,7 +861,8 @@
         "transport-health",
         "config-trust",
         "sync-api",
-        "register-fake"
+        "register-fake",
+        "audit-22-27"
       ]
     },
     {
@@ -847,6 +1012,32 @@
       ]
     },
     {
+      "id": 51,
+      "file": "51_audit-28-33.md",
+      "title": "Audit cooperative operations and native qualification (prompts 28–33)",
+      "phase": "Independent review",
+      "kind": "audit",
+      "depends_on": [
+        28,
+        29,
+        30,
+        31,
+        32,
+        33
+      ],
+      "produces": [
+        "audit-28-33"
+      ],
+      "consumes": [
+        "job-lifecycle",
+        "configuration-jobs",
+        "measurement-jobs",
+        "fault-closure",
+        "variant-fixtures",
+        "native-qualification"
+      ]
+    },
+    {
       "id": 34,
       "file": "34_arduino-examples.md",
       "title": "Implement Arduino/PlatformIO adapters and reusable example",
@@ -855,7 +1046,8 @@
       "depends_on": [
         27,
         30,
-        33
+        33,
+        51
       ],
       "produces": [
         "arduino-adapter-source",
@@ -867,7 +1059,8 @@
         "version-tools",
         "sync-api",
         "measurement-jobs",
-        "native-qualification"
+        "native-qualification",
+        "audit-28-33"
       ]
     },
     {
@@ -879,7 +1072,8 @@
       "depends_on": [
         27,
         30,
-        33
+        33,
+        51
       ],
       "produces": [
         "idf-adapter-source",
@@ -891,7 +1085,8 @@
         "version-tools",
         "sync-api",
         "measurement-jobs",
-        "native-qualification"
+        "native-qualification",
+        "audit-28-33"
       ]
     },
     {
@@ -915,6 +1110,24 @@
       ]
     },
     {
+      "id": 52,
+      "file": "52_audit-34-36.md",
+      "title": "Audit firmware adapters and P4 integration (prompts 34–36)",
+      "phase": "Independent review",
+      "kind": "audit",
+      "depends_on": [
+        34,
+        35
+      ],
+      "produces": [
+        "audit-34-36"
+      ],
+      "consumes": [
+        "arduino-adapter-source",
+        "idf-adapter-source"
+      ]
+    },
+    {
       "id": 37,
       "file": "37_cli-baseline.md",
       "title": "Create one shared bounded diagnostic CLI engine",
@@ -924,7 +1137,8 @@
         27,
         28,
         30,
-        33
+        33,
+        51
       ],
       "produces": [
         "cli-baseline",
@@ -936,7 +1150,8 @@
         "measurement-jobs",
         "native-qualification",
         "host-test-entrypoint",
-        "version-tools"
+        "version-tools",
+        "audit-28-33"
       ]
     },
     {
@@ -996,20 +1211,44 @@
       ]
     },
     {
+      "id": 53,
+      "file": "53_audit-37-39.md",
+      "title": "Audit CLI and HIL runner (prompts 37–39)",
+      "phase": "Independent review",
+      "kind": "audit",
+      "depends_on": [
+        37,
+        38,
+        39
+      ],
+      "produces": [
+        "audit-37-39"
+      ],
+      "consumes": [
+        "cli-baseline",
+        "cli-protocol",
+        "cli-complete",
+        "firmware-cli-handoff",
+        "hil-runner"
+      ]
+    },
+    {
       "id": 40,
       "file": "40_hil-readonly.md",
       "title": "Qualify read-only TMP11x hardware identity and measurement",
       "phase": "Physical fixture qualification",
       "kind": "physical",
       "depends_on": [
-        39
+        39,
+        53
       ],
       "produces": [
         "readonly-hil-record"
       ],
       "consumes": [
         "hil-runner",
-        "firmware-cli-handoff"
+        "firmware-cli-handoff",
+        "audit-37-39"
       ]
     },
     {
@@ -1033,6 +1272,24 @@
       ]
     },
     {
+      "id": 54,
+      "file": "54_audit-40-41.md",
+      "title": "Audit physical qualification evidence (prompts 40–41)",
+      "phase": "Independent review",
+      "kind": "audit",
+      "depends_on": [
+        40,
+        41
+      ],
+      "produces": [
+        "audit-40-41"
+      ],
+      "consumes": [
+        "readonly-hil-record",
+        "volatile-hil-record"
+      ]
+    },
+    {
       "id": 42,
       "file": "42_package-docs.md",
       "title": "Finish packaged consumers, public Doxygen and user documentation",
@@ -1043,7 +1300,9 @@
         34,
         35,
         38,
-        39
+        39,
+        52,
+        53
       ],
       "produces": [
         "package-qualification",
@@ -1060,7 +1319,26 @@
         "hil-runner",
         "arduino-build-record",
         "idf-build-record",
-        "host-test-entrypoint"
+        "host-test-entrypoint",
+        "audit-34-36",
+        "audit-37-39"
+      ]
+    },
+    {
+      "id": 55,
+      "file": "55_audit-42.md",
+      "title": "Audit package and documentation (prompt 42)",
+      "phase": "Independent review",
+      "kind": "audit",
+      "depends_on": [
+        42
+      ],
+      "produces": [
+        "audit-42"
+      ],
+      "consumes": [
+        "package-qualification",
+        "package-doc-tools"
       ]
     },
     {
@@ -1072,7 +1350,8 @@
       "depends_on": [
         33,
         35,
-        42
+        42,
+        55
       ],
       "produces": [
         "ci-record"
@@ -1088,7 +1367,8 @@
         "hil-runner",
         "host-test-entrypoint",
         "arduino-adapter-source",
-        "firmware-cli-handoff"
+        "firmware-cli-handoff",
+        "audit-42"
       ]
     },
     {
@@ -1096,14 +1376,15 @@
       "file": "44_final-independent-audit.md",
       "title": "Perform independent silicon/API/safety/consumer closure",
       "phase": "Package, CI and final review",
-      "kind": "software",
+      "kind": "audit",
       "depends_on": [
         31,
         32,
         33,
         38,
         39,
-        42
+        42,
+        55
       ],
       "produces": [
         "final-audit"
@@ -1115,7 +1396,8 @@
         "cli-complete",
         "hil-runner",
         "package-qualification",
-        "feature-ledger"
+        "feature-ledger",
+        "audit-42"
       ]
     }
   ]

@@ -35,8 +35,9 @@ interpretation or establish any of the implementation layers below.
   selection and real status.
 - **Remote CI:** first complete checkpoint only in stage 43; record exact SHA,
   workflow/job URLs, tool versions, final state. Do not equate old green SHA
-  to later edits. Stages 1–42 do not deliberately dispatch, poll or wait;
-  existing automatic triggers remain intact. Stage 44 repeats the stage 43
+  to later edits. All stages before 43 in the execution sequence, including
+  interleaved audits, skip deliberate dispatch, polling and waiting.
+  Existing automatic triggers remain intact. Stage 44 repeats the stage 43
   procedure for any CI-covered fixes before closing its final report.
 - **Physical/HIL:** exact part marking/ordering code, address straps, board
   revision, power, I2C clock, wiring, instrument, fixture condition, firmware

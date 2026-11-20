@@ -1,9 +1,9 @@
 # 24 — Implement safe EEPROM reads and traceability metadata
 
 Apply [COMMON.md](COMMON.md) and root [AGENTS.md](../../AGENTS.md). Phase: **Features, safe measurements and diagnostics**. Type: **software**.
-Prerequisites: [4](4_family-identity.md), [5](5_register-ledger.md), [7](7_eeprom-reset-policy.md), [11](11_status-values.md), [12](12_i2c-register-transport.md), [13](13_identity-selection.md), [19](19_config-trust.md).
+Prerequisites: [4](4_family-identity.md), [5](5_register-ledger.md), [7](7_eeprom-reset-policy.md), [11](11_status-values.md), [12](12_i2c-register-transport.md), [13](13_identity-selection.md), [19](19_config-trust.md), [49](49_audit-20-21.md).
 Produces: `readonly-eeprom`.
-Consumes: `variant-contract`, `register-ledger`, `safety-policy`, `register-transport`, `public-identity-api`, `config-trust`, `register-fake`.
+Consumes: `variant-contract`, `register-ledger`, `safety-policy`, `register-transport`, `public-identity-api`, `config-trust`, `register-fake`, `audit-20-21`.
 
 ## Objective and boundaries
 

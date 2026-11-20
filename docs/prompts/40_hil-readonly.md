@@ -1,9 +1,9 @@
 # 40 — Qualify read-only TMP11x hardware identity and measurement
 
 Apply [COMMON.md](COMMON.md) and root [AGENTS.md](../../AGENTS.md). Phase: **Physical fixture qualification**. Type: **physical**.
-Prerequisites: [39](39_python-hil-runner.md).
+Prerequisites: [39](39_python-hil-runner.md), [53](53_audit-37-39.md).
 Produces: `readonly-hil-record`.
-Consumes: `hil-runner`, `firmware-cli-handoff`.
+Consumes: `hil-runner`, `firmware-cli-handoff`, `audit-37-39`.
 
 Physical execution also requires one identified, fully linked image from a
 stage 34 **or** stage 35 backend **after** the stage 38 final CLI/protocol

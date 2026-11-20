@@ -1,9 +1,9 @@
 # 20 — Implement continuous operation, averaging and cycle timing
 
 Apply [COMMON.md](COMMON.md) and root [AGENTS.md](../../AGENTS.md). Phase: **Features, safe measurements and diagnostics**. Type: **software**.
-Prerequisites: [6](6_timing-status.md), [8](8_api-architecture.md), [16](16_temperature-codec.md), [17](17_config-codecs.md), [18](18_safe-initialize.md), [19](19_config-trust.md).
+Prerequisites: [6](6_timing-status.md), [8](8_api-architecture.md), [16](16_temperature-codec.md), [17](17_config-codecs.md), [18](18_safe-initialize.md), [19](19_config-trust.md), [48](48_audit-18-19.md).
 Produces: `conversion-settings`.
-Consumes: `behavior-contract`, `behavior-vectors`, `config-codec`, `safe-apply-engine`, `config-trust`, `register-fake`.
+Consumes: `behavior-contract`, `behavior-vectors`, `config-codec`, `safe-apply-engine`, `config-trust`, `register-fake`, `audit-18-19`.
 
 ## Objective and boundaries
 
