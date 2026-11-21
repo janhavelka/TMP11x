@@ -163,3 +163,47 @@ clarifications and this report. These are design traces. Native driver
 tests, MCU links, remote CI and physical qualification were NOT RUN.
 Phase d owns final acceptance, the index and the progress ledger. Stage 9
 remains open with no phase-c blocker.
+
+## Phase d acceptance, 2026-11-21
+
+**COMPLETE.** The `owner-contract` handoff is [Cooperative owner
+operations](../owner-operations.md), paired with the [API contract](../api-contracts.md).
+Acceptance started on clean `main` at `a6a18bdc1c9ce1767f39fe3ddec30c43d2de8f68`.
+Git confirmed the requested phase-c message, three paths and parent
+`b3ae08de268819dd72e64f6cab627cbccda107e5`. The wrapper recorded a successful
+commit and verified `main` equals `origin/main` at 20:49:09 Prague time.
+The local refs still matched at entry. This closure's commit and upstream
+verification are pending wrapper processing.
+
+Rechecked the stage 6 behavior and vectors, stage 7 guard policy and stage 8
+API and register ownership artifacts listed above. The three sibling
+checkouts were clean at the phase-a revisions. The phase-c independent
+reviews cover partial writes and retained result lifetime. The following
+acceptance walk used all eleven traces and the current contracts.
+
+| Scope | Accepted evidence |
+| --- | --- |
+| Admission and teardown, retained identity | All four starts and three read kinds have local gates, including unsupported operations, immutable binding and verified desired shutdown for one-shot. Start, cancel and take are bus-silent. Both occupied states block unrelated I²C and lifecycle calls. A matching issuer and serial frees the slot exactly once, including for a failed result. Foreign and stale tokens, repeated cancellation and serial exhaustion preserve existing ownership. |
+| Wrap and equality, coarse clock, work and transport | The clock table separates optional observations and same-epoch age from deadline-bearing operations. Caller `nowMs` has no timing role. The hook is sampled before and after callbacks, with floor-clock budget rounding, unsigned elapsed time, timeout clipping and expiry at equality. At q=10, tick 70 is the first eligible guard after FIRST_ACK at tick 50 and no callback is allowed at expiry. Zero-budget turns still expire. The turn, job and same-tick limits bound work. |
+| Two routes, drift after trigger, missing or unsafe evidence | The first five turns of A's shot spend one callback each, including distinct read and write turns. B can read between them. Each callback serializes route selection and transfer and releases the lock. Mux traffic has separate accounting. The successful shot has seven callbacks and one trigger. The drift trace stops on callback six, preserves HIGH and consumed readiness and never reads TEMP. EUN, BUSY and pre-trigger drift have explicit refusal or guard-renewal outcomes. |
+| Cancellation around a write, late verification or trigger | Pre-write cancellation preserves the prior target. A partial write retains candidate intent and dirty evidence. Late physical success updates health and observations while the operation times out. Late verification cannot initialize or clear dirty. Successful trigger provenance survives timeout or cancellation. An ambiguous trigger leaves uncertain effects. |
+| Continuous baseline and destructive reads | Final apply consumes readiness as the new baseline. A new eligible observation is required for fresh publication. Failed CONFIG/TEMP reads discard ambiguous readiness, preserve historical alerts and retain possible loss. Late TEMP completion leaves the last-good sample intact. Inspecting or consuming alerts preserves the job's own retained evidence. |
+
+Coverage rows F04, F14 and F18 retain the serial timeout distinction,
+the typed job mapping and the deadline, health and ownership rules.
+[Coverage inventory](../prompts/FULL_COVERAGE.md).
+
+| Check | Phase-d result |
+| --- | --- |
+| `python -B scripts/check_promptset.py`, `python -B scripts/check_references.py`, `python -B tools/check_register_ledger.py`, `python -B tools/test_check_register_ledger.py` | PASS with Python 3.12.10. Checked 55 stages, 14 PDF hashes, six BOM models and 31 ledger regressions. |
+| Inline `python -B -` with `g++ -std=c++17 -Wall -Wextra -Werror -pedantic -fsyntax-only -x c++ -` | PASS with GCC 15.1.0. Compiled 163 published and generated deadline/wait assertions. Python checked 105 coarse-clock service cases, a wrap alias and the admission budget boundaries. |
+| Inline `python -B -` register and PDF checks | PASS. Matched the one-shot words and transfer counts to the vectors and ledger, decoded the AVG drift and checked four turn budgets. Rechecked the timing table, held-line prose, CONFIG and EEPROM field pages in each pinned datasheet. |
+| Local Markdown and Git checks | PASS. Checked local targets and anchors for the acceptance artifacts, the phase-d diff and empty staged diff with Git 2.52.0.windows.1. |
+
+Stage 46 owns the next audit. Stages 18 and 21 implement the shared steps,
+28 implements the retained slot, and 29–31 integrate jobs and test failure
+paths. Native driver tests and MCU links were NOT RUN because driver and
+firmware implementation are later work. Remote CI was NOT RUN under the
+stage 43 checkpoint policy. Physical qualification was NOT RUN. The exact
+CONFIG clear edge, concurrent TEMP latching and one-shot MOD readback
+remain open silicon evidence. No stage 9 acceptance blocker remains.
