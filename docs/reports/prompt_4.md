@@ -1,8 +1,8 @@
 # Prompt 4 — family identity and board integration
 
-**Status: PARTIAL.** Phase c artifact review finished on 2026-11-21. Phase d
-acceptance and closeout are next. The execution manifest places prompt 4 after
-completed [prompt 3](prompt_3.md) and before prompt 5.
+**Status: COMPLETE.** Phase d acceptance finished on 2026-11-21. Prompt 4
+closes the variant and board documentation after [prompt 3](prompt_3.md).
+[Prompt 5](../prompts/5_register-ledger.md) owns the next register-ledger work.
 
 Phase a started on clean `main` at
 `e4597abb69ae95b9a25ae4e31c22b473f8f48416`. The wrapper recorded the
@@ -247,3 +247,35 @@ file and corroborates explicit model and address selection.
   Git 2.52.0.windows.1.
 - NOT RUN — native tests, MCU links, remote CI and physical qualification.
   The fixture details remain unconfirmed. Stage 43 owns remote CI.
+
+## Phase d acceptance — 2026-11-21
+
+The acceptance baseline was clean `main` at
+`45c8396103aea95b268cffbf3a43541af9477141`. Git history matches the phase c
+commit request and shows zero commits ahead or behind the local `origin/main`
+ref. The wrapper's `runs.log` records the phase c commit and remote equality
+at that SHA. The wrapper owns the phase d commit and upstream verification.
+
+- PASS — Rechecked the six BOM-model capability rows, the decision table and
+  the documented invalid and ambiguous cases. An inline `python -B -` check
+  with PyMuPDF 1.27.2.2 compared the three pinned register maps and ID/CONFIG
+  tables, verified nine ordering code/package/range combinations against the
+  addenda, counted 24 supported accuracy rows and checked the three SCL
+  frequency tables. The TMP119 reset-ID discrepancy, EEPROM shadow wording
+  conflicts, TMP116 orderable and ALERT limits, and TMP117M operating bounds
+  remain documented in the [variant contract](../variants.md) and
+  [board guide](../board-integration.md).
+- PASS — Verified `ti-archive`, the two delivered artifacts and the
+  [source coverage entries](../prompts/FULL_COVERAGE.md#prompt-4-source-and-documentation-evidence)
+  against the handoff inventory. TMP1x2's clean local `Config.h` still
+  matches the phase c revision and blob for explicit model/address selection.
+  TI governs the identity rules. Linux remains comparison evidence.
+- PASS — Python 3.12.10 ran `python -B scripts/check_references.py`
+  (14 pinned PDFs), `python -B scripts/test_check_references.py` (9 tests),
+  `python -B scripts/check_promptset.py` (55 stages) and
+  `python -B scripts/test_check_promptset.py` (36 tests).
+  `git diff --check` passed with Git 2.52.0.windows.1.
+- NOT RUN — Native driver tests, MCU links and physical qualification.
+  The physical fixture remains unconfirmed. No CI workflow is tracked at
+  this baseline. Remote CI is deferred to stage 43. Implementation, adapter
+  and physical evidence stay with the owners listed in FULL_COVERAGE.

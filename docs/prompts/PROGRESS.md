@@ -5,9 +5,8 @@
 **Repository:** `main`, tracking `origin/main` at `https://github.com/janhavelka/TMP11x.git`.
 **Preparation input HEAD:** `6c5e4496d5c896af689228d4bee4382a53c20626` (clean and synchronized at entry).
 **Hardware:** Physical TMP11x board and test wiring NOT CONFIRMED.
-**Last completed stage:** 3 (intake scope clarified by the full promptset audit).
-**Last update:** 2026-11-20. The plan now interleaves independent audits with
-the original stages. Next eligible stage is 4.
+**Last completed stage:** 4 (family identity and board integration).
+**Last update:** 2026-11-21. Next eligible stage is 5.
 
 Preparation evidence includes the [6b173cc second follow-up](../reports/audit-followup-6b173cc.md),
 the [cb73740 follow-up](../reports/audit-followup-cb73740.md#response--2026-11-17),
@@ -22,7 +21,8 @@ every planned deliverable a producer and checks consumer dependencies.
 | 1 | Current sibling API/ownership audit | COMPLETE — [report](../reports/prompt_1.md) |
 | 2 | Toolchain/package/prompt workflow audit | COMPLETE — [report](../reports/prompt_2.md) |
 | 3 | Official source intake | COMPLETE — [report](../reports/prompt_3.md); optional TI code access gaps retained |
-| 4–7 | Model identity, field/timing ledger, safety policy | NOT_STARTED |
+| 4 | Model identity and board integration | COMPLETE — [report](../reports/prompt_4.md), [variant contract](../variants.md), [board guide](../board-integration.md) |
+| 5–7 | Field/timing ledger and safety policy | NOT_STARTED |
 | [45](45_audit-1-7.md) | Audit prompts 1–7 before freezing the API | NOT_STARTED |
 | 8–9 | Public API and owner contracts | NOT_STARTED |
 | [46](46_audit-8-9.md) | Audit prompts 8–9 before production code starts | NOT_STARTED |
@@ -48,15 +48,14 @@ every planned deliverable a producer and checks consumer dependencies.
 | 44 | Final independent audit | NOT_STARTED |
 
 The planning review covered the original 44 prompts and shared contracts.
-Begin stage 4 after verifying archive
-integrity and relevant source revisions. Optional inaccessible TI source code
-does not gate datasheet research. Stage 6 retains the unreadable E2E DATA_READY
-race lead and stage 4 the exact-grade scope question. Do not infer implemented
-chip support or physical qualification from this audit.
+Stage 4 verified archive integrity and documented the six exact BOM models,
+identity rules and board conditions. TMP119M remains outside the selected scope.
+Stage 6 retains the unreadable E2E DATA_READY race lead. Optional inaccessible
+TI source code does not gate datasheet research.
 The subsequent completeness audit adds full per-chip source inventories and
 46 mandatory register/behavior/exclusion rows, with focused additions to
-32 prompts. These are stronger future stage obligations, not completion of
-stages 4–7 or a sensor implementation. Stage 25 now explicitly depends on
+32 prompts. The audit established obligations that each stage verifies against
+its own deliverables. Stage 25 now explicitly depends on
 stage 23 for nonfactory offset reset/recovery tests.
 The handoff audit adds `Produces`/`Consumes` declarations to all 44 prompts,
 originally 60 artifact IDs and 226 required-input links. Stage 17 additionally requires

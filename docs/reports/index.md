@@ -17,6 +17,7 @@ containing commit without a self-referential hash inside that commit.
 | [1 — ecosystem audit](prompt_1.md) | COMPLETE | Source/API/test mapping, pinned siblings and adoption record | Recheck changed relevant sources at adoption |
 | [2 — tooling audit](prompt_2.md) | COMPLETE | Build/package plan, tool inventory, strengthened prompt checker | Actual implementation builds belong to later stages |
 | [3 — TI intake](prompt_3.md) | COMPLETE | Scope corrected: required datasheets, provenance, visual review and honest source catalog | Optional TI code/license access remains unavailable |
+| [4 — family identity and board integration](prompt_4.md) | COMPLETE | Six BOM models, identity decisions, board conditions, and source coverage verified against pinned TI tables | Register ledger, driver, adapters and physical evidence remain stage-owned |
 
 See [PROGRESS.md](../prompts/PROGRESS.md) for scheduled audit stages 45–55 and
 current execution status. Hardware qualification remains NOT RUN and the
