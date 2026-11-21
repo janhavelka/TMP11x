@@ -75,9 +75,11 @@ job ownership, deadline and safety gates. Before the one-shot's first CONFIG
 write (including SD), compare all stable CONFIG fields, not only MOD;
 a mismatch invalidates trust without CONFIG writes.
 Changing limits in therm mode requires a non-inverted target pair. Limit writes
-occur inside the shared guarded SD apply phase. Defensively keep intermediate
-pairs ordered when the current pair is known; unknown/inverted current pairs
-need full-profile verification before therm operation.
+occur inside the shared guarded SD apply phase. Keep intermediate therm
+pairs ordered when the current pair is known. Verify alert mode in SD
+before writing an intentionally inverted alert-mode pair. Verify the
+ordered target pair before enabling therm, including during recovery from
+unknown or inverted limits.
 The response to TLOW > THIGH is undocumented, not a new hardware prohibition.
 
 Stages 18/21 implement private resumable step engines shared with stages 29/30.

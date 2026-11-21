@@ -15,7 +15,7 @@ Compare TI timing/data-ready/one-shot sections and TMP1x2 `startRead` job state 
 
 ## Complete implementation work
 
-- Implement separate requested acquisition semantics: continuous latest, continuous try-fresh, and an owned shutdown one-shot. Reuse stage 21's private resumable engine and its clean-profile/baseline requirements; do not duplicate it or silently change desired mode. Latest never promises a new conversion.
+- Reuse stage 21's acquisition engine for three explicit read kinds. LATEST requires initialization and reads TEMP once in either desired mode, including with dirty settings. Continuous fresh and owned shutdown one-shot each require verified clean settings and their own readiness baseline.
 - Budget 0x04 safety guard, preflight CONFIG comparison, explicit SD write, CONFIG stale-ready baseline, one OS trigger, wait, CONFIG observation and TEMP read as distinct steps, each at most one physical callback. Preflight drift or unowned MOD=11 latches dirty state with zero CONFIG writes; only retained owned-trigger provenance permits normalization of residual OS to SD. Freshness-producing continuous jobs also check 0x04 and require their established current-generation baseline; latest-only jobs do not claim freshness. Apply stage 6/21's sparse default poll schedule. Bind evidence to request/profile and consume it once; ambiguous read failures can consume hardware evidence.
 - Record host observation timestamp validity, freshness evidence and possible read-to-clear effects in the retained result. Every successful CONFIG read updates shared sticky alert evidence, including late callbacks and later-failed composites; result copies do not drain the explicit alert consumer. Recheck completion time before publishing: late successful reads update physical health/evidence but not outputs/cache/timely success. GPIO observation alone does not supply a new completion protocol, and no ISR may mutate the driver.
 - Support other sensor instances using the same bus between polling turns, without holding locks or assuming pointer persistence.
@@ -36,6 +36,10 @@ Run lifecycle/invalidation integration tests from stages 14/19/28 against real
 measurement jobs, not only the private state-transition component.
 
 Test interleaved two-sensor fake transport, one transfer per poll, 32-bit wrap, invalid/no clock, same temperature consecutive one-shots, missed ready and late successful read not published as timely result.
+Test LATEST after a failed settings write leaves an initialized shutdown
+target dirty. A timely TEMP yields dirty trust and `freshConversion=false`
+after one callback. At expiry the same complete word appears only as
+`lastRead` in the timed-out result. The historical cache remains intact.
 Include immediate EUN refusal, busy-through-deadline/startup refusal without
 CONFIG writes or fresh results, and timed busy-to-safe guard progression without
 premature writes; retain per-poll transfer/work bounds. Also cover

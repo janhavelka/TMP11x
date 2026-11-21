@@ -61,8 +61,12 @@ read or bus action. If a poll already observed timeout, the timeout record
 owns the slot. A failed take leaves `out` untouched. A matching take copies
 the token, kind/read kind, terminal job status, last physical status/validity,
 callback count, possible writes and read effects, and any timely successful
-sample. A cancelled job with no callbacks has count zero and no physical
-status. Taking a failed job still returns `OK`. The result's read effects
+sample. When the last callback returned a complete read, the result also
+copies its pointer, raw word and completion time/validity into `lastRead`.
+It stays available on timeout. A write, failed or short read, or zero
+callbacks leaves `lastRead` empty. A cancelled job with no callbacks has
+count zero and no physical status. Taking a failed job still returns
+`OK`. The result's read effects
 come from this job's callbacks. Taking alert events from the instance while
 the job is active or pending preserves that job's evidence. Taking the
 result also leaves the instance's events available to their own consumer.
@@ -244,8 +248,13 @@ SD, retain the candidate as desired and mark the profile dirty. Before
 that point cancellation preserves the previous target and all actual read
 effects. Discard prior conversion evidence when mutation begins. Apply and
 verify stable CONFIG, both ordered limits and supported managed offset in
-SD. Observe supported unmanaged offset. TMP116/N uses
-`0x07` for EEPROM3. Consume the SD baseline, write the desired mode and
+SD. Verify an ordered pair before entering therm. When leaving therm
+for inverted alert-mode limits, verify alert mode in SD before writing a
+limit that would invert the pair. Observe supported unmanaged offset. An
+unexplained change under assumed exclusive access invalidates live state
+and stops replay. A timely observation gives `CONFIG_MISMATCH`; expiry
+retains `OPERATION_TIMEOUT` and the observed word. TMP116/N uses `0x07`
+for EEPROM3. Consume the SD baseline, write the desired mode and
 compare all final stable fields. If the final CONFIG shows BUSY, renew the
 guard and repeat verification within the remaining budget. Only timely
 verification of the entire target establishes a verified generation and
@@ -342,7 +351,7 @@ initialized, verified sensor and a timely clock.
 | Passive inspection at expiry | Admit LATEST and let its deadline elapse before its first poll. Inspect twice, cancel, inspect the pending result, take it and inspect again. Separately repeat through the two inspections and poll with budget zero. | Both active snapshots carry the accepted token and READ/LATEST. Cancel retains `CANCELLED` for a matching take. The free snapshot has no job identity. In the second run only the poll retains `OPERATION_TIMEOUT`. Both runs use zero sensor callbacks. All inspections use zero clock calls. |
 | Admission and teardown | Change each configure binding field in turn with a saved token in the output. Separately start a valid job and try bind/end/unbind/invalidate, ID/EEPROM reads and another start before and after cancel. | Mismatch gives `INVALID_CONFIG`, preserves the saved issuer and serial, and uses zero callbacks. Valid start gives a new token and zero callbacks. All competing calls give `BUSY` until take. |
 | Retained identity | Sensors A and B each issue serial 1. Cancel A, poll A again, cancel again, try B's token on A, then take A's token twice. After end/rebind, cancel A's next accepted job and try the old A token before taking the new one. | The first sequence returns `CANCELLED`, `CANCELLED`, `BUSY`, `TOKEN_MISMATCH`, `OK` with cancelled record, then `RESULT_NOT_AVAILABLE`. The stale token also gives `TOKEN_MISMATCH` with output and pending result intact. Zero callbacks throughout. The last allocatable serial works once. Even after end/rebind the next valid start gives `WORK_LIMIT` with its output intact. |
-| Wrap and equality | At hook `0xFFFFFFF8`, q=1, start LATEST with 12 ms, passing caller time 100000. At hook 1, poll with caller time 0, callback cap 50. Return OK at hook 4. Repeat with `poll(any,0)` at 4 before any transfer. | First run grants 3 ms, counts one success, records TEMP and its read effect, and retains timeout without sample/cache replacement. Second run times out with zero callbacks and no valid last physical status. |
+| Wrap and equality | Cache raw `0x0D00`. At hook `0xFFFFFFF8`, q=1, start LATEST with 12 ms, passing caller time 100000. At hook 1, poll with caller time 0 and callback cap 50. TEMP returns `0x0C80` and OK at hook 4. Repeat with a short read at 4, then with `poll(any,0)` at 4 before any transfer. | Each matching take returns a timed-out record with no sample. The cache stays `0x0D00`. The first run grants 3 ms, counts one physical success and retains pointer `0x00`, word `0x0C80`, valid tick 4 and readiness consumption. The short read counts one physical failure with possible readiness loss and empty `lastRead`. The zero-budget run has zero callbacks, no physical status and empty `lastRead`. |
 | Coarse clock | q=10, FIRST_ACK at floor tick 50. Try the 3 ms wait at 60 and 70. In a separate run admission at 40 with requested 39 ms gives expiry 70. Exercise timeout 0, 9, 10, `INT32_MAX` and one above it. | First eligible tick is 70. If expiry is also 70 the guard never runs. Only 10 and `INT32_MAX` admit, with budgets 10 and 2147483640. |
 | Two routes, one turn each | A is a TMP117 in SD, desired stable word `0x0620`, THIGH 20 °C. Start ONE_SHOT. Poll A with budgets 1,1,1,1,1. Between A's turns let B on another route perform its own LATEST. | A emits `R04=0000, R01=2620, W01=0620, R01=0620, W01=0E20`, one per turn. Preflight consumed old ready. The SD baseline reads clear. B emits one TEMP read. Each callback reselects its target. A wait turn spends zero. A later budget 255 can issue `R01=AE20, R00=0C80` on A for a fresh 25 °C and captured HIGH. Seven A callbacks, one trigger. |
 | Drift after the trigger | In the two-route trace, A's first ready poll instead returns `R01=AE40` on time. Consume A's alert events before taking its result. | The owned MOD=11 matches, but AVG changed. Six A callbacks, one trigger, zero TEMP reads. Return `CONFIG_MISMATCH`, keep the target dirty and cache intact. Both the alert consumer and the retained job record observe HIGH. The job also records consumed DATA_READY. |

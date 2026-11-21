@@ -37,6 +37,10 @@ read effects, disabled GPIO, polarity and explicit data-ready output mode.
 Test an out-of-range owned OS whose readiness poll consumes HIGH: the alert
 consumer still receives HIGH exactly once even if a later transfer fails.
 Test therm inversion refusal and intermediate valid-pair write ordering.
+Exercise therm [0,10] °C to alert [20,10] °C through the shared apply
+engine. A failed, mismatched or late SD/alert readback must stop the
+inverting TLOW write. On the return to therm, verify the ordered pair
+before enabling hysteresis.
 
 ## Documentation and delegation
 

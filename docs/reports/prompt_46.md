@@ -169,3 +169,47 @@ Stage 28 owns the slot and its test. Stage 37 already consumes
   Native driver tests, MCU links, remote CI and physical qualification
   were NOT RUN. Production code starts at stage 10. The silicon evidence
   gates recorded in phase a remain open.
+
+## Phase c — independent review, 2026-11-21
+
+Review began on clean `main` at `2c7572989577cc1d38d579139633b6e9ec2a15f7`.
+The parent, subject and eight paths match the phase-b request. The wrapper
+recorded upstream equality at 21:34:13 Prague time, and local divergence
+was 0/0. The lead and two parallel read-only reviewers reread prompts 8
+and 9 and checked the design diffs through that revision. Both reviewers
+then checked the corrected working diff.
+
+| Finding | Verified outcome and implementation owner |
+| --- | --- |
+| A therm-to-alert transition could invert the limits before the comparator mode changed. | Starting in therm at [0,10] °C, the accepted alert target [20,10] needs TLOW `0x0A00`. Stages 18/22 must first verify SD/alert (`0x0620` in this trace). Failed, mismatched or late readback permits zero inverting writes. Returning to therm requires verified TLOW `0x0000` and THIGH `0x0500` first. These are software ordering requirements. The silicon response to inverted therm limits remains unknown. [Apply contract](../api-contracts.md#startup-apply-and-reset), [literal vectors](../registers/behavior-vectors.json). |
+| A changed unmanaged offset could leave old readiness eligible. | Under verified continuous operation, retain ready at offset zero, then observe `0x0040` with no known cause. The word is evidence of changed calibration. Its scope is unknown, so the existing external-interference rule invalidates live state and the next managed fresh request spends zero callbacks. Explicit recovery preserves the +0.5 °C calibration and consumes stale readiness at its baseline. A later conversion can use that calibration. Historical samples keep their original provenance. Stage 23 tests the typed observation and stage 26 the diagnostic route, including TMP116/N's EEPROM3 exception. [Public observation rules](../api-contracts.md#operation-gates), [interference policy](../eeprom-and-reset-policy.md#external-interference). |
+| A late TEMP had no raw-word field in the retained result. | Seed the cache with `0x0D00`. TEMP `0x0C80` at equality gives physical OK, terminal timeout, and a `lastRead` with pointer zero and valid tick 4. The prior cache survives. A short read at the same tick retains physical failure and possible readiness loss. Expiry before dispatch has zero callbacks. Neither case supplies a raw word. The existing slot holds one optional register observation. The owner may inspect status repeatedly and take the record once. Stages 28, 30 and 31 own the slot and real-transfer tests. [Slot and traces](../owner-operations.md#acceptance-traces). |
+| Stage 30 described LATEST as continuous-only and applied fresh-read gates to it. | An initialized shutdown target left dirty by a failed settings write still admits LATEST. One timely TEMP yields a sample with dirty trust and `freshConversion=false`. Fresh and one-shot retain their clean-profile gates. [Corrected stage 30 acceptance](../prompts/30_cooperative-measurement.md). |
+
+The silicon reviewer checked model gates, replay, read effects, the two
+consumer sketches and the 46 coverage rows. The lead rechecked T/nA, the
+signed limits and pointer `0x07` in SBOS740A pp.26/28/30, SNOSD82D
+pp.27/29/31 and SNIS236 pp.34/36/38. The supporting parts add the offset
+after linearization. A later offset read cannot establish which conversion
+produced the stored TEMP. [Pinned sources](../reference/manifest.json).
+
+The owner reviewer checked the single slot, cancel versus zero-budget poll
+at unobserved expiry, foreign and exhausted tokens, per-callback bus
+ownership, budget clipping and late results. Peer comparisons included
+TMP1x2 `afd5088` (`src/TMP1x2Operations.cpp` and `test/jobs/test_jobs.cpp`),
+OPT4001 `441ef57`, ADS1115 `e07622a` and FieldCore-node `c40ea83`
+(`CoilHeadModule::remaining`, `transfer` and the overrun tests). The
+selected peer checkouts were clean and the four GitHub branch tips still
+matched phase a. Stage 28 supplies the passive slot query and stage 37
+consumes it through the existing `job-lifecycle` dependency.
+
+| Phase-c check | Result |
+| --- | --- |
+| `python -B scripts/check_promptset.py`, `python -B scripts/check_references.py`, `python -B tools/check_register_ledger.py`, `python -B tools/test_check_register_ledger.py` | PASS with Python 3.12.10 for 55 stages, 14 pinned PDFs, six BOM models and 31 regressions. |
+| Inline `python -B -` | PASS for all 46 IDs in three maps, the affected producer edges, the two limit-transition vectors and their refusal boundary, all three families' CONFIG/limits/offset-or-shadow pages, and the raw TEMP and offset values above. |
+| `g++ -std=c++17 -Wall -Wextra -Werror -pedantic -fsyntax-only -x c++ -` | GCC 15.1.0 passed 71 lead assertions and 147 independent reviewer assertions, each set including the published example. The checked cases cover unsigned wrap, equality and floor-clock waits. |
+| Git and documentation | Working and empty-index whitespace checks passed with Git 2.52.0.windows.1. The changed documents' local links resolve. |
+
+Native driver tests, MCU links, remote CI and physical qualification were
+NOT RUN. Phase d owns final acceptance, the report index and the progress
+row. The silicon uncertainties in phase a remain open.

@@ -441,7 +441,9 @@
       ],
       "alternates": [
         {"old_pair_C": [15,20], "target_pair_C": [0,10], "write_first": "TLOW", "intermediate_pair_C": [0,20]},
-        {"target_pair_C": [20,10], "expected_therm_admission": "reject locally", "transfers": 0, "hardware_comparison": "unknown"}
+        {"target_pair_C": [20,10], "expected_therm_admission": "reject locally", "transfers": 0, "hardware_comparison": "unknown"},
+        {"from_mode": "therm", "old_pair_C": [0,10], "to_mode": "alert", "target_pair_C": [20,10], "before_inverting_TLOW": "write and verify guarded SD/alert CONFIG 0x0620", "TLOW_word": "0x0A00", "inverting_writes_on_failed_mismatched_or_late_readback": 0},
+        {"from_mode": "alert", "old_pair_C": [20,10], "to_mode": "therm", "target_pair_C": [0,10], "before_enabling_therm": "establish and verify TLOW 0x0000 and THIGH 0x0500 in guarded SD/alert"}
       ]
     },
     {

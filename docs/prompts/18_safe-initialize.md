@@ -40,7 +40,10 @@ Native scripted tests assert zero mutating traffic when busy/unlocked or startup
 readiness is unestablished, including a TMP116 reset-load fixture with busy clear
 and ignored writes. Check invalid profiles cause zero I2C, exact pointer
 sequences, no general-call address, partial-write dirty state, canonical CONFIG
-readback and independent limit verification.
+readback and independent limit verification. When moving from therm to an
+inverted alert-mode pair, require a timely matching SD/alert CONFIG readback
+before the first limit write that would invert the pair. In the reverse
+direction, verify both ordered limits before enabling therm.
 Include public begin/recover success and failure transcripts, real managed
 latest-read integration from stage 16, health integration from stage 15 and
 full-profile bind rejection preserving the prior binding without I2C.

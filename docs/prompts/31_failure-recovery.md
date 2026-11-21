@@ -25,6 +25,11 @@ Revisit TMP1x2 owner/dirty/health/timeout fault tests, ADS1115 indeterminate wri
 
 ## Verification and exit criteria
 
+Check the owner contract's wrap-and-equality trace through a matching
+take. A complete late TEMP, a short read and expiry before dispatch each
+preserve the old sample. Only the complete read supplies a raw word and
+completion timestamp in the result.
+
 Use independent reviewer/fault matrix; run all registered host fault suites with strict warnings, active asserts and relevant sanitizers if available. Capture all open gaps.
 
 ## Documentation and delegation

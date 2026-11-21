@@ -74,7 +74,7 @@ than duplicating every transitive consumer list. There are 61 produced IDs and
 | 26 | `diagnostics` | One bound-only diagnostic route and identity-gated ordered dumps; all CONFIG reads retain evidence. No public raw register-data write API. |
 | 27 | `sync-api` | Complete synchronous public API/snapshots and compile consumer; reconcile feature coverage; consumers: see SEQUENCE. |
 | 50 | `audit-22-27` | `docs/reports/prompt_50.md` records independent findings, scoped fixes and repeated checks for prompts 22–27. |
-| 28 | `job-lifecycle` | Real private admission/result component and lifecycle integration, with a passive public snapshot for stage 37's `jobs` query. Unrelated I2C is BUSY while active/result pending. Unconnected public kinds reject; stages 29/30 connect real engines. |
+| 28 | `job-lifecycle` | Admission/result slot with a passive snapshot for stage 37's `jobs` query. The result retains the last callback's complete read observation even at expiry. Unrelated I2C is BUSY while active/result pending. Unconnected public kinds reject. Stages 29/30 connect the engines and 31 exercises late and short transfers. |
 | 29 | `configuration-jobs` | Initialize/configure/recover reuse stages 18/19/23 phases with immutable binding; execute lifecycle cases against real jobs. |
 | 30 | `measurement-jobs` | Latest/try-fresh/one-shot reuse stage 21; execute lifecycle/interleaving cases and operation-local guards. |
 | 31 | `fault-closure` | Adversarial fault closure of existing synchronous/cooperative recovery and transport/result policies; not the first recovery implementation. |

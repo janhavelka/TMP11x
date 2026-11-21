@@ -99,7 +99,7 @@ zero physical outcomes.
 | `Sample` | `uint16_t raw`, `int16_t counts`, `double celsius`, `uint32_t observedAtMs`, `bool timestampValid`, `ReadKind acquisitionKind`, `bool freshConversion`, `uint32_t profileGeneration`, `ConfigTrust configTrust` and `OffsetProvenance offset`. The latter distinguishes unknown, unavailable on this model, observed unmanaged counts and verified managed counts, with validity for the recorded counts. Unknown is the only populated offset state before stage 23. |
 | `AlertStatus` | Pending alert-mode HIGH/LOW events, separately observed therm HIGH level and validity, source of CONFIG read, generation/mode, observation time/validity and possible history loss. A mixed/unknown marker bounds the record when events span profiles, modes or uncertain observations. |
 | `RegisterObservation`, `RegisterSnapshot`, `EepromSnapshot` | Selected model, identity evidence, ordered pointers and complete raw words, time validity, read effects and uncertainty per observation. Preserve completed prefix and first unsuccessful pointer in a failed composite. Report only available fields. EEPROM snapshot records lock/busy and one-based indexed shadows. |
-| `OperationResult` | Token, kind, terminal operation status, last physical status/validity, callback count, observed read effects and possible writes, optional timely sample. Result copies expose alert evidence without draining it. |
+| `OperationResult` | Token, kind/read kind, terminal status, last physical status/validity, callback count, read effects and possible writes. If the last callback completed a word read, `lastRead` holds its `RegisterObservation` (pointer, raw word and completion timestamp/validity), even at expiry. A write, a failed/short read or zero callbacks leaves this field empty. Only a timely successful READ supplies a `Sample`. Result copies preserve the instance's alert events. |
 | `OperationSnapshot` (stage 28) | Slot state (`FREE`, `ACTIVE`, `RESULT_PENDING`). An occupied slot supplies its token and operation kind, plus the read kind for READ. Only a pending result supplies a terminal status. A free snapshot carries no previous operation. |
 
 `isOnline()` is a bus-silent `initialized && (state == READY || state ==
@@ -181,6 +181,19 @@ replay. Verification compares values at the step where they must already
 have taken effect. Unmanaged offset records calibration provenance without
 joining the target.
 
+On an offset-capable model, compare successive complete unmanaged OFFSET
+observations while relying on the same uninterrupted device state. A change
+from `0x0000` to `0x0040` without an intervening owned offset change breaks
+the exclusive-access assumption. Keep the observed word. Invalidate live
+device state, including startup proof, initialization and all saved readiness,
+as for outside interference of unknown scope. An observation query returns
+the word. A timely change detected in managed verification or replay gives
+`CONFIG_MISMATCH`. Historical samples retain their original calibration.
+Once the owner restores stable power and exclusive access, explicit recovery
+observes the calibration and verifies the owned profile. The first observation
+after bind, invalidation or reset establishes a new comparison baseline.
+In all cases an unmanaged offset stays outside the replay target.
+
 The device instance has a stable identity and cannot be copied, moved or
 assigned. Tokens and retained result values can be copied. Jobs use
 `OperationKind::{INITIALIZE,CONFIGURE,RECOVER,READ}` and an explicit
@@ -193,7 +206,8 @@ alone governs deadlines, timestamps and due times. During active or retained
 ownership, unrelated I2C, a new start, bind, end, unbind and invalidation
 return BUSY without changing state. After power loss stop using the old
 proof, cancel if active, take the terminal result, invalidate, restore
-stable power and explicitly recover. A retained failure is observable once.
+stable power and explicitly recover. The owner can inspect the terminal
+status repeatedly. One matching take transfers the result and frees the slot.
 
 Every timed path samples the clock before and after the callback, clips
 its timeout to the remaining whole-operation budget, and expires at equality.
@@ -264,7 +278,11 @@ lifetime in detail. [Cooperative owner operations](owner-operations.md).
    low, write low first. For an unknown or inverted initial pair, require
    full apply/recovery, establish a valid verified pair before entering
    therm, and keep intermediate observations untrusted. On a transition to
-   therm, defer setting T/nA until the requested pair is established.
+   therm, verify the requested ordered pair before setting T/nA. When
+   leaving therm for an inverted alert-mode pair, first write and verify
+   alert mode in guarded SD while the old limits still hold. Only a timely
+   matching readback under a valid guard permits a limit write that would
+   invert the pair.
    Separate writes can transiently change comparator/pin behavior. Stop
    after failure and retain the candidate and partial observations for
    explicit recovery.

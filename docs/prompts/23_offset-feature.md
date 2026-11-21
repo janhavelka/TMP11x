@@ -38,6 +38,14 @@ write), explicit zero (written and verified), and unchanged sample outputs/cache
 after late success. Physical saturation trials belong to stage 41; simulator
 vectors do not require exposing hardware to extreme ambient temperatures.
 
+Test a verified continuous profile with unmanaged offset zero and retained
+DATA_READY. A later complete offset read of `0x0040` with no known cause
+invalidates live device state on both typed and diagnostic observations
+(stage 26 connects the latter). The next managed fresh request must refuse
+before I2C. Recovery under restored ownership observes the new offset,
+leaves it unmanaged and consumes stale readiness at its baseline. Verify
+that only a later new conversion can carry the changed calibration as its own.
+
 ## Documentation and delegation
 
 Follow [COMMON.md](COMMON.md), [CONVENTIONS.md](CONVENTIONS.md),

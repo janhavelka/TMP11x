@@ -32,6 +32,9 @@ Tests exercise every register address and model, skipped holes, model-dependent 
 Include a freshly bound, uninitialized transcript of identity, CONFIG, TEMP
 and permitted EEPROM-shadow observations with zero data-register writes.
 Verify unknown validity/trust is reported and no hidden `begin` occurs.
+Exercise stage 23's changed unmanaged calibration case through the checked
+word read and dump. Both preserve the observed offset and invalidate prior
+readiness. The same pointer on TMP116/N supplies only EEPROM3 evidence.
 For a TMP114/TMP118 mismatch, a dump stops after 0x0F and never reads foreign
 0x02 alert status. Include CRC-enabled TMP114 transport-failure/0xFFFF adverse
 fixtures with no retry, while distinguishing documented bad-CRC behavior from
