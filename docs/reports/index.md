@@ -19,6 +19,7 @@ containing commit without a self-referential hash inside that commit.
 | [3 — TI intake](prompt_3.md) | COMPLETE | Scope corrected: required datasheets, provenance, visual review and honest source catalog | Optional TI code/license access remains unavailable |
 | [4 — family identity and board integration](prompt_4.md) | COMPLETE | Six BOM models, identity decisions, board conditions, and source coverage verified against pinned TI tables | Driver, adapters and physical evidence remain stage-owned |
 | [5 — register and bitfield ledger](prompt_5.md) | COMPLETE | Six BOM selections, 46 coverage rows, 31 retained open source records and 22 validator regressions | Stages 6 and 7 refine timing and safety. Driver, MCU, CI and physical qualification remain open. |
+| [6 — conversion timing, freshness and alerts](prompt_6.md) | COMPLETE | Three pinned timing tables, read-effect contract and literal vectors checked for six BOM selections | Stage 7 owns safety policy. Read-clear timing, TEMP byte latching and other silicon unknowns remain open. |
 
 See [PROGRESS.md](../prompts/PROGRESS.md) for scheduled audit stages 45–55 and
 current execution status. Hardware qualification remains NOT RUN and the

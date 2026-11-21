@@ -1,7 +1,8 @@
 # Prompt 6 — Conversion timing, freshness and alerts
 
-**PARTIAL. Phases a through c completed on 2026-11-21.** Prompt 6 is the first unfinished
-entry in the sequence. Its prerequisites are prompts 3 and 5. The clean entry
+**COMPLETE on 2026-11-21.** The timing and read-effect contract, literal
+vectors and ledger refinements passed acceptance. Its prerequisites are
+prompts 3 and 5. The clean entry
 revision was `4a8e4dcb2d4993b361b4d1f2e8081a6cdc1a37cf` on `main`,
 equal to the local `origin/main`. Prompt 5's acceptance request matches the
 message and three paths in `963472276e16268a99a35cc7aa1a22c67aa32252`.
@@ -223,3 +224,35 @@ and `python -B tools/test_check_register_ledger.py` passed all 22 tests.
 PDF page and Git whitespace checks passed. Phase d owns final acceptance
 and the progress/index update. Driver tests, MCU links, remote CI and
 physical qualification were not run in phase c.
+
+## Phase d acceptance
+
+Acceptance started with a clean index and worktree on `main` at
+`d7fe1874d98151836080f3929bec8310f460b96d`, equal to local `origin/main`.
+Its parent, message and four changed paths agree with the phase c baseline,
+commit request and wrapper log. The wrapper verified that revision against
+upstream at 16:48:34 Prague time. The acceptance changes are this report,
+its index entry and the dedicated stage 6 progress row. The wrapper stages
+those three files, checks the staged diff, commits and verifies upstream.
+
+| Acceptance check | Result |
+| --- | --- |
+| `python -B scripts/check_references.py` and `python -B scripts/test_check_references.py` | PASS. All 14 pinned PDF hashes and nine reference-tool regressions. |
+| `python -B tools/check_register_ledger.py` and `python -B tools/test_check_register_ledger.py` | PASS. The ledger covers six BOM selections and all 22 regressions passed. |
+| `python -B scripts/check_promptset.py` and `python -B scripts/test_check_promptset.py` | PASS. The checker covers 55 stages and all 36 regressions passed. |
+| Inline `python -B -` with PyMuPDF | PASS. The three pinned timing tables match the vectors and ledger on all 96 nominal cycle cells. The TMP116 table matches all 32 standby notes. The three electrical rows reproduce 36 conditioned active values. |
+| Inline `python -B -` vector assertions | PASS. Five poll/deadline cases, three reset/FIRST_ACK origins, CONFIG busy and drift words, 11 signed words, 14 quantization cases, three offset clamps, eight pin routes and two complete block means all agree with their stated rules. The 11 traces have source attribution. Repeated TEMP reads and the partial-block abort retain the last completed word. |
+| Local Markdown links, PDF page anchors and Git whitespace | PASS for the behavior contract and acceptance documents. The working diff passed `git diff --check`. The index was empty and passed `git diff --cached --check` before wrapper staging. |
+
+Checks used Python 3.12.10, PyMuPDF 1.27.2.2 and Git 2.52.0.windows.1.
+[Stage 7](../prompts/7_eeprom-reset-policy.md) consumes the behavior contract
+for its EEPROM and reset policy. Audit 45 reviews the research, and
+stages 16–23 and 32 use the applicable vectors for implementation and tests.
+The exact CONFIG read-clear edge, TEMP byte latching, offset/comparator order
+and other unknowns remain documented. The TMP117 race report is available
+with conflicting routing details. The related TMP116 thread remains
+inaccessible in the recorded source review.
+[Device behavior contract](../device-behavior.md), [behavior vectors](../registers/behavior-vectors.json).
+
+Native driver tests, MCU links, remote CI and physical qualification were
+NOT RUN. Stage 43 owns the first remote checkpoint.
