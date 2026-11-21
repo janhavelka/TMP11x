@@ -61,13 +61,17 @@ owns the slot. A failed take leaves `out` untouched. A matching take copies
 the token, kind/read kind, terminal job status, last physical status/validity,
 callback count, possible writes and read effects, and any timely successful
 sample. A cancelled job with no callbacks has count zero and no physical
-status. Taking a failed job still returns `OK`. Reading its alert evidence
-leaves the instance's sticky events available to their own consumer.
+status. Taking a failed job still returns `OK`. The result's read effects
+come from this job's callbacks. Taking alert events from the instance while
+the job is active or pending preserves that job's evidence. Taking the
+result also leaves the instance's events available to their own consumer.
 
 An `OperationToken` identifies the issuing live instance and a nonzero
 32-bit admission serial. Compare both for a retained result. Two sensors
 can each issue serial 1. A scheduler keeps the issuing instance and token
-together and keeps that instance at a stable identity through take. The
+together. The device class has a stable address and disallows copy and
+move construction and assignment. This keeps one binding, slot and serial
+history per issuer. Tokens and results can be copied as values. The
 serial starts at 1, advances only on acceptance and survives end, unbind
 and rebind. After issuing `UINT32_MAX`, the next otherwise valid start
 returns `WORK_LIMIT` (token space exhausted). Never issue zero or recycle a
@@ -99,8 +103,9 @@ recover explicitly under restored power and exclusive ownership.
 With no hook, clock-optional observations carry invalid timestamps. Managed
 initialization itself needs a clock. Tick zero is valid with a valid stamp.
 Age is the unsigned elapsed time since the host observed TEMP. The owner
-must establish continuous time and a sample younger than one full 32-bit
-wrap to interpret it. A clock restart or change of epoch requires rebind.
+must establish continuous time and an unambiguous difference between
+the acquisition and current floor readings as defined below. A clock
+restart or change of epoch requires rebind.
 An owner needing older ages tracks them in a wider timebase. A cache read
 preserves the acquisition time, generation, offset provenance and freshness
 of the original sample.
@@ -116,10 +121,18 @@ commitment. Every elapsed interval, including time parked by the owner,
 uses unsigned subtraction. One implementation keeps the previous hook
 reading and subtracts each unsigned delta from the remaining budget,
 saturating at zero. This works across wrap even when a long final service
-gap takes the job more than one wrap from admission. Every gap between
-successive readings must be shorter than a full wrap, including time in a
-callback. A full wrap or a discontinuous clock cannot be detected from
-two low words. Check expiry at equality.
+gap takes the job more than one wrap from admission. Check expiry at equality.
+
+To measure elapsed time by subtraction, the owner must know that the two
+**unwrapped floor readings** differ by less than `2^32` ms. A sufficient
+bound on the actual interval is `2^32 - q` ms, including callback time.
+Rounding the earlier reading down can add almost one tick to the measured
+interval. For example, with q=2, physical times 1 and 4294967296 ms both
+report zero. Their physical gap is less than a wrap, yet a 10 ms job has
+long expired. The two low words cannot detect this case. If service
+continuity is lost, cancel the active job and take the result before
+resuming timed work. A direct sample-age calculation needs the bound from
+acquisition to query, even when intervening polls met it individually.
 
 For example, the following C++17 checks exercise the callback and wait
 arithmetic at wrap and at the largest supported tick. The wait helper
@@ -143,6 +156,7 @@ static_assert(remaining(12, 0xfffffff8u, 1) == 3);
 static_assert(remaining(3, 1, 4) == 0);
 static_assert(remaining(3, 1, 5) == 0);
 static_assert(remaining(3, 1, 1) == 3);
+static_assert(remaining(10, 0xfffffffeu, 0) == 8);
 static_assert(minimumWait(3, 10) == 20);
 static_assert(minimumWait(1, 2147483647) == 4294967294ULL);
 ```
@@ -165,15 +179,19 @@ Each timed callback, including the last, follows this order.
 
 For a minimum wait of `d` ms after a callback with floor reading `t`, the
 earliest eligible elapsed interval from `t` is `q + ceil(d/q) * q`. The
-extra tick covers the unknown sub-tick completion phase. Round fractional
+extra tick covers the unknown sub-tick completion phase. Some stage 6
+vectors give an exactly tick-aligned completion as a fixture input. A
+public hook reading alone supplies no such alignment. Round fractional
 conversion durations up without first truncating to milliseconds. Calculate
 in a wider type and compare the interval with the remaining time at that
 origin before narrowing. If the next required callback is due at or beyond
 expiry, finish with `OPERATION_TIMEOUT` without issuing it. Store a bounded
-relative wait and decrease it by elapsed time. A pre-existing continuous
-baseline can already be overdue at admission. Allow one due poll, then
-pace from its actual completion. If the baseline's age is ambiguous,
-credit no elapsed time and pace from the current tick.
+relative wait and decrease it by elapsed time. For a continuous baseline
+predating admission in the same uninterrupted epoch, the unsigned
+difference is a lower bound on elapsed floor time even across multiple
+wraps. Credit at most that difference toward the minimum wait. An aliased
+short difference can delay the poll. A missing valid timestamp earns zero
+credit. Allow one due poll and pace again from its actual completion.
 
 ### Work limits
 
@@ -189,6 +207,8 @@ failure are part of the same dispatch.
 | During a wait, at most 1,000,000 unsuccessful positive-budget checks of the same hook tick without phase progress. Applies to blocking loops and cooperative service. | A further such check returns terminal `WORK_LIMIT`. A changed tick or actual phase progress resets this counter. A zero-budget turn never spins or charges a wait check. |
 
 Deadline expiry takes precedence when a work check also finds no time left.
+If dispatch 32 of a turn is dispatch 256 of the job, finish on that turn.
+Return the step's terminal status, or `WORK_LIMIT` if it needs another step.
 Waiting probes spend no dispatch or transfer allowance. Blocking wrappers
 drive the same bounded phases without sleeping or calling a yield hook.
 Even with a frozen clock, a blocking call terminates. With an advancing
@@ -216,14 +236,17 @@ attempt. Guard and FIRST_ACK have different lifetimes. [Safety and startup polic
 Immediately before configure's first mutating callback, including guarded
 SD, retain the candidate as desired and mark the profile dirty. Before
 that point cancellation preserves the previous target and all actual read
-effects. Apply and verify stable CONFIG, both ordered limits and supported
-managed offset in SD. Observe supported unmanaged offset. TMP116/N uses
+effects. Discard prior conversion evidence when mutation begins. Apply and
+verify stable CONFIG, both ordered limits and supported managed offset in
+SD. Observe supported unmanaged offset. TMP116/N uses
 `0x07` for EEPROM3. Consume the SD baseline, write the desired mode and
 compare all final stable fields. If the final CONFIG shows BUSY, renew the
 guard and repeat verification within the remaining budget. Only timely
 verification of the entire target establishes a verified generation and
-initialization. A partial or ambiguous write retains the target, affected
-fields and dirty evidence. Recovery requires an explicit new operation.
+initialization. That final matching CONFIG establishes the generation's
+baseline. Retain its alerts and consume its DATA_READY without crediting
+it to a later fresh read. A partial or ambiguous write retains the target,
+affected fields and dirty evidence. Recovery requires an explicit new operation.
 An already initialized instance can retain latest access with dirty trust.
 A failed first initialization cannot grant it. [Apply order and identity exceptions](api-contracts.md#startup-apply-and-reset).
 
@@ -233,8 +256,10 @@ no TEMP. Stable drift in CONFIG returns `CONFIG_MISMATCH` and latches
 dirty even with BUSY or DATA_READY. A missing baseline in an otherwise
 verified generation consumes the first observation without publication.
 Require one unconsumed eligible ready observation for that generation,
-then one timely TEMP. The timed variant paces readiness checks from the
-baseline or preceding poll at the nominal CONV × AVG table period. A
+then one timely TEMP. An ambiguous CONFIG or TEMP read discards any saved
+ready evidence. The next fresh attempt needs a new eligible observation.
+The timed variant paces readiness checks from the baseline or preceding
+poll at the nominal CONV × AVG table period. A
 latest read requires no guard and has no fresh-conversion claim.
 
 **Owned one-shot.** Under the guard compare every stable CONFIG field
@@ -243,9 +268,13 @@ trigger permits MOD=11 here. Write guarded SD, read matching SD CONFIG
 to consume stale readiness, then issue exactly one MOD=11 write. Desired
 mode remains SD. From physical trigger completion wait the AVG count
 times the model's single-conversion maximum before polling CONFIG. After
-a ready-clear poll wait at least 5 ms from its completion. Require new
-DATA_READY for this trigger, then read TEMP. Apply the floor-clock rule to
-each wait. Use the [conversion windows and literal vectors](device-behavior.md#polling-and-deadlines)
+a ready-clear poll wait at least 5 ms from its completion. Compare every
+stable field at the SD baseline and at every readiness poll, applying the
+owned MOD exception only while it is valid. On drift, record the returned
+flags, latch dirty and stop before the next transfer. A timely mismatch
+returns `CONFIG_MISMATCH`. Require new DATA_READY for this trigger, then
+read TEMP. Apply the floor-clock rule to each wait.
+Use the [conversion windows and literal vectors](device-behavior.md#polling-and-deadlines)
 when sizing a budget. A due tick, GPIO level, MOD field or cached
 temperature alone supplies no completion evidence.
 
@@ -265,8 +294,9 @@ refusal, cancellation, work exhaustion and deadline expiry add no physical
 failure. Complete CONFIG reads, including late ones, retain raw fields
 and consumed DATA_READY. OR alert-mode HIGH/LOW into the event record with
 source, mode, generation, timestamp validity and uncertainty. Aggregate
-mixed origins explicitly. Therm HIGH is a live level. TEMP consumes ready
-only. An ambiguous CONFIG read can also lose alert events. A failed TEMP
+mixed origins explicitly. Therm HIGH is a live level. Every completed TEMP
+read, including a diagnostic or late read, consumes outstanding readiness.
+An ambiguous CONFIG read can also lose alert events. A failed TEMP
 can lose readiness alone. Preserve historical events on either failure.
 Use timely, eligible evidence once. Late observations and partial results
 cannot clear dirty, initialize, publish a successful sample or replace the
@@ -303,15 +333,16 @@ initialized, verified sensor and a timely clock.
 
 | Case | Stimulus | Expected result |
 | --- | --- | --- |
-| Admission and teardown | Change each configure binding field in turn, holding sentinel token 91. Separately start a valid job and try bind/end/unbind/invalidate, ID/EEPROM reads and another start before and after cancel. | Mismatch gives `INVALID_CONFIG`, token 91, zero callbacks. Valid start gives a new token and zero callbacks. All competing calls give `BUSY` until take. |
-| Retained identity | Sensors A and B each issue serial 1. Cancel A, poll A again, cancel again, try B's token on A, then take A's token twice. Repeat across end/rebind and the last allocatable serial. | `CANCELLED`, `CANCELLED`, `BUSY`, `TOKEN_MISMATCH`, `OK` with cancelled record, `RESULT_NOT_AVAILABLE`. Zero callbacks throughout. End/rebind preserves serial history. The last valid serial works once. The next start gives `WORK_LIMIT` with its output intact. |
+| Admission and teardown | Change each configure binding field in turn with a saved token in the output. Separately start a valid job and try bind/end/unbind/invalidate, ID/EEPROM reads and another start before and after cancel. | Mismatch gives `INVALID_CONFIG`, preserves the saved issuer and serial, and uses zero callbacks. Valid start gives a new token and zero callbacks. All competing calls give `BUSY` until take. |
+| Retained identity | Sensors A and B each issue serial 1. Cancel A, poll A again, cancel again, try B's token on A, then take A's token twice. After end/rebind, cancel A's next accepted job and try the old A token before taking the new one. | The first sequence returns `CANCELLED`, `CANCELLED`, `BUSY`, `TOKEN_MISMATCH`, `OK` with cancelled record, then `RESULT_NOT_AVAILABLE`. The stale token also gives `TOKEN_MISMATCH` with output and pending result intact. Zero callbacks throughout. The last allocatable serial works once. Even after end/rebind the next valid start gives `WORK_LIMIT` with its output intact. |
 | Wrap and equality | At hook `0xFFFFFFF8`, q=1, start LATEST with 12 ms, passing caller time 100000. At hook 1, poll with caller time 0, callback cap 50. Return OK at hook 4. Repeat with `poll(any,0)` at 4 before any transfer. | First run grants 3 ms, counts one success, records TEMP and its read effect, and retains timeout without sample/cache replacement. Second run times out with zero callbacks and no valid last physical status. |
 | Coarse clock | q=10, FIRST_ACK at floor tick 50. Try the 3 ms wait at 60 and 70. In a separate run admission at 40 with requested 39 ms gives expiry 70. Exercise timeout 0, 9, 10, `INT32_MAX` and one above it. | First eligible tick is 70. If expiry is also 70 the guard never runs. Only 10 and `INT32_MAX` admit, with budgets 10 and 2147483640. |
 | Two routes, one turn each | A is a TMP117 in SD, desired stable word `0x0620`, THIGH 20 °C. Start ONE_SHOT. Poll A with budgets 1,1,1,1,1. Between A's turns let B on another route perform its own LATEST. | A emits `R04=0000, R01=2620, W01=0620, R01=0620, W01=0E20`, one per turn. Preflight consumed old ready. The SD baseline reads clear. B emits one TEMP read. Each callback reselects its target. A wait turn spends zero. A later budget 255 can issue `R01=AE20, R00=0C80` on A for a fresh 25 °C and captured HIGH. Seven A callbacks, one trigger. |
+| Drift after the trigger | In the two-route trace, A's first ready poll instead returns `R01=AE40` on time. Consume A's alert events before taking its result. | The owned MOD=11 matches, but AVG changed. Six A callbacks, one trigger, zero TEMP reads. Return `CONFIG_MISMATCH`, keep the target dirty and cache intact. Both the alert consumer and the retained job record observe HIGH. The job also records consumed DATA_READY. |
 | Missing or unsafe evidence | Preflight against desired `0620` returns `0640` or unowned `0E20`. Separately inject guard `C000`, guard `4000`, or safe guard then matching CONFIG with BUSY/ready. | Preflight drift gives two reads, dirty and zero writes. EUN gives one read and `EEPROM_UNSAFE`. Timed BUSY can only recheck the guard after the paced interval. Untimed fresh with matching desired CC stops on BUSY in one or two reads, zero writes and zero TEMP. |
 | Cancellation around a write | Stage a new limits pair. Stop on either side of the first SD write, or make that callback return a data NACK after a possible partial write. | Before invocation cancel preserves the old target. After invocation the candidate remains desired and dirty, including on NACK. Count the attempted write once, record its status and possible effect. No compensating transfer. |
 | Late verification or trigger | Let the matching final CONFIG of initial replay return HIGH at expiry. Separately let an OS trigger succeed at expiry, or cancel the shot on a later wait turn. | Late read gives one tracked success for that callback and retained HIGH. Initialization stays false, target dirty, no new verified generation. Late trigger gives timeout with physical OK. Both shot exits preserve owned-trigger provenance, with zero extra writes. An ambiguous trigger error gives dirty uncertainty instead. |
-| Destructive read failure | Capture HIGH in CONFIG, later receive matching CONFIG with zero alert flags, then fail TEMP. Repeat with a failed CONFIG. | HIGH survives both sequences. The TEMP failure marks possible loss of ready. The CONFIG failure also marks possible loss of alert history. No successful sample or cache replacement. |
+| Continuous baseline and destructive reads | In CC, final verified apply CONFIG returns ready. Try fresh with no later ready. On another attempt CONFIG returns HIGH and a new ready, then TEMP fails. Take any pending result and try again with a safe guard and ready clear. Separately fail CONFIG after capturing HIGH. | Both ready-clear tries stop after guard and CONFIG with `MEASUREMENT_NOT_READY`, zero TEMP reads and the cache intact. The failed TEMP discards the saved ready and records possible loss. The failed CONFIG can also lose alert history. Captured HIGH survives later zero flags and both failures until explicit event consumption. |
 | Work and transport | Park at a future due tick. Poll with budget 255 on a frozen clock. Separately feed only successful BUSY words with advancing time and a long deadline, or make the first guard fail. | Each parked turn returns promptly. The 1,000,001st unchanged unsuccessful wait check gives `WORK_LIMIT`. No timed operation executes a 257th phase dispatch. A timely guard transport failure ends after one callback. |
 
 These traces are design inputs for the shared engines in stages 18 and 21,

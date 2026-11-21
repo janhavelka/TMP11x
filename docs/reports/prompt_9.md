@@ -124,3 +124,42 @@ steps, 28 implements the slot and 29–31 exercise real jobs and fault cases.
 No blocker for phase c. Native driver tests, MCU links, remote CI and
 physical qualification were NOT RUN. The production driver and CI workflow
 are later-stage artifacts.
+
+## Phase c review, 2026-11-21
+
+Reviewed the phase-b diff at `b3ae08de268819dd72e64f6cab627cbccda107e5`
+on clean `main`. Its parent, message and two paths matched the preceding
+commit request. The wrapper recorded upstream equality at 20:35:51 Prague
+time, and the local tracking ref still matched at review entry. Two
+independent read-only reviewers covered timing/work bounds and partial
+effects/result ownership. The lead checked their findings against the
+stage 6 vectors, stage 7 guard, stage 8 API and stage 28–31 requirements.
+The peer paths, clean local revisions and GitHub tips matched the phase-a
+source table.
+
+| Finding | Correction and review evidence |
+| --- | --- |
+| A physical gap shorter than one wrap can still alias on a coarse clock. | At q=2, physical times 1 and 4294967296 ms both return zero. A naïve check leaves all 10 ms of a job available. Deadline and cache-age subtraction require an unwrapped **floor-reading** difference below one wrap. A physical gap of at most `2^32 - q` ms suffices. For pacing from an older same-epoch baseline, the low-word difference is a conservative credit toward a minimum wait. |
+| A ready bit could survive final apply or an ambiguous read as credit for a later acquisition. A post-trigger poll also needed an explicit stable-field comparison. | Final apply consumes readiness as its generation baseline. A failed CONFIG or TEMP discards ambiguous readiness. In the revised one-shot trace, `AE40` carries HIGH, ready and owned MOD=11, but its AVG differs from desired `0620`. The sixth callback latches dirty and ends with `CONFIG_MISMATCH`, zero TEMP reads and the prior cache intact. |
+| Copying or assigning a device could duplicate or orphan its result slot. Consuming instance alerts could erase evidence needed by a pending result. | The API and owner contract keep the device at a stable identity and disallow copy/move construction and assignment. Tokens and results remain values. The retained record carries the job's own read effects independently of the alert consumer. The stale-token trace now attempts retrieval while a newer result is pending after rebind. |
+
+The reviewers found the first-mutating-attempt rule consistent across
+configure, cancel and callback failure. A pre-write cancellation preserves
+the prior target. An ambiguous first write retains the candidate and dirty
+evidence. A physically successful late trigger retains its provenance.
+The slot table preserves the terminal result on a foreign token, repeated
+poll/cancel or teardown. Only a matching take frees it. Stage 28 can
+check the device's four copy/move type traits alongside its slot tests.
+
+| Focused verification | Phase-c result |
+| --- | --- |
+| `g++ -std=c++17 -Wall -Wextra -Werror -pedantic -fsyntax-only -x c++ -` | GCC 15.1.0 passed seven published and 273 generated assertions for remaining time and floor-clock waits, including q=1 and `INT32_MAX`. Inline Python reproduced the two wrap aliases at q=2 and 10 and checked sub-tick admission, maximum duration and due-equals-expiry. |
+| Inline `python -B -` timing and work traces | 7,728 small-clock cases checked the service bound and conservative wait credit at half-tick phases and multi-wrap gaps. Six dispatch traces checked transfer budgets 0/1/255, a 33rd step in a new turn, success on step 256 and refusal of step 257. The contract now gives a terminal outcome when the turn and job caps coincide. |
+| Inline `python -B -` register and PDF checks | Matched the seven-callback TMP117 sequence to the stage 6 vector, decoded the AVG drift, HIGH, ready and 25 °C, and rechecked the timeout table and held-line prose on the six phase-a PDF pages. |
+| Repository checks | Python 3.12.10 passed `python -B scripts/check_promptset.py`, `python -B scripts/check_references.py`, `python -B tools/check_register_ledger.py` and `python -B tools/test_check_register_ledger.py` for 55 stages, 14 pinned PDFs, six BOM models and 31 regressions. Local Markdown targets, anchors and PDF pages resolve in both contracts and this report. Git 2.52.0.windows.1 passed working and empty-index whitespace checks. |
+
+The checked artifacts are the owner contract, its companion API
+clarifications and this report. These are design traces. Native driver
+tests, MCU links, remote CI and physical qualification were NOT RUN.
+Phase d owns final acceptance, the index and the progress ledger. Stage 9
+remains open with no phase-c blocker.

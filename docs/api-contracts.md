@@ -179,7 +179,9 @@ replay. Verification compares values at the step where they must already
 have taken effect. Unmanaged offset records calibration provenance without
 joining the target.
 
-Jobs use `OperationKind::{INITIALIZE,CONFIGURE,RECOVER,READ}` and an explicit
+The device instance has a stable identity and cannot be copied, moved or
+assigned. Tokens and retained result values can be copied. Jobs use
+`OperationKind::{INITIALIZE,CONFIGURE,RECOVER,READ}` and an explicit
 `ReadKind::{LATEST,CONTINUOUS_FRESH,ONE_SHOT}`. Start signatures take
 `(uint32_t nowMs, uint32_t timeoutMs, OperationToken& token)`, prepended
 by `const Config&` for configure or `ReadKind` for read. `poll(uint32_t
@@ -194,8 +196,9 @@ stable power and explicitly recover. A retained failure is observable once.
 Every timed path samples the clock before and after the callback, clips
 its timeout to the remaining whole-operation budget, and expires at equality.
 Use unsigned elapsed differences with finite positive relative durations
-at most `INT32_MAX`. Continuity and service within one wrap are owner
-obligations. With a coarse clock, round the whole-operation budget down to
+at most `INT32_MAX`. The owner guarantees continuity and less than one
+wrap between the unwrapped floor readings used to measure a deadline
+interval or a sample age. Round the whole-operation budget down to
 complete ticks at admission. Reject a budget shorter than one tick before
 work or token commitment. This makes expiry observable on the timebase
 used by the post-callback check. A zero-transfer poll can expire the job
@@ -211,7 +214,7 @@ The first eligible tick for the 3 ms startup wait is 70 ms. Compute the
 rounded interval in a wider type and compare with the remaining deadline
 before scheduling. A due time at or beyond expiry permits zero transfers.
 Stage 9 specifies the owner-facing scheduling, work limits and token
-lifetime in detail. [Owner contract brief](prompts/9_owner-deadline-contract.md).
+lifetime in detail. [Cooperative owner operations](owner-operations.md).
 
 ## Startup, apply and reset
 
