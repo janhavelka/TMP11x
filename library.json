@@ -22,7 +22,7 @@
     "url": "https://github.com/janhavelka/TMP11x.git"
   },
   "license": "MIT",
-  "headers": ["TMP11x/Version.h"],
+  "headers": ["TMP11x/TMP11x.h", "TMP11x/Version.h"],
   "build": {
     "includeDir": "include",
     "srcDir": "src"

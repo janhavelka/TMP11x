@@ -98,3 +98,46 @@ Phase d owns final acceptance and the completion ledger and index entries.
 - New value-type tests, MCU links, remote CI and physical qualification
   were NOT RUN. No blocker prevents phase b. The wrapper owns the report
   commit and upstream synchronization.
+
+## Phase b implementation, 2026-11-21
+
+Phase b started from clean `main` at
+`ba2e51e4d9c73e9aa3292e709997422c909a3c9f`, matching the local `origin/main`
+at 0/0 divergence. The parent, subject and one changed file match the
+phase-a commit request. `runs.log` records upstream equality at 23:15:42
+Prague time. The phase-b changes await the wrapper commit and push.
+
+| Owned surface | Delivered behavior |
+| --- | --- |
+| [Status and passive state](../../include/TMP11x/Status.h) | `Status` preserves signed diagnostic detail and borrows static text. Symbolic names distinguish pending work, driver refusals, generic and phase-specific NACK, short transfer, bus fault and transport timeout. Whole-operation deadline expiry has a separate code. |
+| [Binding and stable settings](../../include/TMP11x/Config.h) | `Config{}` starts with `Model::UNSELECTED` and address zero. `SensorSettings` copies the stable selectors and two signed limit words. Pure predicates validate all selector values and seven-bit addresses. Callback signatures preserve borrowed buffers, contexts, terminal status and explicit budgets. Full profile validation belongs to stages 17–18. |
+| [Model descriptor](../../src/ModelDescriptor.h), [lookup](../../src/Config.cpp) | One private table maps all six BOM choices to two access and identity profiles. Each row carries the ID group/mask/value, revision mask/shift, shadow pointers and count, and the offset/reset gates. `getCapabilities` preserves output and returns `INVALID_PARAM` for invalid model values. Stage 12 uses the selected descriptor for access policy. Stage 13 can scan the same table to recognize the raw word independently of the BOM selection before evaluating compatibility. Stage 24 uses the shadow map. |
+| [Identity and sample evidence](../../include/TMP11x/TMP11x.h) | `IdentityInfo` has independent raw and revision validity. A zero revision can be valid. `Sample` preserves `double` Celsius, exact signed counts and independent time, acquisition, profile, freshness and offset evidence. The default timestamp is invalid and offset evidence is unknown. Stage 16 populates the numeric values, and stage 23 supplies offset evidence and the managed offset setting. |
+| [Build and tests](../../CMakeLists.txt), [test guide](../testing.md) | Both CMake paths include `src/Config.cpp`. The host suite registers `value_types_cpp` with strict C++17 and independent header compilations. PlatformIO advertises the main header alongside the version header. [Source adaptations and MIT attribution](../source-adoption.md#portable-value-types). |
+
+One agent implemented the three test translation units. A separate read-only
+agent rechecked the exact pinned TI pages for addresses, maps, TEMP, CONFIG,
+limits and ID. The code uses the phase-a ID, EEPROM and reset decisions.
+CONV codes 0–3 have AVG-dependent nominal periods. The related code-0 example
+in phase a remains valid. The CONFIG software defaults encode `0x0220` and
+the limit defaults correspond to `0x8000` and `0x6000`. A default value or a
+compatible ID alone supplies no live configuration or exact grade evidence.
+The TMP119 ID table discrepancy and reset uncertainties remain recorded in
+the silicon evidence. Both agents finished before handoff.
+
+### Phase-b checks
+
+| Command or case | Evidence |
+| --- | --- |
+| `cmake -S . -B build-tests-prompt11-b -G Ninja -DTMP11X_BUILD_TESTS=ON -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXPORT_COMPILE_COMMANDS=ON`, `cmake --build build-tests-prompt11-b --config Release --parallel`, `ctest --test-dir build-tests-prompt11-b -C Release --output-on-failure` | PASS, 7/7 registrations with CMake 4.0.1, Ninja 1.12.1, GNU C++ 15.1.0 and Python 3.12.10. The value test and new core source compiled with `-std=c++17 -Wall -Wextra -Wpedantic -Werror` and `-DNDEBUG`. The ledger and its 31 regression cases passed. |
+| `statusNamesAndPredicates`, `modelCapabilitiesAndIdentityPolicy`, `addressesAndSelectors`, `defaultAndCopiedEvidence` in [test_value_types.cpp](../../test/test_value_types.cpp) | PASS. Cases cover all symbolic errors, invalid enum formatting, signed detail and static pointer preservation, all 256 model/address/selector encodings, the two literal ID/shadow profiles, unchanged output on capability failure, default binding/settings and independent sample evidence. The runtime guard traps ordinary C++ `new` and `new[]` during checks. `nm -u` on `Config.cpp.obj` reported no undefined symbols. [Config header check](../../test/config_header.cpp), [Status header check](../../test/status_header.cpp). |
+| `doxygen build-tests-prompt11-b/Doxyfile.values` | PASS with Doxygen 1.13.2. The local XML build of the three new public headers passed with warnings treated as errors. |
+| `scripts/pio.cmd package pack --output build-package-prompt11-b/TMP11x-final.tar.gz` | PASS with managed Core 6.2.0 and the Git-blob-verified offline SPDX response recorded in [stage 10](prompt_10.md#phase-b-checks). All 15 exported files matched the checked source bytes. Archive SHA-256 `ad302e8660e92eb14b7138f69f5feeed21276bed9ab9c012cb259a3d076d7862`. |
+| Tests-off consumer from the extracted export under `build-package-prompt11-b/linked` | PASS. The separate app included `<TMP11x/TMP11x.h>`, linked `getCapabilities` and verified TMP119 capability values. Python and Git package discovery were disabled. CMake reported the discovery flags unused and CTest listed zero tests. |
+| `python -B scripts/check_promptset.py`, `python -B scripts/check_references.py`, `git diff --check` | PASS for 55 stages, 14 pinned PDF hashes and whitespace. The initial coverage evidence row was relabelled after the checker interpreted its compound first cell as a requirement ID. |
+
+MCU links, deliberate remote CI and physical qualification were NOT RUN.
+Stages 34–36 own the first adapter links, 40–41 own fixture evidence, and
+43 owns the first deliberate remote checkpoint. Phase c reviews the source,
+tests and checked artifact revision. Phase d retains final acceptance and
+completion ownership.

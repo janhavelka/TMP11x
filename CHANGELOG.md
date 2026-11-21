@@ -6,3 +6,5 @@
   compile/link example.
 - Added the generated public package version and linked version function.
 - Added the host CTest entrypoint with version and register-ledger checks.
+- Added portable status, binding, stable settings, model capabilities, and
+  identity and sample evidence types with native tests for all six BOM models.

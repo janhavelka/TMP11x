@@ -52,14 +52,19 @@ core cannot infer missing bytes from a buffer's contents.
 | `limits` | `Limits{lowCounts, highCounts}` in exact signed 16-bit counts. Both words belong to the target. Validate therm mode with `lowCounts <= highCounts`, including when entering therm. |
 | `managedOffsetCounts` (stage 23) | `std::optional<int16_t>` in the same units. Disengaged by default. Engaged zero is a request to apply, verify and later replay zero. Reject any engaged value on TMP116/N before I2C. Releasing ownership preserves the live value. |
 
-For `Config{}` the proposed target is continuous, cycle code 4, eight-sample
+For `Config{}` the desired target is continuous, cycle code 4, eight-sample
 averaging, alert mode, active-low threshold output, low −32768 and high
 24576 counts. These are software defaults. Only a verified readback
 describes the device. Callback pointers start null. Defaults of 50 ms per
 callback, 1000 ms per synchronous apply/reset and five consecutive failures
-are transport policy. The owner selects model and address before binding.
-`Capabilities` reports `hasOffset`, `hasAddressedReset` and `eepromWordCount`
-for a validated selection without observing hardware.
+are transport policy. `Model::UNSELECTED` and address zero require the owner
+to select a model and address before binding. `isValidModel` and
+`isValidAddress` check those choices. `getCapabilities(model, out)` fills
+`hasOffset`, `hasAddressedReset` and `eepromWordCount` without I/O. An invalid
+model returns `INVALID_PARAM` and preserves `out`. Use `Cycle::CODE_0` through
+`CODE_7` and `Averaging::SAMPLES_1`, `SAMPLES_8`, `SAMPLES_32` or `SAMPLES_64`
+for the stable selectors. CONV codes 0–3 have AVG-dependent periods.
+[Continuous timing table](device-behavior.md#conversion-modes-and-intervals).
 
 Stage 11 supplies binding and CONFIG/limits. Stages 18–21 can verify all
 then-owned fields and publish samples with unknown offset provenance. Stage
@@ -81,8 +86,9 @@ message text, `ok()`, `is(Err)`, `inProgress()`, `Status::Ok()`,
 of the requested action. `IN_PROGRESS` belongs to the operation engine.
 Normalize a nonterminal or incoherent adapter status to `I2C_ERROR` and
 retain its diagnostic detail. Use `I2C_NACK_ADDR` or `I2C_NACK_DATA` only
-when the adapter knows the phase. Preserve a generic NACK, bus error, short
-transfer or transport timeout with its actual cause. The API distinguishes
+when the adapter knows the phase. Use `I2C_NACK`, `I2C_BUS`,
+`I2C_SHORT_TRANSFER` and `I2C_TIMEOUT` for other identified adapter causes.
+`errorName` returns `"UNKNOWN"` for an unrecognized code. The API distinguishes
 `INVALID_PARAM`, `INVALID_CONFIG`, `NOT_BOUND`, `NOT_INITIALIZED`,
 `UNSUPPORTED`, `CLOCK_REQUIRED`, `BUSY`, `IDENTITY_MISMATCH`,
 `EEPROM_UNSAFE`, `CONFIG_DIRTY`, `CONFIG_MISMATCH`,
@@ -92,7 +98,7 @@ zero physical outcomes.
 
 | Public value | Evidence carried |
 | --- | --- |
-| `IdentityInfo` | Selected BOM model and bound address, complete raw ID when available, recognized group, revision and its validity, compatibility with the selection. TMP116/N requires exactly `0x1116` and has no decoded revision. TMP117/M/N and TMP119 require low 12 bits `0x117` and expose the high nibble even for an unfamiliar revision. Compatible family, exact ordering code and physical authentication are distinct claims. |
+| `IdentityInfo` | Selected BOM model and bound address, complete raw ID when available, recognized group, revision and its validity, compatibility with the selection. The group describes the complete observed word even on a mismatch with the selection. TMP116/N requires exactly `0x1116` and has no decoded revision. TMP117/M/N and TMP119 require low 12 bits `0x117` and expose the high nibble, including zero or an unfamiliar revision. Compatible family, exact ordering code and physical authentication are distinct claims. |
 | `HealthSnapshot` | `DriverState`, initialized flag, saturating total successes/failures and consecutive failures, last physical fault/status, observation time and validity. Start at `UNINIT` on accepted bind or teardown. Each tracked terminal success sets `READY` and clears the streak. Each tracked failure increments it and sets `DEGRADED` below the threshold or `OFFLINE` at/above it. Preserve the last fault across success. |
 | `SettingsSnapshot` | Desired settings, observed raw/decoded fields with per-field validity and times, last verified generation/time, current trust (`UNKNOWN`, `DIRTY` or `VERIFIED`), first unresolved dirty reason and affected fields. Partial observations stay partial. A detected stable mismatch leaves the target intact. |
 | `ConfigurationObservation` | One complete CONFIG word with decoded stable fields, observed MOD, BUSY, DATA_READY and mode-specific HIGH/LOW, observation time/validity and read effects. Preserve the raw MOD even when accepting a continuous alias or an owned one-shot. |

@@ -53,6 +53,20 @@ OPT4001 at [`441ef579d7fa3f7bca7665f52632fdaddd306300`](https://github.com/janha
 provided a clean-package precedent through `tools/check_clean_consumer_package.py`.
 The template was a structural precedent. [Stage 10 checks](reports/prompt_10.md).
 
+## Portable value types
+
+Stage 11 used TMP1x2 at
+[`afd50889312f6e218a6a34eca687e3e8547d8b40`](https://github.com/janhavelka/TMP1x2/tree/afd50889312f6e218a6a34eca687e3e8547d8b40)
+and retains the original MIT notice in [LICENSE](../LICENSE).
+
+| Original file | TMP11x adaptation and evidence |
+| --- | --- |
+| `include/TMP1x2/Status.h` | [Status.h](../include/TMP11x/Status.h) adapts the typed aggregate, constexpr predicates and factories, and static symbolic name switch. TMP11x defines its own error set and preserves signed adapter detail. |
+| `include/TMP1x2/Config.h` | [Config.h](../include/TMP11x/Config.h) adapts the callback/context and typed settings conventions. TMP11x defines its own BOM selection, cycle and averaging selectors, timing policy and limit values. |
+| `include/TMP1x2/TMP1x2.h`, `test/helpers/test_helpers.cpp` | `DriverState` reuses the passive state vocabulary. The sample and tests use separate value and freshness fields and Release-active checks as precedents. TMP11x defines the acquisition, time, trust, ID and offset evidence and tests the TI-derived model rows independently. |
+
+[Stage 11 sources and checks](reports/prompt_11.md).
+
 ## Selected future reuse
 
 These are decisions for later stages, not claims that the corresponding
@@ -60,7 +74,6 @@ TMP11x files already exist.
 
 | Source | Decision | Required adaptation and evidence |
 |---|---|---|
-| TMP1x2 `include/TMP1x2/Status.h` and `Config.h` | Adapt | Preserve compact typed status, static strings, terminal injected callbacks and user contexts. Change namespace, models, errors and configuration fields after prompt 8. Record exact copied source and retain the MIT notice. |
 | TMP1x2 `src/TMP1x2.cpp` health/lifecycle concepts | Adapt | Preserve passive OFFLINE, bus-silent binding/end and health-neutral preconditions. Test callback count, zero-bus APIs, failure outputs, counter saturation and recovery explicitly. |
 | TMP1x2 `TMP1x2Configuration.cpp` | Adapt concept; rewrite chip behavior | Preserve desired/observed/trusted distinctions and evidence after a write may have committed. Replace masks, ordering, state transitions and verification reads from exact TMP11x evidence; account for read-to-clear flags and EEPROM safety. |
 | TMP1x2 `TMP1x2Operations.cpp` | Adapt bounded owner/result model | One operation, no hidden task or retry; clip callback budgets and retain terminal result. Rewrite phases for TMP11x EEPROM checks, model gates and conversion readiness. |

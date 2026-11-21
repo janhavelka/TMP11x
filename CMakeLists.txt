@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.16)
 
-set(TMP11X_SOURCES src/Version.cpp)
+set(TMP11X_SOURCES
+  src/Config.cpp
+  src/Version.cpp)
 
 if(COMMAND idf_component_register)
   idf_component_register(SRCS ${TMP11X_SOURCES} INCLUDE_DIRS include)
@@ -22,6 +24,23 @@ if(TMP11X_BUILD_TESTS)
   add_executable(tmp11x_version_test test/test_version.cpp)
   target_link_libraries(tmp11x_version_test PRIVATE TMP11x)
   add_test(NAME version_cpp COMMAND tmp11x_version_test)
+
+  add_executable(tmp11x_value_types_test
+    test/test_value_types.cpp
+    test/config_header.cpp
+    test/status_header.cpp)
+  target_link_libraries(tmp11x_value_types_test PRIVATE TMP11x)
+  target_include_directories(tmp11x_value_types_test PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src")
+  set_target_properties(TMP11x tmp11x_value_types_test PROPERTIES
+    CXX_STANDARD 17 CXX_STANDARD_REQUIRED YES CXX_EXTENSIONS NO)
+  if(MSVC)
+    target_compile_options(TMP11x PRIVATE /W4 /WX /permissive-)
+    target_compile_options(tmp11x_value_types_test PRIVATE /W4 /WX /permissive-)
+  elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+    target_compile_options(TMP11x PRIVATE -Wall -Wextra -Wpedantic -Werror)
+    target_compile_options(tmp11x_value_types_test PRIVATE -Wall -Wextra -Wpedantic -Werror)
+  endif()
+  add_test(NAME value_types_cpp COMMAND tmp11x_value_types_test)
 
   add_test(NAME version_generator_check
     COMMAND "${Python3_EXECUTABLE}" -B "${CMAKE_CURRENT_SOURCE_DIR}/scripts/generate_version.py" check)

@@ -31,13 +31,15 @@ F20 and applies to every selected model.
 | Applies to | documented | implemented | host-tested | MCU-linked | remote-CI | physically-qualified |
 | --- | --- | --- | --- | --- | --- | --- |
 | F20.foundation | Source pages and project dispositions below | SDK-free C++17 library and source consumer foundation | Version test and isolated native source link/run passed. Shared-bus and installed-package checks are pending. | Not run | Not run | Not run |
-| All other rows, all six models | Source pages and project dispositions below | Pending | Not run | Not run | Not run | Not run |
+| Value types for all six models | F01, F02, R01, R05–R12 and R14–R17 below | Portable values, selector checks and two shared model profiles | `value_types_cpp` verifies model gates, addresses, selectors, signed fields and evidence defaults. Transactions, decoding, timing and effects have later test owners. | Not run | Not run | Not run |
+| Remaining software and qualification work | Source pages and project dispositions below | Pending | Not run | Not run | Not run | Not run |
 
 When evidence differs by row or model, record its implementation path, test
 registration/result, linked target, exact CI revision and fixture identity in
 separate entries. The [stage 10 report](reports/prompt_10.md) records the F20
-checks and ledger test registration. Stages 33 and 44 reconcile the software
-evidence. Stages 40–41 record physical results only for the board, part,
+checks and ledger test registration. The [stage 11 report](reports/prompt_11.md)
+records the value-type checks and source evidence. Stages 33 and 44 reconcile
+software evidence. Stages 40–41 record physical results for the board, part,
 conditions and actions actually exercised.
 [Required coverage inventory](prompts/FULL_COVERAGE.md),
 [verification layers](prompts/VERIFICATION.md).

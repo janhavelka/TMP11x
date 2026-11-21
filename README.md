@@ -3,10 +3,12 @@
 A new, framework-neutral C++17 driver project for TI TMP116 / TMP116N,
 TMP117 / TMP117M / TMP117N, and TMP119. TMP117 is the primary intended sensor.
 
-The C++17 library foundation is available at development version `0.1.0`.
-Its public header is `<TMP11x/Version.h>`, and `TMP11x::version()` reports the
-version compiled into the linked library. Sensor implementation and
-qualification are still pending.
+Development version `0.1.0` provides portable C++17 status, binding, settings,
+model capability and observation types through `<TMP11x/TMP11x.h>`.
+`TMP11x::getCapabilities()` reports features of an explicit BOM selection
+without accessing hardware. Device communication and qualification are pending.
+`<TMP11x/Version.h>` exposes `TMP11x::version()` for the linked library.
+[Value and binding contracts](docs/api-contracts.md).
 
 ## Build and test
 

@@ -10,6 +10,10 @@ The [orderable packages and operating conditions](board-integration.md#orderable
 and [guaranteed accuracy tables](board-integration.md#guaranteed-accuracy) give
 the exact-part conditions for each row.
 
+`getCapabilities(model, out)` in `<TMP11x/Config.h>` reports the hardware
+capabilities for the selected row without I/O. Select an address separately
+and check it with `isValidAddress`. [Binding contract](api-contracts.md#binding-and-sensor-settings).
+
 | BOM model | Silicon family | Register map | Seven-bit I2C addresses | EEPROM shadow words | Optional managed offset | Addressed reset | Supply and accuracy source |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | `Model::TMP116` | TMP116 | TMP116 | `0x48–0x4B` | 4 | Unavailable | Unavailable | [SBOS740A pp.4–5, TMP116 rows](reference/source/TMP116-Digital-Temperature-Sensor-Datasheet-SBOS740A.pdf#page=5) |

@@ -10,10 +10,10 @@ conversion or startup interval runs. [Public API and operation gates](api-contra
 
 | Public header under `include/TMP11x/` | Contents |
 | --- | --- |
-| `Status.h` | SDK-independent errors, static messages, status and predicates. |
+| `Status.h` | SDK-independent errors, static messages, status predicates and passive transport states. |
 | `Config.h` | Value types, model and capability queries, callback types, binding and desired sensor settings. Stage 23 adds the configurable hardware offset. |
 | `CommandTable.h` | Checked map, access classes and field constants for the selected family. Stage 12 derives these from the reviewed ledger. A register identifier grants no write permission. |
-| `TMP11x.h` | Device class, typed observations, lifecycle, measurements, configuration, diagnostics and operation interface. Introduce each method with its feature stage. |
+| `TMP11x.h` | Sample and identity evidence types. Later stages add the device class with lifecycle, measurement, configuration, diagnostic and operation methods as each becomes available. |
 | `Version.h` | Checked-in generated package version from `library.json`. Its constants describe the header, and the out-of-line `version()` describes the linked library. |
 
 Implementation belongs in `src/`. Each public header must compile on its
@@ -27,6 +27,11 @@ the library. Test doubles, host scripts and vendor PDFs stay in the development
 checkout. [Native testing](testing.md), [toolchain and package plan](toolchain-and-package-plan.md).
 
 ## Which code decides each register action
+
+The private `src/ModelDescriptor.h` holds the two model profiles and declares
+`findModelDescriptor` for transport, identity and shadow access. Use the table
+to recognize a complete ID word independently of the selected BOM model.
+`src/Config.cpp` implements the lookup and the public capability query.
 
 | Owner | Exclusive decision and callers |
 | --- | --- |
