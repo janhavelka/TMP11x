@@ -69,19 +69,22 @@ responder can coincidentally return compatible data.
 | Any TMP117 grade or TMP119 reads `0x1116` | Incompatible ID. End validation. |
 | Any supported selection reads `0x0000` or `0xFFFF` as a complete word | Incompatible ID. End validation. |
 
-The ID operation writes only the pointer byte and reads two data bytes. On
-failure or mismatch, it ends before additional register reads or data writes.
-Application discovery stays outside this operation. Treat the pointer as
-compatible-protocol traffic and use it only on a known route and candidate.
-Subsequent volatile mutations require their own readiness, lock/busy and
-configuration safety checks.
+The ID operation writes the pointer byte alone and reads two data bytes after
+a repeated START in the same transfer. On failure or mismatch, it ends before
+additional register reads or data writes. Use this operation only on a known
+route and candidate with compatible framing. Subsequent volatile mutations
+require their own readiness, lock/busy and configuration safety checks.
+[Owner transport contract](prompts/ENGINEERING.md#transport-and-ownership),
+[SBOS740A p.20](reference/source/TMP116-Digital-Temperature-Sensor-Datasheet-SBOS740A.pdf#page=20),
+[SNOSD82D p.21](reference/source/TMP117-Digital-Temperature-Sensor-Datasheet-SNOSD82D.pdf#page=21),
+[SNIS236 p.23](reference/source/TMP119-Digital-Temperature-Sensor-Datasheet-SNIS236.pdf#page=23).
 
 As secondary evidence, Linux IIO compares the three full words `0x1116`,
 `0x0117` and `0x2117` and uses firmware/device match information as a
 fallback for other words. Here revision semantics come from the TI ID
 tables and the model comes from the BOM. [Pinned public-code
 catalog](reference/public-code-catalog.md#linux-iio-tmp11x-driver--factual-comparison-only),
-[Linux comparison revision](https://kernel.googlesource.com/pub/scm/linux/kernel/git/torvalds/linux.git/+/1f7267d8043e394933b0ed06070bfa7921d7c830/drivers/iio/temperature/tmp117.c).
+[Linux source at the catalog revision](https://github.com/torvalds/linux/blob/23c62304dde29abe92013d85910d03a77dada35d/drivers/iio/temperature/tmp117.c).
 
 ## EEPROM shadow and traceability
 
@@ -91,13 +94,19 @@ catalog](reference/public-code-catalog.md#linux-iio-tmp11x-driver--factual-compa
 | TMP117, TMP117M, TMP117N | `0x05` | `0x06` | `0x08` | Unmapped |
 | TMP119 | `0x05` | `0x06` | `0x08` | Unmapped |
 
+The pointer assignments come from the exact-part register maps.
+[SBOS740A p.24](reference/source/TMP116-Digital-Temperature-Sensor-Datasheet-SBOS740A.pdf#page=24),
+[SNOSD82D p.25](reference/source/TMP117-Digital-Temperature-Sensor-Datasheet-SNOSD82D.pdf#page=25),
+[SNIS236 p.32](reference/source/TMP119-Digital-Temperature-Sensor-Datasheet-SNIS236.pdf#page=32).
+
 Each pointer names one 16-bit EEPROM data shadow. TI describes a unique ID
-programmed during manufacturing to support NIST traceability. TMP117's
-EEPROM overview and TMP119's overview and EEPROM1 description refer to four
-words or EEPROM[4:1]. Their register maps show three EEPROM data shadows and
-assign `0x07` to offset. Use those documented map entries for access.
+programmed during manufacturing to support NIST traceability. The EEPROM
+overviews and EEPROM1 descriptions for both TMP117 and TMP119 refer to four
+words or `EEPROM[4:1]`. Use the three data shadow pointers in their register
+maps, which assign `0x07` to offset.
 [TMP116 overview, SBOS740A p.17](reference/source/TMP116-Digital-Temperature-Sensor-Datasheet-SBOS740A.pdf#page=17),
 [TMP117 overview, SNOSD82D p.18](reference/source/TMP117-Digital-Temperature-Sensor-Datasheet-SNOSD82D.pdf#page=18),
+[TMP117 EEPROM1, p.30](reference/source/TMP117-Digital-Temperature-Sensor-Datasheet-SNOSD82D.pdf#page=30),
 [TMP119 overview, SNIS236 p.20](reference/source/TMP119-Digital-Temperature-Sensor-Datasheet-SNIS236.pdf#page=20),
 [TMP119 EEPROM1, p.37](reference/source/TMP119-Digital-Temperature-Sensor-Datasheet-SNIS236.pdf#page=37).
 

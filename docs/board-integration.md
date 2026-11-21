@@ -131,14 +131,21 @@ and GND and choose a temperature rating that covers the operating range.
 [SNOSD82D pp.33, 35](reference/source/TMP117-Digital-Temperature-Sensor-Datasheet-SNOSD82D.pdf#page=33),
 [SNIS236 pp.28, 30](reference/source/TMP119-Digital-Temperature-Sensor-Datasheet-SNIS236.pdf#page=28).
 
+TMP117 grades and TMP119 specify a recommended 0–5.5 V range for SCL, SDA,
+ALERT and ADD0. The TMP116/N recommended conditions list supply and ambient
+limits. Their −0.3 to +6 V pin ratings are absolute maximum stress limits.
+[SBOS740A p.4, §§6.1, 6.3](reference/source/TMP116-Digital-Temperature-Sensor-Datasheet-SBOS740A.pdf#page=4),
+[SNOSD82D p.5, §6.3](reference/source/TMP117-Digital-Temperature-Sensor-Datasheet-SNOSD82D.pdf#page=5),
+[SNIS236 p.6, §6.3](reference/source/TMP119-Digital-Temperature-Sensor-Datasheet-SNIS236.pdf#page=6).
+
 The ordinary serial-input bounds are LOW ≤ 0.3 × V+ and HIGH ≥ 0.7 × V+.
 The TMP119 table includes ADD0 in these threshold rows. Check the host
-thresholds, rail tolerances, leakage and actual signal levels as well. A bus
-can communicate correctly at logic levels outside the tighter TMP117/TMP119
-accuracy test conditions. Set the clock against the timing tables and validate
-rise and fall times at the chosen rate. [SBOS740A pp.5–6, §§6.5–6.6](reference/source/TMP116-Digital-Temperature-Sensor-Datasheet-SBOS740A.pdf#page=5),
+thresholds, rail tolerances, leakage and actual signal levels as well. The
+TMP117/TMP119 accuracy tables specify tighter I²C input levels. The supported
+clock range is 1–400 kHz for all six models. Validate rise and fall times at
+the chosen rate. [SBOS740A pp.5–6, §§6.5–6.6](reference/source/TMP116-Digital-Temperature-Sensor-Datasheet-SBOS740A.pdf#page=5),
 [SNOSD82D pp.6–7, §§6.5, 6.7](reference/source/TMP117-Digital-Temperature-Sensor-Datasheet-SNOSD82D.pdf#page=6),
-[SNIS236 pp.7–9, §§6.5, 6.7](reference/source/TMP119-Digital-Temperature-Sensor-Datasheet-SNIS236.pdf#page=7).
+[SNIS236 pp.7–8, §§6.5, 6.7](reference/source/TMP119-Digital-Temperature-Sensor-Datasheet-SNIS236.pdf#page=7).
 
 TMP117 and TMP119 allow unused ALERT to float or connect to GND. For TMP116,
 the pin table and Figure 41 show a pulled-up ALERT when used. The unqualified
@@ -189,7 +196,8 @@ current and self-heating curves describe their test setups. Measure the error
 under the expected bus load and thermal conditions.
 [SBOS740A pp.5, 34–35](reference/source/TMP116-Digital-Temperature-Sensor-Datasheet-SBOS740A.pdf#page=35),
 [SNOSD82D pp.6, 34–35](reference/source/TMP117-Digital-Temperature-Sensor-Datasheet-SNOSD82D.pdf#page=34),
-[SNIS236 pp.8, 23, 29–30](reference/source/TMP119-Digital-Temperature-Sensor-Datasheet-SNIS236.pdf#page=29).
+[SNIS236 p.23, §7.5.3.1.1](reference/source/TMP119-Digital-Temperature-Sensor-Datasheet-SNIS236.pdf#page=23),
+[SNIS236 pp.29–30](reference/source/TMP119-Digital-Temperature-Sensor-Datasheet-SNIS236.pdf#page=29).
 
 ## Fixture evidence
 

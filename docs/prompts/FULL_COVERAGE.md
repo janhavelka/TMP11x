@@ -23,8 +23,8 @@ timing and safety decisions.
 ## Models and complete register coverage
 
 The BOM selects TMP116, TMP116N, TMP117, TMP117M, TMP117N or TMP119. Models
-share register capabilities where the exact-part maps agree. Identity
-compatibility and accuracy grade are separate observations. The six-model
+share register capabilities where the exact-part maps agree. A register read
+checks compatibility. The BOM records the accuracy grade. The six-model
 scope excludes TMP119M because the pinned addendum gives no TMP119M ordering
 code. Every row requires per-model applicability, including explicit refusal
 of absent features. See the [variant contract](../variants.md).
@@ -96,7 +96,7 @@ listed above.
   supplies the shared-bus exclusions for X07.
 - **F13** records the per-model [EEPROM shadow map and provenance limits](../variants.md#eeprom-shadow-and-traceability).
   The same evidence documents the factory-identity limit for X06.
-- **F16** records [serial inputs, pullups and decoupling](../board-integration.md#pullups-logic-levels-and-decoupling)
+- **F16** records [I/O limits, timing, pullups and decoupling](../board-integration.md#pullups-logic-levels-and-decoupling)
   and [package-specific thermal layout](../board-integration.md#thermal-layout-and-precision).
 - **F17** records [guaranteed accuracy and its conditions](../board-integration.md#guaranteed-accuracy),
   including averaging, cycle, assembly, code range and startup sentinel.

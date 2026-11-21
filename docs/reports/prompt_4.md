@@ -1,7 +1,7 @@
 # Prompt 4 — family identity and board integration
 
-**Status: PARTIAL.** Phase b deliverables checked on 2026-11-21. Phase c
-artifact review is next. The execution manifest places prompt 4 after
+**Status: PARTIAL.** Phase c artifact review finished on 2026-11-21. Phase d
+acceptance and closeout are next. The execution manifest places prompt 4 after
 completed [prompt 3](prompt_3.md) and before prompt 5.
 
 Phase a started on clean `main` at
@@ -200,3 +200,50 @@ the board guide, and prompt 42 finalizes user-facing integration guidance.
   fixture qualification. No workflow is tracked at the phase b baseline.
   Remote CI is deferred to stage 43. Phase c reviews the guides and source
   evidence. Phase d owns acceptance, report index and progress updates.
+
+## Phase c artifact review
+
+Reviewed `54e48e370023fe7f015960e971ebd2e40555ff37` and its phase b diff.
+`main` was clean and equal to the local `origin/main` tracking ref on entry.
+The wrapper's `runs.log` records a successful commit and matching remote
+verification at that SHA on 2026-11-21. The clean local TMP1x2 checkout was
+at `c91bac63313ea725ce174ab98abc50705c365639`. Its `Config.h` blob
+`e7dfdf5ff836fa35fecea7eb7a0f48bd83a8d288` matched the GitHub `main`
+file and corroborates explicit model and address selection.
+
+- Two independent read-only reviewers checked identity and exclusions, and
+  package and board conditions. The lead rechecked the findings against the
+  original TI pages and checked the F01/F02/F13/F16/F17 coverage links and
+  the R17/X06/X07 boundaries. The six capability rows and ID decisions match
+  the sources. Reviewed examples include invalid selection, a short read,
+  undocumented TMP116 words, shared TMP117/TMP119 revision words and
+  complete `0x0000` or `0xFFFF` responses. The identity guide now states the
+  repeated-START transfer required by the owner contract. The four required
+  excluded-family rows agree with their vendor sources.
+- Added the TMP117 EEPROM1 citation for the four-word prose and linked the
+  three exact register maps at the shadow table. The guides retain the
+  TMP119 reset-ID conflict and the limit on factory provenance. The GitHub
+  connector returned the exact catalog-pinned Linux revision
+  `23c62304dde29abe92013d85910d03a77dada35d` and expected blob
+  `2d0e79416434bec0c03469ce71094882952098df`. It confirmed the full-word
+  comparisons and firmware/device match fallback. The variant guide now
+  links that revision. [SNOSD82D p.30](../reference/source/TMP117-Digital-Temperature-Sensor-Datasheet-SNOSD82D.pdf#page=30),
+  [Linux source](https://github.com/torvalds/linux/blob/23c62304dde29abe92013d85910d03a77dada35d/drivers/iio/temperature/tmp117.c).
+- Added the recommended 0–5.5 V I/O range for TMP117 grades and TMP119,
+  identified the TMP116/N absolute maximum pin ratings as stress limits,
+  and gave the verified 1–400 kHz clock range. Linked the TMP119 guidance
+  on I²C traffic during conversion directly. The nine orderable examples,
+  24 accuracy rows, both pinouts and all ADD0 straps match the pinned PDFs.
+  The TMP116 ALERT and temperature-range conflicts and TMP117M's orderable
+  limits remain explicit. [Board guide](../board-integration.md).
+- PASS — Python 3.12.10 with `-B` ran `scripts/check_references.py`
+  (14 PDFs), `scripts/test_check_references.py` (9 tests),
+  `scripts/check_promptset.py` (55 stages) and
+  `scripts/test_check_promptset.py` (36 tests). A focused Python check
+  with PyMuPDF 1.27.2.2 verified six model/capability rows, nine orderable
+  code/package/range matches, 24 accuracy rows, the added I/O, clock and
+  EEPROM source details, and the local links, heading anchors and PDF
+  pages in the four reviewed files. `git diff --check` passed with
+  Git 2.52.0.windows.1.
+- NOT RUN — native tests, MCU links, remote CI and physical qualification.
+  The fixture details remain unconfirmed. Stage 43 owns remote CI.
