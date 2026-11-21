@@ -652,7 +652,7 @@
                 "0": "continuous",
                 "1": "shutdown (aborts active conversion)",
                 "2": "continuous alias (reads back 00)",
-                "3": "one-shot from shutdown, physical return to shutdown after completion"
+                "3": "one-shot conversion, physical return to shutdown after completion"
               }
             },
             {
@@ -1173,7 +1173,7 @@
                 "0": "continuous",
                 "1": "shutdown (aborts active conversion)",
                 "2": "continuous alias (reads back 00)",
-                "3": "one-shot from shutdown, physical return to shutdown after completion"
+                "3": "one-shot conversion, physical return to shutdown after completion"
               }
             },
             {

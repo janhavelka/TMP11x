@@ -100,6 +100,39 @@ class RegisterLedgerTests(unittest.TestCase):
                 self.rejected("invalid tmp117 source page")
                 record["pages"] = original
 
+    def test_citations_alone_cannot_replace_protocol_or_startup(self):
+        for topic, missing in (("protocol", "pointer"), ("startup", "writes")):
+            with self.subTest(topic=topic):
+                profile = self.profile()
+                original = profile[topic]
+                profile[topic] = {"pages": original["pages"]}
+                self.rejected(f"TMP117.{topic}: missing or empty {missing}")
+                profile[topic] = original
+
+    def test_bus_addresses_timing_and_ownership(self):
+        protocol = self.profile()["protocol"]
+        for key, replacement in (
+            ("add0_7bit", {"GND": 0x48, "V+": 0x49, "SDA": 0x4B, "SCL": 0x4A}),
+            ("scl_khz", {"min": 1, "max": 1000}),
+            ("scl_khz", {"min": True, "max": 400}),
+            ("interface_timeout_ms", {"min": 20, "max": 40}),
+        ):
+            with self.subTest(key=key, replacement=replacement):
+                original = protocol[key]
+                protocol[key] = replacement
+                self.rejected(f"incorrect {key}")
+                protocol[key] = original
+        protocol["owners"] = [0]
+        self.rejected("unknown owner stage")
+
+    def test_nominal_cycle_table_requires_every_conv_avg_pair(self):
+        field = self.field("CONFIG", "CONV", "TMP119")
+        cycles = field.pop("cycle_ms_by_conv_avg")
+        self.rejected("CONV x AVG cycle table")
+        field["cycle_ms_by_conv_avg"] = cycles
+        cycles[2][3] = 250  # CONV=010, AVG=11 occupies a nominal 1000 ms in Table 8-6.
+        self.rejected("CONV x AVG cycle table")
+
     def test_reserved_and_invalid_pointers_do_not_alias(self):
         register = self.register("OFFSET")
         for address in (*range(0x09, 0x0F), 0x17, 0xF7, -1, 0x107, True):
@@ -114,6 +147,16 @@ class RegisterLedgerTests(unittest.TestCase):
         register["name"] = "EEPROM3"
         self.register("EEPROM3", "TMP119")["name"] = "EEPROM4"
         self.rejected("0x08 must be EEPROM3")
+
+    def test_pointer_07_rejects_fields_from_the_other_family(self):
+        eeprom = self.register("EEPROM3", "TMP116")
+        offset = self.register("OFFSET", "TMP117")
+        eeprom_fields = eeprom["fields"]
+        eeprom["fields"] = offset["fields"]
+        self.rejected("TMP116.EEPROM3: expected D field with role eeprom-data")
+        eeprom["fields"] = eeprom_fields
+        offset["fields"] = eeprom_fields
+        self.rejected("TMP117.OFFSET: expected D field with role calibration")
 
     def test_command_and_nvm_domains(self):
         self.field("CONFIG", "SOFT_RESET", "TMP119")["role"] = "setting"
@@ -149,8 +192,11 @@ class RegisterLedgerTests(unittest.TestCase):
         self.rejected("resolution_evidence")
         conflict["resolution_evidence"] = {"profile": "TMP116", "claim": "fixture", "pages": [0]}
         self.rejected("invalid tmp116 source page")
-        # Exercise the resolution schema without changing the real conflict's disposition.
-        conflict["resolution_evidence"]["pages"] = [17]
+        source = conflict["sources"][1]
+        conflict["resolution_evidence"] = dict(source, pages=list(reversed(source["pages"])))
+        self.rejected("repeats a disputed source claim")
+        # A distinct explanation on an already cited page can qualify for manual review.
+        conflict["resolution_evidence"]["claim"] = "Synthetic reconciliation for the schema test."
         self.path.write_text(json.dumps(self.ledger), encoding="utf-8")
         checker.check_file(self.path)
 
@@ -158,6 +204,11 @@ class RegisterLedgerTests(unittest.TestCase):
         conflict = self.ledger["conflicts"][0]
         conflict["sources"] = conflict["sources"][:1]
         self.rejected("paired source claims")
+
+    def test_required_conflicts_survive_ledger_edits(self):
+        conflicts = self.ledger["conflicts"]
+        conflicts.remove(next(item for item in conflicts if item["id"] == "tmp119-id-default"))
+        self.rejected("missing required conflicts: tmp119-id-default")
 
 
 if __name__ == "__main__":

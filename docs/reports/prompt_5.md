@@ -1,6 +1,6 @@
 # Prompt 5 — Register and bitfield ledger
 
-**Phase b implemented on 2026-11-21. Phase c review is next.** Phase a began on clean
+**Phase c reviewed on 2026-11-21. Phase d acceptance is next.** Phase a began on clean
 `main` at `1707f3fd36eabf2c74f76cb4e7ffc5034e465b6b`, equal to the
 local `origin/main`. Git history and the wrapper log confirm that prompt 4's
 acceptance commit reached upstream. The [sequence](../prompts/SEQUENCE.json)
@@ -144,3 +144,37 @@ Stages 6 and 7 refine timing, behavior and safety on this ledger. Stage 10
 registers both Python commands, and stage 12 owns the C++ constants. Native
 driver, MCU, remote CI and physical checks were not run in phase b.
 [Producer and consumer handoffs](../prompts/HANDOFFS.md).
+
+## Phase c review
+
+Review started on clean `main` at `c8c5a1bb5054fa908b03e26e1780a9a95eaf1f73`.
+The five files in the phase-b commit matched the wrapper request. Git history,
+the upstream tracking ref and the wrapper's successful push verification agreed.
+Two read-only reviewers independently examined the silicon ledger and the
+validator. The lead checked their findings against the PDFs and reproduced
+the validator failures with altered copies of the ledger.
+
+| Finding | Correction and evidence |
+| --- | --- |
+| The TMP117 and TMP119 one-shot encodings implied that TI specifies the same starting mode as TMP116. | TMP116 p.14 explicitly describes triggering from shutdown. TMP117 p.15 and TMP119 p.17 describe the trigger and subsequent return to shutdown. Their MOD records and R05 now distinguish the documented transition from the project's guarded shutdown prerequisite on all six models. |
+| R04's single-read wording obscured the busy case. X03 extended threshold alert-response behavior to DATA_READY pin routing. | Each EUN/busy observation uses one word at `0x04`. Timed operations may poll a locked, busy device within budget. The no-wait path returns busy or not-ready. X03 now limits the direction bit and pin acknowledgement to documented conditions. DATA_READY routing and the reported direction when both flags are latched remain open. See TMP116 pp.15–16, 21, TMP117 pp.16–17, 21–22 and TMP119 pp.18–19, 24. |
+| Hardware and board obligations were underspecified in F04 and overstated in R09. | F04 records the fast-mode SCL low/high and data setup minima from TMP116 p.6, TMP117 p.7 and TMP119 pp.8–9. R09 retains the pullup requirement for a used ALERT pin. Any GPIO observation belongs to the application. |
+| The validator accepted page-only startup or protocol records, a missing cycle table and cross-family field substitutions at `0x07`. | Regressions now require both records' contents, the four ADD0 assignments, bus bounds and protocol owners. They check all 32 nominal CONV × AVG cells per profile and distinguish EEPROM data from offset calibration even when register names and masks still look correct. |
+| Deleting the TMP119 ID discrepancy or marking a conflict resolved with one of its own disputed citations passed validation. | The validator requires the reviewed conflict IDs and rejects a recycled source claim even when its pages are reordered. Source review still determines whether distinct evidence actually resolves a discrepancy. All 31 records remain open. |
+
+Fresh comparison with the three pinned PDFs matched 30 register map entries,
+70 field ranges and literal access codes, and 96 nominal cycle cells. The
+review also checked the six BOM selections, CONFIG read effects, field-level
+EEPROM eligibility, shadow reset conflicts and write guards. The feature
+matrix preserves the 46 required IDs and their forward owners.
+
+| Phase c working-tree checks (Python 3.12.10) | Result |
+| --- | --- |
+| `python -B tools/check_register_ledger.py` and `python -B tools/test_check_register_ledger.py` | PASS, six BOM selections and 22 tests. |
+| `python -B scripts/check_references.py` | PASS, all 14 pinned PDF hashes. Source tables were read with PyMuPDF 1.27.2.2. |
+| `python -B scripts/check_promptset.py` and `python -B scripts/test_check_promptset.py` | PASS, all 55 stages and 36 prompt checker regressions. |
+| `git diff --check` | PASS with Git 2.52.0.windows.1. |
+
+Phase d verifies the wrapper commit, runs acceptance and owns the report
+index, progress row and completion marker. Driver, MCU, remote CI and
+physical qualification remain open under their assigned stages.

@@ -9,6 +9,19 @@ import sys
 ROOT = Path(__file__).resolve().parents[1]
 LEDGER = ROOT / "docs/registers/tmp11x.json"
 PROFILES = {"TMP116", "TMP117", "TMP119"}
+REQUIRED_CONFLICTS = {
+    "tmp116-startup-busy", "tmp116-shadow-defaults", "tmp116-operating-range",
+    "tmp116-alert-connection", "tmp116-program-current", "tmp116-conv-cycle",
+    "tmp117-data-word-count", "tmp117-stored-fields", "tmp117-eeprom2-default",
+    "tmp117-reset-access", "tmp117-one-shot-alert", "tmp117-shutdown-current",
+    "tmp117-program-current", "tmp117-conv-cycle", "tmp117-address-reference",
+    "tmp117-supply-summary", "tmp117-revision-default",
+    "tmp119-data-word-count", "tmp119-stored-fields", "tmp119-eeprom2-default",
+    "tmp119-reset-access", "tmp119-one-shot-alert", "tmp119-shutdown-current",
+    "tmp119-program-current", "tmp119-conv-cycle", "tmp119-id-default",
+    "tmp119-accuracy-summary", "tmp119-summary-tmp116-supply", "tmp119-characterization-speed",
+    "tmp119m-orderable", "tmp119-address-reference",
+}
 
 
 def unique_keys(pairs):
@@ -39,6 +52,12 @@ def pages(obj, document, where):
     for page in items(obj, "pages", where):
         if type(page) is not int or not 1 <= page <= document["page_count"]:
             raise ValueError(f"{where}: invalid {document['id']} source page {page!r}")
+
+
+def check_owners(obj, stages, where):
+    for owner in items(obj, "owners", where):
+        if type(owner) is not int or owner not in stages:
+            raise ValueError(f"{where}: unknown owner stage {owner!r}")
 
 
 def check_fields(register, where):
@@ -107,6 +126,13 @@ def check_semantics(profile, register, fields, where):
             count = 1 << expected[selector][0].bit_count()
             if set(fields.get(selector, {}).get("encodings", {})) != {str(i) for i in range(count)}:
                 raise ValueError(f"{where}.{selector}: expected encodings 0 through {count - 1}")
+        # TI Tables 7, 7-7 and 8-6 give these nominal ms for each CONV (row) and AVG (column).
+        cycles = fields["CONV"].get("cycle_ms_by_conv_avg")
+        periods = (15.5, 125, 250, 500, 1000, 4000, 8000, 16000)
+        avg_periods = (15.5, 125, 500, 1000)
+        expected_cycles = [[max(period, avg) for avg in avg_periods] for period in periods]
+        if cycles != expected_cycles:
+            raise ValueError(f"{where}.CONV: incorrect nominal CONV x AVG cycle table")
     elif name == "EEPROM_UL":
         expected = {"EUN": (0x8000, "R/W", 0), "BUSY": (0x4000, "R", 0),
                     "RESERVED": (0x3FFF, "R", 0)}
@@ -116,9 +142,12 @@ def check_semantics(profile, register, fields, where):
         else:
             expected = {"REV": (0xF000, "R", 0), "DID": (0x0FFF, "R", 0)}
     else:
-        if len(fields) != 1:
-            raise ValueError(f"{where}: expected one full-word field")
-        expected = {next(iter(fields)): (0xFFFF, access, 0 if readonly else 0xFFFF)}
+        full_words = {"TEMP": ("T", "measurement"), "THIGH": ("H", "limit"),
+                      "TLOW": ("L", "limit"), "OFFSET": ("D", "calibration")}
+        field_name, role = full_words.get(name, ("D", "eeprom-data"))
+        if fields.get(field_name, {}).get("role") != role:
+            raise ValueError(f"{where}: expected {field_name} field with role {role}")
+        expected = {field_name: (0xFFFF, access, 0 if readonly else 0xFFFF)}
 
     if fields.keys() != expected.keys():
         raise ValueError(f"{where}: expected fields {', '.join(expected)}")
@@ -140,11 +169,25 @@ def check_profile(name, profile, document, stages):
     text_fields(profile, ("source",), name)
     if profile["source"] != document["path"] or not (ROOT / document["path"]).is_file():
         raise ValueError(f"{name}: source must be the pinned {document['path']}")
-    for topic in ("protocol", "startup"):
+    for topic, required in (
+        ("startup", ("writes", "policy")),
+        ("protocol", ("pointer", "read_word", "write_word", "timeout_condition", "stop_behavior", "ownership")),
+    ):
         section = profile.get(topic)
         if not isinstance(section, dict):
             raise ValueError(f"{name}: missing {topic} source record")
         pages(section, document, f"{name}.{topic}")
+        text_fields(section, required, f"{name}.{topic}")
+    protocol = profile["protocol"]
+    check_owners(protocol, stages, f"{name}.protocol")
+    for key, expected_values in (
+        ("add0_7bit", {"GND": 0x48, "V+": 0x49, "SDA": 0x4A, "SCL": 0x4B}),
+        ("scl_khz", {"min": 1, "max": 400}),
+        ("interface_timeout_ms", {"min": 20, "typ": 35, "max": 40}),
+    ):
+        values = protocol.get(key)
+        if values != expected_values or any(type(value) is not int for value in values.values()):
+            raise ValueError(f"{name}.protocol: incorrect {key}")
     models = items(profile, "models", name)
     if not all(isinstance(m, str) for m in models) or sorted(models) != sorted(document["models"]):
         raise ValueError(f"{name}: models must match the selected BOM grades in the manifest")
@@ -177,9 +220,7 @@ def check_profile(name, profile, document, stages):
         if type(reg.get("width")) is not int or reg["width"] != 16:
             raise ValueError(f"{where}: expected 16-bit register width")
         pages(reg, document, where)
-        for owner in items(reg, "owners", where):
-            if type(owner) is not int or owner not in stages:
-                raise ValueError(f"{where}: unknown owner stage {owner!r}")
+        check_owners(reg, stages, where)
         check_semantics(name, reg, check_fields(reg, where), where)
     if seen != expected.keys():
         missing = ", ".join(expected[p] for p in sorted(expected.keys() - seen))
@@ -191,6 +232,7 @@ def check_citation(citation, documents, where):
     if citation["profile"] not in documents:
         raise ValueError(f"{where}: unknown source profile {citation['profile']!r}")
     pages(citation, documents[citation["profile"]], where)
+    return citation["profile"], frozenset(citation["pages"]), citation["claim"].strip()
 
 
 def check_file(path):
@@ -216,14 +258,18 @@ def check_file(path):
             raise ValueError(f"{where}: duplicate conflict ID")
         seen.add(conflict["id"])
         sources = items(conflict, "sources", where)
-        for source in sources:
-            check_citation(source, documents, where)
-        if len(sources) < 2 or all(s == sources[0] for s in sources):
+        citations = {check_citation(source, documents, where) for source in sources}
+        if len(citations) < 2:
             raise ValueError(f"{where}: expected paired source claims")
         if conflict["status"] == "resolved":
-            check_citation(conflict.get("resolution_evidence"), documents, f"{where} resolution_evidence")
+            evidence = check_citation(conflict.get("resolution_evidence"), documents, f"{where} resolution_evidence")
+            if evidence in citations:
+                raise ValueError(f"{where}: resolution_evidence repeats a disputed source claim")
         elif conflict["status"] != "open":
             raise ValueError(f"{where}: expected open or resolved status")
+    missing = REQUIRED_CONFLICTS - seen
+    if missing:
+        raise ValueError(f"missing required conflicts: {', '.join(sorted(missing))}")
 
 
 def main(argv=None):
