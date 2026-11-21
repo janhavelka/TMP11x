@@ -4,7 +4,8 @@
 
 Choose the first physical board and say which claims it needs to support.
 The board, installed part, wiring and measurement setup are still unconfirmed.
-The exact model comes from the populated BOM. A compatible ID at `0x48`
+Identify the exact part and grade using the fitted parts list (BOM) or
+assembly record. A compatible ID at `0x48`
 does not distinguish a TMP117 from a TMP119 or establish the accuracy grade.
 
 **Example.** A bench board and the intended P4 product both return a matching
@@ -31,8 +32,11 @@ Choose the route from the fitted board when bringing up the optional P4
 consumer. Its example leaves the pins, address straps and routing to the
 application. A successful compile does not identify the product's wiring.
 
-**Example.** Two populated modules are both strapped to `0x48`. They cannot
-be treated as two independently addressed sensors on the same active segment.
+**Example.** Two sensor boards are set to address `0x48` by their ADD0 pins.
+If both are connected to the same I²C wires, a request to `0x48` reaches both.
+Changing one ADD0 connection gives the sensors different addresses. If the
+addresses are fixed, a multiplexer (mux) can switch between separate pairs
+of wires so only the selected sensor sees the request.
 
 | Option | Pros | Cons |
 | --- | --- | --- |
@@ -63,10 +67,12 @@ from the processor dominates, test the sensor location and thermal path.
 
 ## How should the product obtain a fresh sample?
 
-Choose the required update interval and maximum observation age. Establish
-freshness with the driver's acquisition evidence. Two equal temperature
-values can be two separate results or one repeated observation. The read
-timestamp records when the controller observed the value.
+Choose how often the product needs an update and how old a reading can be.
+Two reads of 25 °C could come from two actual conversions, or both could
+read the same stored result. The controller's timestamp tells when it read
+the register. Use a new ready indication after the previous one was accounted
+for, or a completed requested conversion, to establish that a new measurement
+took place.
 
 **Example.** A dashboard that needs regular fresh updates and a test that
 needs one identifiable conversion on demand can both display 25 °C. The
@@ -75,8 +81,8 @@ test needs a result attributable to its own trigger.
 
 | Option | Pros | Cons |
 | --- | --- | --- |
-| Use trusted continuous conversion and paced fresh reads for regular updates. | No per-sample trigger writes. A single bus owner can schedule readiness and reads with the other clients. | Multiple updates can coalesce behind one ready bit, and an overlapping TEMP update has unspecified byte coherence. Report missed readiness or deadline failures explicitly. |
-| Use an explicit, guarded one-shot from shutdown for on-demand acquisition. | A completed owned shot provides a stable shutdown result under exclusive ownership and gives the read a specific acquisition boundary. | Adds a guarded trigger and conversion wait per request. It can miss the product's latency or cadence target if triggered too often. |
+| Let the sensor measure continuously and check readiness before regular reads. | The firmware can share the bus with other devices without sending a start command for every reading. | One ready flag can represent multiple updates. If the sensor updates the temperature register during a read, the datasheet leaves open whether both bytes come from the same measurement. Report missed readiness or deadlines. |
+| Start one measurement on request from shutdown (one-shot). | With exclusive control and a completed request, the firmware can tie the result to that trigger and read it while the sensor is idle. | Each request needs a start command and a wait for the conversion. Too many requests can miss the required update rate. |
 
 For a display that only needs the latest observation, the latest-read route
 uses one temperature transfer and reports freshness unproven.
@@ -95,9 +101,9 @@ signal and acknowledgement behavior.
 
 | Option | Pros | Cons |
 | --- | --- | --- |
-| Poll the status through the existing owner if it meets the latency budget. | Uses the existing bus without an MCU pin or interrupt configuration. | Detection depends on the conversion and poll intervals. The owner must account for read-to-clear flags. |
+| Have the code in charge of the bus check status regularly if that meets the response-time requirement. | Uses the existing bus without an MCU pin or interrupt configuration. | Detection depends on the conversion and check intervals. Some flags clear when the firmware reads them, so other callers must use the owner's recorded result. |
 | Wire ALERT as a threshold signal if the product must wake on an excursion. | A threshold event can request service without a polling round trip. | Takes an MCU input and electrical and re-arm qualification. Conversion timing still limits when the excursion is detected. |
-| Wire ALERT as a data-ready signal if the main need is scheduling samples. | The owner can service acquisitions on a cue and reduce empty polls. | The pin then carries readiness instead of the threshold signal. An edge alone cannot establish fresh-conversion provenance. |
+| Wire ALERT to signal that a new result is ready if the main need is scheduling reads. | The owner can read when prompted and avoid unnecessary checks. | The pin is then used for readiness. A change on the pin alone cannot prove which conversion produced a reading. |
 
 Use the same owner to read and attribute events on either wired route.
 If the product needs both threshold wake and fresh samples, reserve the pin
@@ -108,9 +114,11 @@ at the required cadence.
 
 ## Who owns a temperature correction?
 
-Decide this only if a product needs correction for its assembled thermal
-environment. Offset management remains opt-in. The first release keeps EEPROM
-data and shadows read-only. TMP116 and TMP116N have no supported hardware offset.
+Decide this only if measurements show the assembled product needs a
+temperature correction. The driver applies a hardware offset only if the
+product explicitly enables it. The first release keeps EEPROM and the
+registers that mirror its stored values read-only. TMP116 and TMP116N
+have no supported hardware offset.
 
 **Example.** An installed TMP117 reads 0.3 °C high against an independent
 reference under the intended conditions. If firmware subtracts 0.3 °C only
@@ -120,8 +128,8 @@ correction again in the application would double it.
 
 | Option | Pros | Cons |
 | --- | --- | --- |
-| Preserve the device setup and apply the correction in the application. | Leaves existing calibration intact and works across the supported models. | The application owns correction provenance and threshold units. Corrected display values can diverge from the sensor's hardware threshold behavior. |
-| Opt in to a managed volatile offset on an eligible model. | The correction follows the verified sensor profile. Consumers of fresh TEMP values can share the correction without applying it again. | Needs offset preimage and restore, clean recovery, and evidence before any threshold logic relies on how the comparator uses the offset. |
+| Leave the sensor configured as it is and apply the correction in the application. | Leaves existing calibration intact and works across the supported models. | The application must record where the correction came from and which temperature the thresholds use. The sensor's own ALERT threshold may still use the uncorrected value. |
+| Enable the hardware offset on a supported model for the current run. | The verified sensor configuration applies the correction once for all callers. | Save the old offset so it can be restored and handle reset or failure. Verify whether the sensor applies the offset before checking its own thresholds. |
 
 If an application-side correction is paired with a hardware threshold,
 translate the required trip point into the sensor's uncorrected units and
