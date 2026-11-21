@@ -65,9 +65,11 @@ the TI product-page listing showed March 9, 2026. The manifest records the PDF.
 TI product pages and targeted TI errata/support searches were checked. No
 separate applicable errata PDF was located in this intake; that is not proof
 that no errata exist. A [TI E2E DATA_READY race discussion](https://e2e.ti.com/support/sensors-group/sensors/f/sensors-forum/1019457/tmp117-data_ready-flag-cleared-incorrectly-if-data-becomes-ready-during-read-of-configuration-register)
-could not be read (HTTP 403). Treat its reported CONFIG-read/conversion race as
-an unresolved research lead for stage 6, not a verified silicon guarantee or
-an implemented workaround. Physical timing evidence remains NOT RUN.
+returned HTTP 403 during intake. Stage 6 subsequently reviewed the TMP117
+capture. The reported CONFIG word conflicts with the stated pin routing.
+The clear edge and applicability to TMP116 remain open. The linked TMP116
+thread still returned HTTP 403 during audit 45.
+[Stage 6 interpretation](../../device-behavior.md#temp-destructive-reads-and-sample-publication).
 
 ## Promptset audit additions
 

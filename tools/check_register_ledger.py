@@ -20,7 +20,7 @@ REQUIRED_CONFLICTS = {
     "tmp119-reset-access", "tmp119-one-shot-alert", "tmp119-shutdown-current",
     "tmp119-program-current", "tmp119-conv-cycle", "tmp119-id-default",
     "tmp119-accuracy-summary", "tmp119-summary-tmp116-supply", "tmp119-characterization-speed",
-    "tmp119m-orderable", "tmp119-address-reference",
+    "tmp119m-orderable", "tmp119-address-reference", "tmp119-supply-summary",
 }
 
 
@@ -133,6 +133,18 @@ def check_semantics(profile, register, fields, where):
         expected_cycles = [[max(period, avg) for avg in avg_periods] for period in periods]
         if cycles != expected_cycles:
             raise ValueError(f"{where}.CONV: incorrect nominal CONV x AVG cycle table")
+        # The electrical rows bound a single conversion under each part's stated conditions.
+        page, minimum, maximum = {
+            "TMP116": (5, 13.5, 17),
+            "TMP117": (6, 13, 17.5),
+            "TMP119": (7, 13, 17.5),
+        }[profile]
+        avg = fields["AVG"]
+        if type(avg.get("single_conversion_page")) is not int or avg["single_conversion_page"] != page:
+            raise ValueError(f"{where}.AVG: expected electrical row on page {page}")
+        if avg.get("single_conversion_ms") != {"min": minimum, "typ": 15.5, "max": maximum}:
+            raise ValueError(f"{where}.AVG: incorrect single-conversion limits")
+        text_fields(avg, ("timing_condition",), f"{where}.AVG")
     elif name == "EEPROM_UL":
         expected = {"EUN": (0x8000, "R/W", 0), "BUSY": (0x4000, "R", 0),
                     "RESERVED": (0x3FFF, "R", 0)}

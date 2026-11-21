@@ -133,6 +133,22 @@ class RegisterLedgerTests(unittest.TestCase):
         cycles[2][3] = 250  # CONV=010, AVG=11 occupies a nominal 1000 ms in Table 8-6.
         self.rejected("CONV x AVG cycle table")
 
+    def test_single_conversion_limits_and_source_by_profile(self):
+        for profile, wrong_max in (("TMP116", 17.5), ("TMP117", 17), ("TMP119", 17)):
+            avg = self.field("CONFIG", "AVG", profile)
+            with self.subTest(profile=profile):
+                original = avg["single_conversion_ms"]["max"]
+                avg["single_conversion_ms"]["max"] = wrong_max
+                self.rejected(f"{profile}.CONFIG.AVG: incorrect single-conversion limits")
+                avg["single_conversion_ms"]["max"] = original
+                page = avg["single_conversion_page"]
+                avg["single_conversion_page"] = page + 1
+                self.rejected(f"{profile}.CONFIG.AVG: expected electrical row on page {page}")
+                avg["single_conversion_page"] = page
+                condition = avg.pop("timing_condition")
+                self.rejected(f"{profile}.CONFIG.AVG: missing or empty timing_condition")
+                avg["timing_condition"] = condition
+
     def test_reserved_and_invalid_pointers_do_not_alias(self):
         register = self.register("OFFSET")
         for address in (*range(0x09, 0x0F), 0x17, 0xF7, -1, 0x107, True):

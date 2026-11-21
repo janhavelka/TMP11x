@@ -313,8 +313,8 @@ comparison at averaged-block end is an inference requiring physical evidence.
 [TMP117 pp.15–17](reference/source/TMP117-Digital-Temperature-Sensor-Datasheet-SNOSD82D.pdf#page=15),
 [TMP119 pp.17–19](reference/source/TMP119-Digital-Temperature-Sensor-Datasheet-SNIS236.pdf#page=17).
 
-DR/Alert=0 routes comparator assertion (HIGH or LOW in alert mode, HIGH in
-therm mode). DR/Alert=1 routes DATA_READY in either mode. At POL=0 the
+DR/Alert=0 routes threshold alerts in alert mode and the HIGH level in
+therm mode. DR/Alert=1 routes DATA_READY in either mode. At POL=0 the
 open-drain output sinks on assertion. At POL=1 it releases on assertion and
 the board's pullup supplies high. The eight pin-route vectors give both
 assertion and acknowledgement observations. Therm pin persistence through SD
@@ -323,10 +323,12 @@ insufficient evidence of a completed owned shot. TMP117 and TMP119 one-shot
 prose mentions an ALERT flag, while the CONFIG map defines DATA_READY and
 the two threshold flags. Keep completion and threshold evidence independent.
 A third-party SMBus alert response can deassert the winning threshold-alert
-pin in alert mode. The library issues no alert-response traffic.
+pin in alert mode. The timing diagrams show LOW still set after this
+acknowledgement. The next CONFIG read captures LOW and clears the latch.
+The library issues no alert-response traffic.
 [TMP116 pp.15–16, 21, 26](reference/source/TMP116-Digital-Temperature-Sensor-Datasheet-SBOS740A.pdf#page=15),
-[TMP117 pp.15–17, 21–22, 27](reference/source/TMP117-Digital-Temperature-Sensor-Datasheet-SNOSD82D.pdf#page=27),
-[TMP119 pp.17–19, 24, 34](reference/source/TMP119-Digital-Temperature-Sensor-Datasheet-SNIS236.pdf#page=34).
+[TMP117 Figure 7-5 and pp.15–17, 21–22, 27](reference/source/TMP117-Digital-Temperature-Sensor-Datasheet-SNOSD82D.pdf#page=16),
+[TMP119 Figure 7-6 and pp.17–19, 24, 34](reference/source/TMP119-Digital-Temperature-Sensor-Datasheet-SNIS236.pdf#page=18).
 
 ## Partial writes and remaining unknowns
 

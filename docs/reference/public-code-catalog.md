@@ -1,6 +1,6 @@
 # Public code and vendor tooling catalog
 
-Inspected on 2026-11-15. These sources support independent comparisons; TI's
+Initial intake was 2026-11-15. These sources support independent comparisons; TI's
 exact-part datasheets govern silicon behavior. No code from this catalog has
 been copied into the production library. GitHub file contents were re-read at
 the listed commits, not inferred from an unpinned default branch.
@@ -41,6 +41,16 @@ the listed commits, not inferred from an unpinned default branch.
 
 ## TI official tooling and examples
 
+Audit 45 checked TI's SimpleLink Sensor and Actuator Plugin 1.50.00.00 on
+2026-11-21. Its generated TMP116 API reference requires a blocking I²C handle
+for `TMP116_open`, lists the reset command among that function's references,
+and describes `TMP116_close` disabling conversions. TMP11x binding and
+teardown are bus-silent. Only the API documentation and release notes were
+inspected. The linked software license manifest was unavailable, and no
+implementation was imported.
+[TI TMP116 API reference](https://software-dl.ti.com/simplelink/esd/plugins/sail/1.50.00.00/exports/sail_1_50_00_00/docs/sail/doxygen/html/tmp116_8c.html),
+[TI release notes](https://software-dl.ti.com/simplelink/esd/plugins/sail/1.50.00.00/exports/release_notes_sail_1_50_00_00.html).
+
 | Official source | Version/evidence | Availability and boundary |
 |---|---|---|
 | [TMP117 ASC Studio](https://dev.ti.com/sysconfig/index.html?module=%2Fti%2Fsensors%2Ftempsensor%2FTMP117&product=ascstudio) | Linked by the [TI product page](https://www.ti.com/product/TMP117); no immutable generated-code revision acquired | The app request timed out. Generated code and its license were not inspected; no adoption claim. |
@@ -51,4 +61,5 @@ the listed commits, not inferred from an unpinned default branch.
 Availability of a TI GUI or code generator is not permission to relicense its
 output. If later research needs TI software, record the exact release, original
 license and inspected files first. E2E forum posts also remain secondary support
-evidence; see the unresolved access item in [intake notes](extracted/intake-notes.md).
+evidence. The [intake notes](extracted/intake-notes.md) track the TMP117
+capture and the separate TMP116 access gap.

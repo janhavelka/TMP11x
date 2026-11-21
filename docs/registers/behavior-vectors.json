@@ -309,7 +309,7 @@
     {
       "id": "alert-window-ack-and-rearm",
       "source": ["words", "flags"],
-      "condition": "Alert mode, AVG=00, initially clear. Verified THIGH=0xFCC0 (-6.5 C), TLOW=0xFAC0 (-10.5 C). HIGH/LOW in each comparison row are hardware flags after completion.",
+      "condition": "Alert mode, AVG=00, initially clear. Verified THIGH=0xFCC0 (-6.5 C), TLOW=0xFAC0 (-10.5 C). HIGH/LOW in each comparison row are hardware flags after completion. The final external ARA uses threshold routing, POL=0 and a working pullup.",
       "steps": [
         {"complete_word": "0xFAC0", "HIGH": 0, "LOW": 0},
         {"complete_word": "0xFCC0", "HIGH": 0, "LOW": 0},
@@ -319,7 +319,9 @@
         {"event": "read CONFIG", "returned_HIGH_LOW_ready": [1,0,1], "after_HIGH_LOW_ready": [0,0,0]},
         {"complete_word": "0xFABF", "HIGH": 0, "LOW": 1},
         {"event": "read CONFIG", "returned_HIGH_LOW_ready": [0,1,1], "after_HIGH_LOW_ready": [0,0,0]},
-        {"complete_word": "0xFABF", "HIGH": 0, "LOW": 1}
+        {"complete_word": "0xFABF", "HIGH": 0, "LOW": 1, "pin": "L"},
+        {"event": "external controller performs ARA, this sensor wins", "pin": "H", "LOW": 1, "driver_ARA_transfers": 0},
+        {"event": "read CONFIG after ownership is restored, before another conversion", "returned_LOW": 1, "after_LOW": 0}
       ]
     },
     {

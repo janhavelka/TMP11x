@@ -68,3 +68,66 @@ Phase-a verification used Python 3.12.10 and Git 2.52.0.windows.1.
 and Git whitespace were checked locally. Semantic review and final
 acceptance remain open. Driver tests, MCU links, remote CI and physical
 qualification were NOT RUN.
+
+## Phase b — engineering evidence, 2026-11-21
+
+The audit started from clean `main` at
+`3bb582587dbd136a81babfc488d5e35a8f93a293`. Git history shows the
+phase-a report as that commit's only path. The wrapper recorded upstream
+equality at 18:15:29 Prague time. Two read-only agents checked stages 1–3
+and 4–5 against the pinned sources. The lead checked the reported corrections,
+recalculated the behavior vectors and traced the safety policy. Phase c
+still requires its own fresh parallel review.
+
+### Peer code, tooling and archive
+
+| Stage | Source comparison and disposition |
+| --- | --- |
+| 1 | At TMP1x2 `afd5088`, `src/TMP1x2.cpp` counts tracked terminal transfers and permits reads while OFFLINE. The registered `helpers` case `trackedWordObservations` contrasts raw and tracked reads. The `variants` assertion covers a bound probe. Corrected the test attribution and the ADS1115 `e07622a` helper name to `_markHardwareConfigDirtyIfClean` in the [comparison](../library-comparison.md). That helper preserves an earlier dirty fault. OPT4001 `441ef57` supplies destructive-read bookkeeping, TCA9548A `4a244ad` supplies an example of recovery that disables mux routes, and MB85RC `3ace168` supplies retained results. The FieldCore caller on `rodtester` at `c40ea83` clips the callback budget. The checked TMP1x2 MIT notice matches the local license. |
+| 2 | TMP1x2 `afd5088` registers eight native C++ tests in `CMakeLists.txt`. Its CI pins Core 6.1.19 and IDF 5.3.2/5.5.1/6.0.1. Its generator embeds the project name. The 24Cxx `1bd9f96` CMake test runs a Python transcript against its CLI executable. The template at `b574041` has an unpinned PlatformIO install and no root CMake file. MotorControl-CAN `60bcefe` and DP8382x `87aafc0` support the sequence and evidence-layer conventions. The current TMP11x manifest keeps the original 44 stages and inserts 11 audits. The [toolchain plan](../toolchain-and-package-plan.md) distinguishes the installed Core 6.2.0 at `C:\pio` from the peer CI pin. SDK discovery confirmed S2/S3/P4 target metadata. The peer working-tree edits in MotorControl-CAN were excluded by reading commit objects. |
+| 3 | All 14 original PDFs matched the manifest hashes, cover revisions and page counts. The Linux and Adafruit source blobs match the GPL-2.0-only and BSD-3-Clause comparisons in the [catalog](../reference/public-code-catalog.md). Added TI's SAIL 1.50.00.00 TMP116 API documentation, which describes a blocking open and a close that disables conversions. Its linked license manifest was unavailable. Updated the [intake notes](../reference/extracted/intake-notes.md) to point from the original HTTP 403 to the subsequently reviewed TMP117 capture. Thread 1019457 reports a missed indication and gives conflicting DR/Alert settings. The linked TMP116 thread 822036 still returned HTTP 403. |
+
+### Silicon and coverage
+
+| Stage | Source comparison and disposition |
+| --- | --- |
+| 4 | Compared the 24 conditioned accuracy rows and nine selected model/package combinations against SBOS740A pp.5,43, SNOSD82D pp.6,46 and SNIS236 pp.7,45. TMP117M's orderable range is 0–85 °C. The TMP119M electrical rows lack a corresponding orderable in the pinned addendum. Across all 65,536 possible identity words, the TMP116/N rule admits only `0x1116`. Each TMP117 grade and TMP119 admits the same 16 words ending in `0x117`. The TMP114 pin/interface evidence and TMP118 register map support their exclusion. [Variant contract](../variants.md), [board conditions](../board-integration.md). |
+| 5 | Compared 30 register addresses/access codes and 70 field masks/access codes with the three map-to-ID page ranges listed above. The stored CONFIG subset is `0x07FC`. Bit 11 is volatile. Bit 1 is an addressed command on 117/119 and reserved on 116. Added the TMP119 supply-summary discrepancy to the [ledger](../registers/tmp11x.json). SNIS236 pp.4,30 give an unqualified 1.7 V lower bound. Pages 6–7 require at least 1.8 V above +70 °C through +150 °C. The board guide already gave the conditioned values. The ledger now retains 32 open source records. Compared all 18 R, 20 F and eight X rows with FULL_COVERAGE and restored omitted forward owner references in R12, R16, F04, F05, F11 and F18. [Coverage matrix](../feature-coverage.md). |
+| 6 | Parsed each original CONV × AVG table and matched all 96 cells to both the ledger and [vectors](../registers/behavior-vectors.json), including all 32 TMP116 standby footnotes. Independently multiplied the electrical rows by 1/8/32/64. At 64 conversions the derived upper intervals are 1088 ms on 116 and 1120 ms on 117/119. The 117 electrical row is for one-shot and the 119 row for no internal averaging. The ledger validator previously accepted substituted limits or an incorrect AVG source page. It now checks each family's electrical row and page and requires a nonempty timing condition. A new negative test reproduces each defect. |
+| 7 | Compared 24Cxx `0bb27f4:docs/integration.md` on indeterminate writes and TMP1x2 `c91bac6:src/BusOperations.cpp` on general call and ARA against the planned TMP11x paths. SBOS740A Fig.23, SNOSD82D Fig.7-5 and SNIS236 Fig.7-6 all show the winning threshold-alert pin deasserting while LOW stays latched until an addressed CONFIG read. Captured that sequence in the [behavior contract](../device-behavior.md#comparator-and-pin-evidence), literal vector, X03 and [safety policy](../eeprom-and-reset-policy.md#external-interference). DATA_READY routing and the direction bit when both thresholds are latched remain open. |
+
+### Safety transcript walkthrough
+
+The nine rows are planned transfer sequences. The audit checked permitted
+selectors, forbidden callbacks and evidence transitions against the policy
+and the pinned maps.
+
+| Transcript cases | Result |
+| --- | --- |
+| Identity and shadow indices / protected memory and raw escape | TMP116/N permits reads at `0x05/0x06/0x07/0x08`. The other four selections use `0x05/0x06/0x08` and reserve `0x07` for opt-in offset. EEPROM_UL and all data shadows deny data writes. Invalid indices, unsupported features and mismatched identity stop dependent access. |
+| Startup / busy or guard failure / unlocked | A compatible ACK at 50.9 ms on the stated floor clock admits the guard from tick 54. Test EUN and BUSY together at `0x04`. A timely locked/busy word permits only paced guard rereads on a timed path. A failed callback ends the attempt. CONFIG BUSY invalidates a previous guard. An untimed attempt stops. Either EUN-set word refuses all writes and fresh publication until external correction. |
+| Supported reset / recovery | Verified stable words `0x0220` and `0x0620` encode a single reset write of `0x0222` and `0x0622`, respectively. Invalidate before attempting it. Completion at 50.9 ms permits postwait observation from tick 53. Recheck identity and safe state. Recovery uses renewed startup evidence and verifies both limits and any managed offset. The transcript literals decode to +37, −10 and +0.5 °C. An ambiguous write leaves trust dirty. |
+| Interference after the guard / shared bus exclusions | Reset, a power cycle or an outside write invalidates the evidence used by the dependent operation. External ARA can change the pin while a comparator latch remains available to CONFIG. Checked X01–X08 across the proposed typed, diagnostic, cooperative and CLI routes. No allowed path sends a general call, ARA, EEPROM data write or relock. The bus-silent lifecycle row now requires zero callbacks, including reads. |
+
+### Focused checks
+
+Python 3.12.10 and PyMuPDF 1.27.2.2 reproduced the 96 nominal cells,
+36 active-time values, 11 signed words, 14 host rounding/rejection cases,
+three offset clamps, eight pin routes, five poll schedules and three clock
+origins. The two eight-conversion means are 7 and 27 counts. Aborting the
+third block retains 27. The comparator walkthrough checked equality,
+acknowledgement, re-arm and therm hysteresis. The external ARA case retains
+LOW with the pin high and records zero driver ARA transfers.
+
+The commands `python -B tools/check_register_ledger.py` and
+`python -B tools/test_check_register_ledger.py` passed for six models and
+30 tests. Under `python -B`, `scripts/check_references.py` verified the
+14 PDFs and `scripts/test_check_references.py` passed nine tests.
+`scripts/check_promptset.py` verified 55 stages and
+`scripts/test_check_promptset.py` passed 36 tests. All 148 local links
+in the changed documents resolved, including 77 PDF pages and nine
+Markdown section anchors. `git diff --check` passed.
+The startup BUSY contradiction, read-clear edge, TEMP byte latching,
+offset/comparator ordering and addressed-reset effects listed in phase a
+remain open. Native driver execution, MCU links, remote CI and physical
+qualification were NOT RUN.

@@ -2035,6 +2035,23 @@
       "policy": "Record raw revision; check only the low 12-bit DID for family compatibility."
     },
     {
+      "id": "tmp119-supply-summary",
+      "status": "open",
+      "sources": [
+        {
+          "profile": "TMP119",
+          "pages": [4, 30],
+          "claim": "The portfolio table and application power guidance give a 1.7 to 5.5 V range without a temperature qualification."
+        },
+        {
+          "profile": "TMP119",
+          "pages": [6, 7],
+          "claim": "The 1.7 V minimum applies from -55 to +70 degrees Celsius. Operation up to +150 degrees Celsius requires at least 1.8 V."
+        }
+      ],
+      "policy": "Use the temperature-conditioned operating range and the electrical test conditions for the selected grade and package."
+    },
+    {
       "id": "tmp119-id-default",
       "status": "open",
       "sources": [

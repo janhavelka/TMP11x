@@ -189,7 +189,9 @@ or status evidence. Unknown write scope requires full invalidation. A known
 external ARA can acknowledge a threshold alert in alert mode. Among
 responding devices the lowest seven-bit address wins arbitration. TI describes
 that winner's ALERT pin becoming inactive and losing responders retaining
-their asserted pin. The response's low bit is 1 for a high-threshold alert
+their asserted pin. In the alert-mode timing diagrams LOW stays latched
+after the winning pin deasserts. A later CONFIG read captures and clears
+it. The response's low bit is 1 for a high-threshold alert
 and 0 for a low-threshold alert. TI does not specify which direction wins
 when both flags are latched. Effects on DATA_READY routing remain unspecified.
 Invalidate affected live alert/acknowledgement evidence and retain historical
@@ -197,9 +199,9 @@ events. If the outcome is unknown, mark the affected evidence uncertain.
 Outside CONFIG/TEMP reads can consume the corresponding flags as well. The
 application must report interference and reestablish ownership. A valid DID
 or later matched CONFIG word cannot detect every outside action.
-[TMP116 pp.21,23](reference/source/TMP116-Digital-Temperature-Sensor-Datasheet-SBOS740A.pdf#page=21),
-[TMP117 pp.22–23](reference/source/TMP117-Digital-Temperature-Sensor-Datasheet-SNOSD82D.pdf#page=22),
-[TMP119 pp.24,26](reference/source/TMP119-Digital-Temperature-Sensor-Datasheet-SNIS236.pdf#page=24).
+[TMP116 Figure 23 and pp.21,23](reference/source/TMP116-Digital-Temperature-Sensor-Datasheet-SBOS740A.pdf#page=15),
+[TMP117 Figure 7-5 and pp.22–23](reference/source/TMP117-Digital-Temperature-Sensor-Datasheet-SNOSD82D.pdf#page=16),
+[TMP119 Figure 7-6 and pp.24,26](reference/source/TMP119-Digital-Temperature-Sensor-Datasheet-SNIS236.pdf#page=18).
 
 Use the bus-silent invalidation lifecycle where full invalidation is needed.
 Stop or finish the active job and consume any result before invalidating,
@@ -246,7 +248,7 @@ apply to all six models where the capability exists.
 | Supported reset | After safe preflight, with last verified stable code `0x0220` (continuous) or `0x0620` (shutdown), one `W(0x48, [0x01, 0x02, 0x22])` or `W(0x48, [0x01, 0x06, 0x22])`, respectively. Invalidate before the attempt. On success at 50.9 ms, a 1 ms floor clock allows postwait observation from tick 53. Read compatible identity at `0x0F`, a complete safe word at `0x04` and the full profile. Vary changed/unchanged settings, EUN/BUSY and transport failure independently. | No command on TMP116/N, without verified stable input or before startup/guard. No replay of flags or transient one-shot MOD, no resend after ambiguous completion, no postwait write on old proof or success inferred from bit 1 reading zero. |
 | Recovery | Inject ambiguous CONFIG, second limit or managed offset writes. An explicit recovery establishes evidence again and verifies replay of nonfactory limits such as THIGH `0x1280` (+37 °C) and TLOW `0xFB00` (−10 °C). On supported parts, exercise OFFSET `0x0040` (+0.5 °C) as an owned setting and as an observed unmanaged value. Inject failed CONFIG/TEMP reads and possible flag loss. | No hidden reset, rollback or blind replay after partial failure. No unmanaged calibration write or fresh result from a diagnostic. |
 | Interference after the guard | Start with locked/idle evidence, then report an external power cycle, general call or write before the next dependent transfer. Separately report external ARA with the target winning, losing or unknown. | No write or fresh result using the invalidated guard. No use of old profile or conversion proof after reset. ARA cannot supply a fresh sample or erase retained historical alerts. |
-| Shared bus exclusions | Across all typed, diagnostic, recovery, job and CLI paths, including bind-only boot, check callback counts and addresses. Each operation that requires a guard must obtain its own passing word, including consecutive operations on one owner. | Zero sensor callbacks at `0x00` (including `W(0x00, [0x06])`), zero ARA callbacks at `0x0C`, zero broadcast sync and no unapproved route traffic. No sensor writes from bind, job admission/cancel/result consumption or teardown. |
+| Shared bus exclusions | Across all typed, diagnostic, recovery, job and CLI paths, including bind-only boot, check callback counts and addresses. Each operation that requires a guard must obtain its own passing word, including consecutive operations on one owner. | Zero sensor callbacks at `0x00` (including `W(0x00, [0x06])`), zero ARA callbacks at `0x0C`, zero broadcast sync and no unapproved route traffic. Zero sensor callbacks from bind, job admission/cancel/result consumption or teardown. |
 
 These are research inputs. Stages 18–23 own guard, trust and acquisition
 traces. Stages 24–26 own EEPROM, reset and diagnostic tests. Stages 29–33 own
