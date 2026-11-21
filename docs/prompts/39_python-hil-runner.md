@@ -11,7 +11,7 @@ Provide unattended but safe diagnostic verification tooling that records reprodu
 
 ## Source audit
 
-Study TMP1x2 `tools/hil_tmp1x2_runner.py` and parser/unit tests, OPT4001 and LDC1614 runners, DP8382x runner/event contracts and this promptset `CLI_CONTRACT` and `VERIFICATION`. Reuse parsing/record ideas selectively, not board pin assumptions.
+Study TMP1x2 `tools/hil_tmp1x2_runner.py` and parser/unit tests, OPT4001 and LDC161x runners, DP8382x runner/event contracts and this promptset `CLI_CONTRACT` and `VERIFICATION`. Reuse parsing/record ideas selectively, not board pin assumptions.
 
 ## Complete implementation work
 

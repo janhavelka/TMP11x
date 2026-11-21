@@ -11,7 +11,7 @@ Prove the portable driver is usable with native ESP-IDF without Arduino shims or
 
 ## Source audit
 
-Inspect TMP1x2 `examples/esp_idf/basic` CMake/PlatformIO, modern ESP-IDF `driver/i2c_master.h`, OPT4001 or LDC1614 native transport examples, and read-only current SDK APIs. Record pinned IDF version before adapting callbacks.
+Inspect TMP1x2 `examples/esp_idf/basic` CMake/PlatformIO, modern ESP-IDF `driver/i2c_master.h`, OPT4001 or LDC161x native transport examples, and read-only current SDK APIs. Record pinned IDF version before adapting callbacks.
 
 ## Complete implementation work
 
