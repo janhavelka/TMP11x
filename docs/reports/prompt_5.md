@@ -1,6 +1,6 @@
 # Prompt 5 — Register and bitfield ledger
 
-**Phase c reviewed on 2026-11-21. Phase d acceptance is next.** Phase a began on clean
+**Status: COMPLETE.** Phase d acceptance finished on 2026-11-21. Phase a began on clean
 `main` at `1707f3fd36eabf2c74f76cb4e7ffc5034e465b6b`, equal to the
 local `origin/main`. Git history and the wrapper log confirm that prompt 4's
 acceptance commit reached upstream. The [sequence](../prompts/SEQUENCE.json)
@@ -175,6 +175,28 @@ matrix preserves the 46 required IDs and their forward owners.
 | `python -B scripts/check_promptset.py` and `python -B scripts/test_check_promptset.py` | PASS, all 55 stages and 36 prompt checker regressions. |
 | `git diff --check` | PASS with Git 2.52.0.windows.1. |
 
-Phase d verifies the wrapper commit, runs acceptance and owns the report
-index, progress row and completion marker. Driver, MCU, remote CI and
-physical qualification remain open under their assigned stages.
+## Phase d acceptance
+
+Acceptance started on clean `main` at `a331cf5b3abb311af3c535ff6184949e5bb0f9b3`.
+The five phase c paths and commit message match the wrapper request. Git
+history, the local `origin/main` ref and `runs.log` agree on that revision,
+which the wrapper verified upstream at 15:50:05 Prague time. The acceptance
+commit contains this report, its index entry and a dedicated stage 5 progress
+row. The wrapper owns staging, commit and upstream verification for those edits.
+
+| Acceptance check | Result |
+| --- | --- |
+| `python -B tools/check_register_ledger.py` | PASS. Six BOM selections, with per-profile maps, field layouts, release restrictions and conflict citations. |
+| `python -B tools/test_check_register_ledger.py` | PASS. 22 regressions, including parse-time duplicate keys, within-profile overlap and duplicate addresses, invalid masks and pointers, missing provenance, incompatible model semantics and unsupported conflict resolution. |
+| `python -B scripts/check_promptset.py` and `python -B scripts/test_check_promptset.py` | PASS. 55 stages and 36 regressions. |
+| `python -B scripts/check_references.py` and `python -B scripts/test_check_references.py` | PASS. All 14 pinned PDFs matched the archive manifest and all nine reference-tool regressions passed. |
+| Direct coverage, BOM and source inventory reconciliation | PASS. The feature matrix has the exact 18 R, 20 F and eight X IDs from FULL_COVERAGE. The six BOM selections agree across the register ledger, feature matrix and variant contract. The ledger retains 31 unique open source records. PyMuPDF located all 30 map entries and the CONFIG/ID pages in the three pinned exact-part PDFs. The detailed field and cycle comparison is recorded in phase c above. |
+| `git diff --check` and `git diff --cached --check` | PASS. Acceptance documentation passed the working diff check. The index was empty at handoff to the wrapper, which checks its staged diff before committing. |
+
+Tools were Python 3.12.10, PyMuPDF 1.27.2.2 and Git 2.52.0.windows.1.
+[Stage 6](../prompts/6_timing-status.md) consumes the checked ledger and validator
+for timing, readiness and alert behavior, including the unresolved DATA_READY
+race lead. Stage 7 refines the EEPROM and reset policy. Stage 10 registers the
+Python checks in the host entrypoint. Stage 12 uses the reviewed facts for the
+C++ command table. Native driver tests, MCU links, remote CI and physical
+qualification were NOT RUN. The first remote checkpoint is stage 43.

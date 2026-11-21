@@ -5,8 +5,8 @@
 **Repository:** `main`, tracking `origin/main` at `https://github.com/janhavelka/TMP11x.git`.
 **Preparation input HEAD:** `6c5e4496d5c896af689228d4bee4382a53c20626` (clean and synchronized at entry).
 **Hardware:** Physical TMP11x board and test wiring NOT CONFIRMED.
-**Last completed stage:** 4 (family identity and board integration).
-**Last update:** 2026-11-21. Next eligible stage is 5.
+**Last completed stage:** 5 (register and bitfield ledger).
+**Last update:** 2026-11-21. Next eligible stage is 6.
 
 Preparation evidence includes the [6b173cc second follow-up](../reports/audit-followup-6b173cc.md),
 the [cb73740 follow-up](../reports/audit-followup-cb73740.md#response--2026-11-17),
@@ -22,7 +22,8 @@ every planned deliverable a producer and checks consumer dependencies.
 | 2 | Toolchain/package/prompt workflow audit | COMPLETE — [report](../reports/prompt_2.md) |
 | 3 | Official source intake | COMPLETE — [report](../reports/prompt_3.md); optional TI code access gaps retained |
 | 4 | Model identity and board integration | COMPLETE — [report](../reports/prompt_4.md), [variant contract](../variants.md), [board guide](../board-integration.md) |
-| 5–7 | Field/timing ledger and safety policy | NOT_STARTED |
+| 5 | Per-model register, field and feature ledger | COMPLETE — [report](../reports/prompt_5.md), [register ledger](../registers/tmp11x.json), [feature coverage](../feature-coverage.md), [validator](../../tools/check_register_ledger.py) |
+| 6–7 | Conversion timing, status behavior and EEPROM/reset safety policy | NOT_STARTED |
 | [45](45_audit-1-7.md) | Audit prompts 1–7 before freezing the API | NOT_STARTED |
 | 8–9 | Public API and owner contracts | NOT_STARTED |
 | [46](46_audit-8-9.md) | Audit prompts 8–9 before production code starts | NOT_STARTED |
