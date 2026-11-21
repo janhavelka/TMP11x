@@ -228,3 +228,47 @@ Checks used Python 3.12.10 and Git 2.52.0.windows.1. These are contract
 and source checks. Native driver execution, MCU links, remote CI and
 physical qualification were NOT RUN. Phase d owns remaining acceptance,
 the report index and progress entry. No phase-c blocker remains.
+
+## Phase d acceptance, 2026-11-21
+
+**COMPLETE.** The acceptance baseline was clean `main` at
+`125fb76bbcd57b82092f27d059304239a90de1ca`. Git history matched the phase-c
+commit request message and all three paths. The wrapper synchronized that
+SHA at 19:49:40 Prague time. `HEAD...origin/main` showed zero commits on
+either side and the index was empty. The closure commit and push are handed
+to the wrapper. Git history and its run log identify the resulting revision.
+
+Rechecked all seven prerequisite stage completions and eight consumed artifact
+IDs against the files in the input inventory above. Rechecked the per-model
+register maps, CONFIG, EEPROM lock/busy, offset and ID pages cited in phase c
+using the pinned TI archive. The four inspected clean local sibling heads
+still match the phase-b local revisions. All 16 cited source and test blobs
+match their phase-a pins. The TMP1x2 sketch's model, callback and method
+signatures agree with its public headers. The wrapper had already verified
+the phase-c upstream revision. No sibling tests or network checks ran in
+this phase.
+
+| Prompt requirements in order | Acceptance evidence |
+| --- | --- |
+| 1–3. Names and binding inputs, typed API, replay and acquisition modes | Both documents name the C++17 headers and types. The gates distinguish diagnostics, latest, continuous fresh and owned one-shot. Reset and one-shot have dedicated entry points. |
+| 4–6. One-shot ordering, immutable binding and bind-only diagnostics | Traced guard, preflight comparison, SD, stale-ready baseline, single trigger, readiness and TEMP. Drift and unowned MOD stop before any write. Late success retains trigger ownership. Configure/recover reuse the binding. Diagnostic access captures read effects and supports write-free observation firmware. |
+| 7–10. Register and stage owners, outputs and transport | One owner per register decision, one shared apply engine and one operation slot. Source stages and reuse are explicit. Failure preserves caller outputs except labelled ID/snapshot evidence. Short transfers fail in the adapter. Null contexts and clockless observations have defined behavior. Both packages stand alone. |
+| 11–14. State gates, passive health, FIRST_ACK and invalidation | Traced admission and outcomes for dirty latest, clean fresh, guarded recovery, physical health before initialization, and bus-silent invalidation with historical evidence retained. Missing proof uses the current compatible ID callback and stable-power guarantee. |
+| 15–17. Sample evidence, explicit read methods and shared-bus sketches | Sample fixes raw/counts/Celsius, acquisition kind, time validity, freshness, generation/trust and offset provenance. Local cache access retains that record. The two sketches borrow the same application bus; adapter transactions include mux routing within the callback budget. |
+| 18–20. Full replay, staged offset and coverage | Guarded shutdown, ordered limit writes, opt-in offset and final verification cover every owned field. The offset control starts at 23. TMP116/N never uses `0x07` for offset or emits addressed reset. All 46 register, behavior and exclusion rows map to typed, job, CLI or application ownership. EEPROM and shadow writes stay excluded across all routes. |
+
+| Check | Result |
+| --- | --- |
+| `python -B scripts/check_promptset.py` and `python -B scripts/test_check_promptset.py` | PASS. 55 stages and 36 regressions. |
+| `python -B scripts/check_references.py` and `python -B scripts/test_check_references.py` | PASS. 14 pinned PDF hashes and nine regressions. |
+| `python -B tools/check_register_ledger.py` and `python -B tools/test_check_register_ledger.py` | PASS. Six BOM models, three register maps and 31 regressions. |
+| Focused inline Python and pinned PDF page inspection | PASS. All 46 ordered coverage rows, full and shadow dump counts, `0x0620`/`0x0E20` one-shot trace, BUSY stop and owned-trigger lifetime. Floor-clock checks included the reset and FIRST_ACK expiry trace, 1–16 ms ticks and due-time equality. Exact-alignment examples in the behavior vectors use idealized completion times; the public floor-clock hook supplies only the reported tick. |
+| Local Markdown and Git | PASS. Local link targets, phase-c diff, closure working diff and empty staged diff checked. |
+
+Checks used Python 3.12.10 and Git 2.52.0.windows.1. The independent review
+and acceptance close the `api-contract` handoff in [docs/api-contracts.md](../api-contracts.md)
+and [docs/architecture.md](../architecture.md). [Stage 9](../prompts/9_owner-deadline-contract.md)
+consumes it for clock, deadline and result lifetime. Stage 46 audits both
+contracts. The phase-a silicon unknowns remain open. Native driver execution,
+MCU links, remote CI and physical qualification were NOT RUN. The first
+deliberate remote CI checkpoint is stage 43.
