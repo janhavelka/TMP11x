@@ -178,3 +178,53 @@ whitespace were checked across all three changed files, including the two
 new documents. The Git index remained empty. Native driver and MCU links,
 remote CI and physical qualification were NOT RUN. Phase c owns the fresh
 API and ownership review. No phase-b blocker remains.
+
+## Phase c independent review, 2026-11-21
+
+The review started on clean `main` at
+`669924fb496e12f116c16587fe99cb6881d0921f`. The phase-b commit matched
+the wrapper request's message and three paths. The wrapper verified upstream
+equality at 19:37:32 Prague time. Entry showed an empty index and zero
+commits on either side of `HEAD...origin/main`.
+
+Two read-only reviewers worked in parallel on the public API/state contract
+and the architecture/coverage map. Both returned findings. The lead checked
+all 20 prompt requirements against the two artifacts, including the
+following cases that required corrections.
+
+| Review case | Corrected outcome and source |
+| --- | --- |
+| A previously initialized TMP117 now reads ID `0x1116` | Retain the incompatible word, clear live device trust and stop after ID. A subsequent reset or non-ID read cannot touch the responder on stale trust. A new compatible diagnostic ID permits observations. Managed operation requires verified begin/recover. Neutral probe leaves transport counters alone. [Identity decision](../variants.md#identity-decision). |
+| A diagnostic dump sees changed THIGH before a later transfer fails | Record the observed limit and latch dirty immediately. The next fresh request refuses locally even if CONFIG still matches. The same comparison covers TLOW and owned offset. Unmanaged offset remains observed calibration. [Trust requirements](../prompts/19_config-trust.md). |
+| A safe guard is followed by CONFIG with BUSY and DATA_READY | Preserve the flag evidence. With matching stable fields, untimed try-fresh ends not-ready after two reads, with zero TEMP reads or writes. Stable drift also latches dirty. Only a timed operation may reacquire a guard after BUSY. EUN set stops guarded work immediately. [Guard transcripts](../eeprom-and-reset-policy.md#transcript-vectors-for-implementation). |
+| The clock reports 50 ms for a completion just before 60 ms | With a 10 ms floor clock the first startup guard can run at 70 ms. The binding now records the clock tick, default 1 ms. Minimum waits round up from the latest possible completion and budgets round down to whole ticks. A due tick equal to expiry permits no transfer. Post-callback deadline checks apply to timed operations. [Timing policy](../device-behavior.md#polling-and-deadlines). |
+| CLI observation before begin and adapter ownership | Bound `read` observes TEMP without filling the managed cache. `latest` uses the cache. Live `config` and `status` capture CONFIG read effects. Mux locking, route selection through STOP and the sensor transaction all occur inside the adapter's callback budget. [CLI contract](../prompts/CLI_CONTRACT.md), [transport contract](../prompts/ENGINEERING.md#transport-and-ownership). |
+
+The reviewers also traced rejected bind and start outputs, first-write
+target commitment, limit ordering in shutdown, the one-shot preflight and
+late trigger, cancellation with a retained result, mixed-generation alert
+history, staged offset control, package boundaries and the two consumer
+sketches. Register decisions still use one owner per function. The six
+models share one replay engine and one operation slot. TMP116/N offset and
+addressed reset refuse locally. All protected shadow writes remain excluded.
+[Public contract](../api-contracts.md), [architecture and coverage](../architecture.md).
+
+Rechecked the phase-a peer source/test pins against the phase-b local heads.
+The selected paths matched. GitHub reported the same four remote revisions
+listed in the phase-a source table. The original register and field tables
+were rechecked in SBOS740A pp.24,26,29,31, SNOSD82D pp.25,27–28,30,32
+and SNIS236 pp.32,34–35,37,39. No silicon or ownership ledger changed.
+
+### Phase c local checks
+
+| Check | Result |
+| --- | --- |
+| `python -B scripts/check_promptset.py` and `python -B scripts/check_references.py` | PASS. 55 stages and 14 pinned PDF hashes. |
+| `python -B tools/check_register_ledger.py` and `python -B tools/test_check_register_ledger.py` | PASS. Six models and 31 regression tests. |
+| Focused inline Python comparisons | PASS. All 46 R/F/X rows agreed in order across the three inventories. Full/shadow dump orders and bounds matched all three maps. The one-shot steps and SD/OS words matched the literal trace. Floor-clock calculations covered the reset/FIRST_ACK expiry vector and ticks of 1, 2, 5, 10 and 16 ms. |
+| Markdown and Git | PASS. Local link targets resolved in the three reviewed files. The phase-b commit, working diff and empty staged diff passed `git diff --check`. |
+
+Checks used Python 3.12.10 and Git 2.52.0.windows.1. These are contract
+and source checks. Native driver execution, MCU links, remote CI and
+physical qualification were NOT RUN. Phase d owns remaining acceptance,
+the report index and progress entry. No phase-c blocker remains.

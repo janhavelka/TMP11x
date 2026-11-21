@@ -20,7 +20,7 @@ can install a different binding.
 | `model`, `i2cAddress` | Select one of `Model::{TMP116,TMP116N,TMP117,TMP117M,TMP117N,TMP119}` from the BOM. Supply the unshifted seven-bit address `0x48–0x4B` of the known target. |
 | `i2cWrite`, `i2cWriteRead`, `i2cUser` | Both synchronous callbacks are required. One opaque context serves both. A stateless function may use `nullptr`. |
 | `i2cTimeoutMs`, `operationTimeoutMs` | Positive bounded millisecond intervals, each at most `INT32_MAX`. The former caps one callback. The latter bounds synchronous apply and reset, including waits. Explicit blocking-read and job budgets cover their entire call or job. |
-| `nowMs`, `timeUser` | Optional `uint32_t (*)(void*)`, monotonic milliseconds in a single epoch. Its value at physical completion timestamps observations. The state table identifies operations that require it. Replacing or restarting the epoch requires rebind. |
+| `nowMs`, `timeUser`, `clockResolutionMs` | Optional `uint32_t (*)(void*)` reporting monotonic elapsed milliseconds rounded down to its tick in one epoch. Its value at callback completion timestamps observations. Supply the clock's tick in whole milliseconds (default 1, valid 1–`INT32_MAX`) when installing the hook. Changing the hook, epoch or resolution requires rebind. |
 | `readAlertPin`, `gpioUser` | Optional `Status (*)(bool& high, void*)` reading the physical GPIO level. The context identifies the pin. A missing hook makes this observation unavailable. No pin setup or interrupt handling occurs. |
 | `offlineThreshold` | Positive consecutive tracked failure count at which health becomes OFFLINE. |
 
@@ -95,6 +95,7 @@ zero physical outcomes.
 | `IdentityInfo` | Selected BOM model and bound address, complete raw ID when available, recognized group, revision and its validity, compatibility with the selection. TMP116/N requires exactly `0x1116` and has no decoded revision. TMP117/M/N and TMP119 require low 12 bits `0x117` and expose the high nibble even for an unfamiliar revision. Compatible family, exact ordering code and physical authentication are distinct claims. |
 | `HealthSnapshot` | `DriverState`, initialized flag, saturating total successes/failures and consecutive failures, last physical fault/status, observation time and validity. Start at `UNINIT` on accepted bind or teardown. Each tracked terminal success sets `READY` and clears the streak. Each tracked failure increments it and sets `DEGRADED` below the threshold or `OFFLINE` at/above it. Preserve the last fault across success. |
 | `SettingsSnapshot` | Desired settings, observed raw/decoded fields with per-field validity and times, last verified generation/time, current trust (`UNKNOWN`, `DIRTY` or `VERIFIED`), first unresolved dirty reason and affected fields. Partial observations stay partial. A detected stable mismatch leaves the target intact. |
+| `ConfigurationObservation` | One complete CONFIG word with decoded stable fields, observed MOD, BUSY, DATA_READY and mode-specific HIGH/LOW, observation time/validity and read effects. Preserve the raw MOD even when accepting a continuous alias or an owned one-shot. |
 | `Sample` | `uint16_t raw`, `int16_t counts`, `double celsius`, `uint32_t observedAtMs`, `bool timestampValid`, `ReadKind acquisitionKind`, `bool freshConversion`, `uint32_t profileGeneration`, `ConfigTrust configTrust` and `OffsetProvenance offset`. The latter distinguishes unknown, unavailable on this model, observed unmanaged counts and verified managed counts, with validity for the recorded counts. Unknown is the only populated offset state before stage 23. |
 | `AlertStatus` | Pending alert-mode HIGH/LOW events, separately observed therm HIGH level and validity, source of CONFIG read, generation/mode, observation time/validity and possible history loss. A mixed/unknown marker bounds the record when events span profiles, modes or uncertain observations. |
 | `RegisterObservation`, `RegisterSnapshot`, `EepromSnapshot` | Selected model, identity evidence, ordered pointers and complete raw words, time validity, read effects and uncertainty per observation. Preserve completed prefix and first unsuccessful pointer in a failed composite. Report only available fields. EEPROM snapshot records lock/busy and one-based indexed shadows. |
@@ -110,14 +111,24 @@ initialization-gated transitions in [TMP1x2](library-comparison.md).
 
 All output references stay unchanged on failure, including a rejected start
 token, failed sample, scalar read and unmatched result token. There are two
-evidence-bearing exceptions. `readIdentity` returns a complete incompatible
-word in `IdentityInfo` alongside mismatch. An admitted diagnostic snapshot
+evidence-bearing exceptions. An explicit ID read (`readIdentity` or
+`readRegister(0x0F, …)`) returns the complete incompatible word alongside
+`IDENTITY_MISMATCH`. An admitted diagnostic snapshot
 returns a labelled partial snapshot on transfer failure or mismatch, including
 an incompatible ID when received. Precondition rejection preserves its
 output. Private observations, physical health, potential write effects and
 flag bookkeeping survive a composite failure. A `takeResult` of a
 matching terminal token succeeds at retrieval even when the job's own
 status in the returned record is failure.
+
+A complete incompatible ID on any path also invalidates live device state.
+Clear initialization, startup proof, profile trust, live alert level and
+ready/trigger evidence. Retain the mismatch, desired settings, transport
+history and historical samples/events. While the selected target is known
+incompatible, refuse I2C to every other pointer. An explicit ID check,
+including the first step of begin/recover or a dump, can establish compatibility
+again. Only verified begin/recover restores managed operation. A failed
+transfer supplies no complete ID for a comparison.
 
 ## Operation gates
 
@@ -131,7 +142,7 @@ words always use individual checked transfers.
 | Entry point | Required state | Work on acceptance |
 | --- | --- | --- |
 | `bind(const Config&)`, `end()`, `unbind()` | Free. Validate the complete new binding/profile before changing the instance. | Zero callbacks. Accepted bind installs target directly, discards old observations and starts uninitialized with unknown trust. End clears observations, health, startup and initialization, retaining binding and desired settings. Unbind also drops the binding. Teardown may be called on an empty instance. |
-| `begin(const Config&)`, `begin()`, `recover()` | Free and clock. First overload is an explicit validated bind followed by begin. The other two need an existing binding. Dirty, invalidated and previously failed instances may recover. | Tracked identity, startup, operation guard and full replay. Accepted replacement persists even if subsequent initialization fails. Hardware shutdown requires an explicit request. |
+| `begin(const Config&)`, `begin()`, `recover()` | Free and clock. The first overload checks the candidate's required clock and validates its binding/profile before replacing the instance. The other two need an existing binding. Dirty, invalidated and previously failed instances may recover. | Tracked identity, startup, operation guard and full replay. Accepted replacement persists even if subsequent initialization fails. Teardown sends no shutdown command. |
 | `invalidateDeviceState()` | Bound and free. | Zero callbacks. Clear startup origin/proof, initialized, live trust, current ready baseline, outstanding shot provenance and live alert level. Retain binding, target, health and historical samples/events under their original provenance. |
 | `readIdentity(IdentityInfo&)`, `probe()` | Bound, free, known authorized target. | One neutral ID read at `0x0F`. Probe returns compatibility status. No initialization/guard or clock required. |
 | `readRegister(uint8_t pointer, RegisterObservation&)`, `readEepromWord(uint8_t index, uint16_t&)` | Bound, free, mapped pointer or valid one-based shadow index. | One neutral word read. A lone observation can have unknown identity/startup/profile/freshness. Label pointer `0x07` by selected model. EEPROM words accept every bit pattern. Unsupported requests reject locally. |
@@ -154,6 +165,20 @@ A clockless binding supports identity and bounded diagnostics. The
 latest-value read engine itself requires no clock for decoding or
 publication, while public managed initialization requires one.
 
+Every complete live read of CONFIG, either limit or a supported offset
+updates the corresponding observation, including a diagnostic word in a
+partly failed dump. Compare owned fields against their verified values or,
+during apply/readback, the values expected at that step. A mismatch latches
+dirty, preserves the target and invalidates current ready evidence. A live
+observation API returns its observed data on a complete read.
+`verifyConfiguration()` reports `CONFIG_MISMATCH` on drift. Apply
+verification or acquisition stops on drift. A later matching diagnostic
+cannot clear dirty.
+During begin/recover, initial reads establish the starting values for
+replay. Verification compares values at the step where they must already
+have taken effect. Unmanaged offset records calibration provenance without
+joining the target.
+
 Jobs use `OperationKind::{INITIALIZE,CONFIGURE,RECOVER,READ}` and an explicit
 `ReadKind::{LATEST,CONTINUOUS_FRESH,ONE_SHOT}`. Start signatures take
 `(uint32_t nowMs, uint32_t timeoutMs, OperationToken& token)`, prepended
@@ -170,9 +195,21 @@ Every timed path samples the clock before and after the callback, clips
 its timeout to the remaining whole-operation budget, and expires at equality.
 Use unsigned elapsed differences with finite positive relative durations
 at most `INT32_MAX`. Continuity and service within one wrap are owner
-obligations. A zero-budget poll can expire the job and never calls the bus.
+obligations. With a coarse clock, round the whole-operation budget down to
+complete ticks at admission. Reject a budget shorter than one tick before
+work or token commitment. This makes expiry observable on the timebase
+used by the post-callback check. A zero-transfer poll can expire the job
+and never calls the bus.
 Blocking wrappers bound CPU steps as well as time, including a stuck clock.
 Cooperative waits return pending without a sleep/yield or a held bus lock.
+For a minimum wait after callback completion, the hook supplies only a
+floor reading `t`. With clock tick `q = clockResolutionMs` and interval
+`d`, allow the next transfer after elapsed time `q + ceil(d/q) × q` from
+`t`. The extra tick covers the unknown completion phase. For example, on
+a 10 ms clock a FIRST_ACK reported at 50 ms can occur just before 60 ms.
+The first eligible tick for the 3 ms startup wait is 70 ms. Compute the
+rounded interval in a wider type and compare with the remaining deadline
+before scheduling. A due time at or beyond expiry permits zero transfers.
 Stage 9 specifies the owner-facing scheduling, work limits and token
 lifetime in detail. [Owner contract brief](prompts/9_owner-deadline-contract.md).
 
@@ -189,15 +226,24 @@ lifetime in detail. [Owner contract brief](prompts/9_owner-deadline-contract.md)
    seed. Retain established proof while the guarantee holds.
 2. Obtain a new `0x04` word for each mutation or fresh acquisition. EUN bit
    15 set latches `EEPROM_UNSAFE` immediately, including on diagnostics or
-   with BUSY also set. Ordinary recovery, shutdown, addressed reset and a
+   with BUSY also set. A diagnostic returns the observed word and records
+   the unsafe condition. A guarded operation stops with `EEPROM_UNSAFE`.
+   Ordinary recovery, shutdown, addressed reset and a
    later diagnostic zero cannot clear it. The owner must power-cycle or
    arrange external relock, invalidate and re-establish startup and ownership.
    With EUN clear and BUSY bit 14 set, only a timed path may pace successful
-   `0x04` rereads within remaining work/deadline. An untimed try ends here.
+   `0x04` rereads within remaining work/deadline. An untimed try returns
+   `MEASUREMENT_NOT_READY` after that one callback.
    No retry follows a failed transfer. A later observed BUSY (including
-   CONFIG bit 12) cancels the guard without itself implying drift. Renew it
-   before dependent work, or stop. Interference, reset, rebind or ambiguity
-   also ends the guard. Never carry it to the next operation.
+   CONFIG bit 12) cancels the guard without itself implying drift. If
+   untimed try-fresh reads CONFIG with BUSY set, retain the returned flags
+   and issue no second guard or TEMP read. Return `MEASUREMENT_NOT_READY`
+   for BUSY with matching fields. Stable-field drift still latches dirty
+   and returns `CONFIG_MISMATCH`.
+   A timed path may renew the guard before dependent work. A known unlocked
+   target still requires external correction across teardown or rebind.
+   Interference, reset, rebind or ambiguity also ends the guard. Never
+   carry it to the next operation.
 3. Read current stable fields/limits as needed for safe ordering. Establish
    explicit shutdown. A settings candidate becomes the retained desired
    target immediately before the **first mutating callback attempt**,
@@ -214,9 +260,9 @@ lifetime in detail. [Owner contract brief](prompts/9_owner-deadline-contract.md)
    full apply/recovery, establish a valid verified pair before entering
    therm, and keep intermediate observations untrusted. On a transition to
    therm, defer setting T/nA until the requested pair is established.
-   Separate writes
-   can transiently change comparator/pin behavior. Stop after failure and
-   retain the candidate and partial observations for explicit recovery.
+   Separate writes can transiently change comparator/pin behavior. Stop
+   after failure and retain the candidate and partial observations for
+   explicit recovery.
 5. Consume old readiness with a CONFIG read in the expected SD profile.
    Write the desired mode. Read CONFIG again, check **every** stable field,
    feed alert bookkeeping and consume its readiness as the new generation
@@ -270,7 +316,7 @@ and per-model evidence](eeprom-and-reset-policy.md).
 - **Trigger ownership.** A terminally successful trigger permits MOD=01 or
   11 as compatible with desired shutdown during the shot and after
   completion, timeout or cancellation, until a successful explicit SD write
-   or invalidation/rebind. All other fields must still match. A late trigger
+  or invalidation/rebind. All other fields must still match. A late trigger
   retains physical ownership and returns timeout. An ambiguous SD/trigger
   invalidates trust and cannot establish verified shutdown or a new owned
   trigger. Cancel/timeout performs no restore or retrigger. A later explicit
@@ -284,7 +330,8 @@ and per-model evidence](eeprom-and-reset-policy.md).
   and LOW is zero. TEMP consumes DATA_READY only. Diagnostic CONFIG may
   retain eligible same-generation readiness. TEMP, ambiguous destructive
   reads, reset or outside access consume or invalidate that evidence.
-  Failed destructive reads mark possible loss and preserve prior alerts.
+  A failed CONFIG read can lose readiness and alert-mode events. A failed
+  TEMP read can lose readiness alone. Both preserve previously captured alerts.
 - **Publication.** A late successful read updates physical health (when
   tracked), observed words and read effects, even in a failed composite.
   It cannot publish a sample, replace the last good cache, mark initialized

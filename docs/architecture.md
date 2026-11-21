@@ -94,12 +94,12 @@ After successful bring-up the same owner calls `tmp112.readSample(a)` with a
 `TMP1x2::Sample` and `tmp117.readLatest(b)` with a `TMP11x::Sample` and
 handles each returned status. An observation-only TMP117 consumer stops
 after bind and invokes `readIdentity` or a checked diagnostic. On a mux,
-each target context carries its route and a reference to this bus. Under
-one application lock, select that route through STOP, perform one sensor
-callback, then release the lock. Budget lock delay, routing and transfer
-together. Count extra mux transactions separately. Serialize ownership of
-the *same sensor* across dependent transfers and waits even when the bus
-itself is released. Neither package depends on the other or inherits from
+each target context carries its route and a reference to this bus. Inside
+each adapter callback, acquire the application bus lock, select the route
+through STOP, perform the sensor transaction and release the lock within
+the supplied timeout. Count extra mux transactions separately. Serialize
+ownership of the *same sensor* across dependent transfers and waits even
+when the bus itself is released. Neither package depends on the other or inherits from
 a common driver. [Peer sources and consumers](library-comparison.md).
 
 ## Register-to-interface map
@@ -115,10 +115,10 @@ before the callback. [Source pages and test owners](feature-coverage.md),
 
 | ID | Owner and public route | Job | CLI |
 | --- | --- | --- | --- |
-| R01 | Measurement decodes TEMP in `readLatest` and the explicit fresh APIs. Bound-only `readRegister` can return the startup word. `getLastSample` reads the cache. | READ (all kinds), cache local | `read`, `read --fresh`, `oneshot`, `latest` |
-| R02 | Configuration retains HIGH/LOW on each CONFIG read. `getAlertStatus` and `takeAlertEvents` expose the sticky alert-mode history or separate therm level. | Shared side effect in jobs, inspect/take local | `config`, `status` |
+| R01 | Measurement decodes TEMP in `readLatest` and the explicit fresh APIs. Before begin, CLI `read` uses a bound TEMP diagnostic with unknown freshness and leaves the sample cache alone. `getLastSample` reads the cache. | READ (all kinds), cache local | `read`, `read --fresh`, `oneshot`, cached `latest` |
+| R02 | Configuration captures HIGH/LOW on every live CONFIG read. `getAlertStatus` inspects the retained events and therm level. Only `takeAlertEvents` drains the event record. | Shared read effect in jobs, inspect/take local | `config` and `status` each read CONFIG and disclose its effects |
 | R03 | Measurement consumes eligible DATA_READY once after the generation baseline. CONFIG/TEMP observation bookkeeping includes diagnostic reads. | READ continuous fresh/one-shot | `read --fresh`, `config`, `dump` |
-| R04 | Configuration compares BUSY from `0x04` and observes the CONFIG mirror on existing CONFIG reads. Renew a lost guard before dependent work. | All apply and fresh jobs | `begin`, `recover`, `read --fresh`, `status` |
+| R04 | Configuration tests BUSY at `0x04` and in any CONFIG read. BUSY ends an untimed fresh attempt. Only a timed path can wait for a new safe `0x04` within budget. A transfer failure ends the attempt. | All apply and fresh jobs | `begin`, `recover`, `read --fresh`, `status` |
 | R05 | Configuration owns the two replayable modes and canonical CC alias. Measurement owns the single explicit OS trigger. | CONFIGURE or READ one-shot | `mode`, `shutdown`, `oneshot` |
 | R06 | Configuration `setCycle` selects one of eight CONV codes. Timing estimates combine cycle and averaging. | CONFIGURE, estimates local | `cycle`, `config` |
 | R07 | Configuration `setAveraging` selects the block size. Measurement schedules the OS poll from the count and model-specific active-time bound. | CONFIGURE, READ | `avg`, `oneshot` |
@@ -155,7 +155,7 @@ before the callback. [Source pages and test owners](feature-coverage.md),
 | F15 | ID-first dumps record order, incomplete prefixes and destructive read effects. A TMP116/N or TMP117-family mismatch stops after one ID callback. | Explicit bounded diagnostics sync. `identity`, `status`, `config`, `dump`. |
 | F16 | Board integrator owns logic levels, pulls, local bypass, package mounting, thermal paths, strain, leakage and bus activity during conversion. | No sensor job. `bus` reports adapter configuration. [Board guide](board-integration.md). |
 | F17 | Public value gives raw word, signed counts and °C. Accuracy depends on exact grade, supply, temperature range, averaging, timing and assembly. | READ. `read` reports observation. Physical accuracy needs an independent reference. |
-| F18 | Exclusive owner, passive physical health, finite work and post-callback deadline apply to every operation. Cancellation retains uncertain effects and terminal identity. | `health`, `xfer`, `job cancel`, `job result`. Health/counter queries and result handling are local. |
+| F18 | Each sensor callback has a finite transport timeout. Timed operations also clip it to the remaining whole-operation budget and recheck the clock on return. The exclusive owner retains physical health, uncertain effects and terminal job identity across cancellation. | `health`, `xfer`, `job cancel`, `job result`. Health/counter queries and result handling are local. |
 | F19 | Check all six BOM selections and TMP114/TMP118 negative responders in stages 13/32–33. Mismatch ends the attempt with no alternate-family scan. | Identity in apply jobs, sync observation. `bind`, `identity`, authorized `discover`. |
 | F20 | Stage 33 tests native consumers, 34–36 link S2/S3/P4 targets, 42 exercises the installed package, 43 verifies exact-SHA CI, and 40–41 qualify the actual fixture. | Application/build evidence, no sensor job. `version`, `bus`, `xfer` identify the run. |
 
