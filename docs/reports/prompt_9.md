@@ -78,3 +78,49 @@ Python 3.12.10 passed `python -B scripts/check_promptset.py`,
 No phase-a blocker. The owner contract and its acceptance traces remain
 open for phase b. Native driver execution, MCU links, remote CI and
 physical qualification were NOT RUN.
+
+## Phase b delivery, 2026-11-21
+
+The phase-a request named only this report. Git history confirms the requested
+message and path at `14fcdbd6cf65d78e54892cfde35e1acd0bf07653`, parent
+`193f8f3bca62231e1ff06bddcda80a93ac55c135`. The wrapper recorded upstream
+equality at 20:15:36 Prague time. Phase b started at that clean HEAD on
+`main` with zero divergence from the local `origin/main` and an empty index.
+The stage 6, 7 and 8 inputs above were present. Stage 9 sits between 8 and
+46 in the manifest.
+
+The [owner contract](../owner-operations.md) supplies the `owner-contract`
+handoff. Its admission and slot tables specify the four start methods, all
+three READ kinds and the result of every poll/cancel/take transition.
+The trace with two live instances requires matching both issuer and serial.
+The last serial is usable, exhaustion returns `WORK_LIMIT`, and taking a
+matching failed operation succeeds exactly once.
+
+The clock table distinguishes untimed, finite-transfer calls from timed
+jobs and blocking wrappers. Phase b selected 32 dispatches per poll, 256
+per timed operation and 1,000,000 unsuccessful same-tick wait checks. The
+last allowed step can succeed. A further required step beyond the operation
+limit gives `WORK_LIMIT`. Each successful BUSY guard observation starts a
+minimum 1 ms interval before another guard read. Polling caps and pacing
+are library policy. Each callback receives at most the remaining budget.
+
+Two read-only engineering checks informed these decisions. One compared
+the time and work bounds with the API, behavior vectors and TMP1x2 blocking
+loops. The other traced admission, cancellation and partial effects through
+the stage 8 API and the stage 28–31 requirements. Both finished in phase b.
+Phase c owns independent review of the authored contract.
+
+| Focused check | Phase-b evidence |
+| --- | --- |
+| `python -B scripts/check_promptset.py` and `python -B scripts/check_references.py` | PASS with Python 3.12.10. All 55 stages and 14 pinned PDF hashes passed. An inline manifest check confirmed stage 9's three inputs and one output. |
+| `python -B tools/check_register_ledger.py` and `python -B tools/test_check_register_ledger.py` | PASS for six selected BOM models and all 31 ledger regressions. |
+| `g++ -std=c++17 -Wall -Wextra -Werror -pedantic -fsyntax-only -x c++ -` | PASS with GCC 15.1.0. Compiled the published deadline/wait example with its six static assertions and 73 generated assertions for unsigned elapsed time and floor-clock minimum waits across seven resolutions. Separate arithmetic checks covered admission at 0, sub-tick, one tick, maximum, maximum plus one and due-equals-expiry. |
+| Inline Python vector and PDF checks | PASS. Matched the seven A callbacks in the two-route trace to the guard, preflight, SD word, cleared baseline, single OS word, returned HIGH/ready and 25 °C TEMP. Checked the serial timeout table and held-line prose on the six pinned pages listed above. |
+| Markdown and Git | PASS. Both documents are UTF-8 and all 26 local links resolve, including section and PDF page anchors. Whitespace checks covered the new file, working diff and empty staged diff. |
+| Named failure traces | The contract gives expected outcomes for a changed binding, foreign/stale token, zero-budget expiry, pre-/post-write cancel, ambiguous trigger, late final CONFIG and missed destructive-read evidence. These are inputs to future tests. |
+
+Stage 46 audits the two design contracts. Stages 18/21 implement the shared
+steps, 28 implements the slot and 29–31 exercise real jobs and fault cases.
+No blocker for phase c. Native driver tests, MCU links, remote CI and
+physical qualification were NOT RUN. The production driver and CI workflow
+are later-stage artifacts.
