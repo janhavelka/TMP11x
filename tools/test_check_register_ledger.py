@@ -181,6 +181,18 @@ class RegisterLedgerTests(unittest.TestCase):
         self.profile("TMP116")["startup"]["reset_max_ms"] = 1.5
         self.rejected("TMP116.startup: expected typical 1.5 ms with no specified maximum")
 
+    def test_unlock_field_powers_up_locked_and_encodes_both_states(self):
+        for profile in ("TMP116", "TMP117", "TMP119"):
+            with self.subTest(profile=profile):
+                unlock = self.field("EEPROM_UL", "EUN", profile)
+                unlock["factory"] = "1"
+                self.rejected(f"{profile}.EEPROM_UL.EUN: must power up locked (0)")
+                unlock["factory"] = "0"
+                encodings = unlock["encodings"]
+                encodings["0"], encodings["1"] = encodings["1"], encodings["0"]
+                self.rejected(f"{profile}.EEPROM_UL.EUN: expected locked=0 and unlocked=1")
+                encodings["0"], encodings["1"] = encodings["1"], encodings["0"]
+
     def test_addressed_reset_is_model_gated(self):
         reset = self.profile()["addressed_reset"]
         self.profile("TMP116")["addressed_reset"] = reset
@@ -206,6 +218,19 @@ class RegisterLedgerTests(unittest.TestCase):
     def test_reset_records_keep_relock_and_reload_outcomes_unknown(self):
         self.profile("TMP119")["addressed_reset"]["unknown_effects"].remove("eun")
         self.rejected("TMP119.addressed_reset: incomplete or incorrect unknown effects")
+
+    def test_reset_command_field_reads_zero_and_cites_both_source_claims(self):
+        for profile in ("TMP117", "TMP119"):
+            with self.subTest(profile=profile):
+                field = self.field("CONFIG", "SOFT_RESET", profile)
+                field["factory"] = "1"
+                self.rejected(f"{profile}.CONFIG.SOFT_RESET: expected zero readback")
+                field["factory"] = "0"
+                reset = self.profile(profile)["addressed_reset"]
+                original = reset["pages"]
+                reset["pages"] = [original[0]]
+                self.rejected(f"{profile}.addressed_reset: cite both the CONFIG diagram and field table")
+                reset["pages"] = original
 
     def test_identity_uses_the_correct_family_literal(self):
         self.field("DEVICE_ID", "DID", "TMP116")["factory"] = "0x117"

@@ -32,9 +32,9 @@ and retention is 10 years minimum and 100 typical. These are silicon
 characteristics. Keep programmed startup values distinct from factory
 defaults, including the programmable CONFIG subset, thresholds and
 applicable offset. TMP117/TMP119 startup prose omits DR/Alert and OFFSET
-from its stored-field list. Their detailed maps and field tables mark
-both as EEPROM-backed. The effect of an OFFSET write during the load
-remains unverified.
+from its stored-field list. Their CONFIG diagrams identify DR/Alert as
+EEPROM-backed. Their register map footnotes identify OFFSET as EEPROM-backed.
+The effect of an OFFSET write during the load remains unverified.
 
 ## Sibling precedent
 
@@ -176,3 +176,55 @@ The TMP116 POR busy contradiction remains open. Addressed reset's EEPROM
 reload, EUN, companion-bit application and ACK availability still need
 evidence. Native driver tests, MCU links, remote CI and physical qualification
 were NOT RUN. The wrapper owns staging, commit, push and upstream checks.
+
+## Phase c review
+
+**2026-11-21.** The fresh review started on clean `main` at
+`dafad41c8455f595882228a2f38b2e3da967caf3`. Git history shows the six
+phase-b paths in that commit and the local upstream has the same SHA. The
+wrapper recorded upstream verification at 17:37:34 Prague time.
+
+Two independent read-only reviews covered the pinned silicon sources and
+the register checker, tests and coverage diff. The lead checked both against
+the policy, stage 6 behavior and the planned synchronous, diagnostic,
+cooperative and CLI routes. All six model gates, protected shadow sets,
+FIRST_ACK and guard order, reset encoding and readback, and X01–X08
+remain consistent with their implementation owners.
+
+- The [policy](../eeprom-and-reset-policy.md) now separates the TMP117
+  and TMP119 register-map footnotes for OFFSET (pp.25 and 32) from the
+  CONFIG diagrams for DR/Alert (pp.27 and 34). The startup summaries
+  still omit both fields.
+- An untimed fresh attempt stops if a later CONFIG read reports BUSY.
+  A timed attempt can re-establish the `0x04` guard within its budget.
+  A diagnostic unlock observation also requires external correction
+  before mutation or freshness can resume. The transcript cases cover
+  simultaneous DATA_READY and BUSY, sticky EUN refusal and post-reset
+  identity, guard and profile reads.
+- The ARA description scopes pin acknowledgement to a threshold alert
+  in alert mode. The response direction when both threshold flags are
+  latched and the effect on DATA_READY routing remain unspecified.
+  See TMP116 p.21, TMP117 p.22 and TMP119 p.24.
+- The [validator](../../tools/check_register_ledger.py) now rejects an
+  unlocked EUN factory field, reversed EUN encodings, a nonzero Soft_Reset
+  readback field and loss of either the diagram or field-table citation.
+  The [regressions](../../tools/test_check_register_ledger.py) exercise
+  these contradictions on all applicable profiles.
+
+Python 3.12.10 and PyMuPDF 1.27.2.2 on Windows. Results apply to the phase-c
+changes based on the revision above.
+
+| Command or check | Result |
+| --- | --- |
+| `python -B scripts/check_references.py` | PASS, 14 pinned sizes and SHA-256 hashes. |
+| `python -B scripts/check_promptset.py` | PASS, 55 stages. |
+| `python -B scripts/test_check_promptset.py` | PASS, 36 regressions. |
+| `python -B tools/check_register_ledger.py` | PASS, six BOM models and guard/reset policy. |
+| `python -B tools/test_check_register_ledger.py` | PASS, 29 regressions. |
+| Focused policy and feature-table check | PASS, 31 links, six model gates, eight exclusions, nine research transcript cases and literal arithmetic, and 46 coverage IDs with stable implementation and CLI owners. |
+| `git diff --check HEAD^ HEAD`, `git diff --check`, `git diff --cached --check` | PASS. Phase-b commit and phase-c changes had no whitespace diagnostics. The index was empty. |
+
+The TMP116 startup-busy contradiction and addressed-reset reload, EUN,
+companion-bit application and ACK availability remain open silicon evidence.
+Native driver tests, MCU links, remote CI and physical qualification were NOT
+RUN. Phase d owns acceptance, the report index and the progress update.

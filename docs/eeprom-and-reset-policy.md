@@ -37,9 +37,10 @@ At power-up the device loads prior EEPROM contents into the register map.
 Programmed startup values can differ from TI's factory values. The maps and
 field tables identify the EEPROM-backed CONFIG subset (MOD0 and bits 9:2),
 limits, supported OFFSET and the mapped EEPROM data words. TMP117/TMP119
-startup prose omits DR/Alert and OFFSET. The corresponding map and field
-tables mark both EEPROM-backed. MOD1, status, commands and reserved bits are
-outside the stored CONFIG subset. The known general-call reload uses the
+startup prose omits DR/Alert and OFFSET. The CONFIG diagrams identify
+DR/Alert as EEPROM-backed. The register map footnotes identify OFFSET as
+EEPROM-backed. MOD1, status, commands and reserved bits are outside the
+stored CONFIG subset. The known general-call reload uses the
 programmed startup data. Addressed Soft_Reset has separate evidence below.
 [TMP116 pp.17,24,26–27](reference/source/TMP116-Digital-Temperature-Sensor-Datasheet-SBOS740A.pdf#page=17),
 [TMP117 pp.18,25,27–28,31](reference/source/TMP117-Digital-Temperature-Sensor-Datasheet-SNOSD82D.pdf#page=18),
@@ -108,13 +109,15 @@ the application's routing and ownership guarantees.
    and diagnostic observations may run with unknown startup/lock/profile
    evidence and make no freshness claim.
 3. EUN set refuses immediately, even with BUSY set or when asked to shut down.
-   Report `EEPROM_UNSAFE` or the equivalent. Once observed, remain fail-closed
+   Report `EEPROM_UNSAFE` or the equivalent. A complete diagnostic `0x04`
+   read showing EUN set establishes the same unsafe condition. Remain fail-closed
    until an application power cycle or authorized external relock, followed by
    invalidation and renewed startup, ownership and guard evidence. An ordinary
    recovery, a later diagnostic zero word or a library reset cannot clear
    that condition. The library sends no command to stop conversions on an
    unlocked part. If the guard transfer failed, end the attempt without a
    write or fresh result. Retain the transport failure and unknown lock state.
+   Unknown lock blocks mutation and fresh publication.
    A separate attempt needs a new complete safe observation.
 4. With EUN clear and BUSY set, a timed operation may make only paced `0x04`
    rereads within its deadline and work cap until a complete safe word arrives.
@@ -124,8 +127,10 @@ the application's routing and ownership guarantees.
 5. Reuse a passing word only within this uninterrupted operation. Reset,
    rebind, interference, ambiguous transfer and any observed BUSY invalidate
    the guard. A subsequent CONFIG observation of BUSY retains any returned
-   flag evidence and requires a fresh safe `0x04` before another dependent
-   step. BUSY alone leaves stable profile trust unchanged.
+   flag evidence. A timed operation needs a fresh safe `0x04` before another
+   dependent step. An untimed `tryReadFresh` ends with busy/not-ready and
+   has no second guard read or TEMP read. BUSY alone leaves stable profile
+   trust unchanged.
    [Owner and guard rules](prompts/ENGINEERING.md#eeprom-safety-and-reset).
 
 ## Addressed reset and recovery
@@ -181,11 +186,12 @@ Known power loss/cycle or external reset invalidates startup proof, guard,
 initialized/configuration trust, freshness, the owned trigger and live alert
 evidence. Outside writes invalidate the guard and affected profile, conversion
 or status evidence. Unknown write scope requires full invalidation. A known
-external ARA can acknowledge a threshold alert. Among responding devices the
-lowest seven-bit address wins arbitration. TI describes that winner's ALERT
-pin becoming inactive and losing responders retaining their asserted pin.
-The response's low bit identifies the high or low threshold source. Effects
-on DATA_READY routing remain unspecified.
+external ARA can acknowledge a threshold alert in alert mode. Among
+responding devices the lowest seven-bit address wins arbitration. TI describes
+that winner's ALERT pin becoming inactive and losing responders retaining
+their asserted pin. The response's low bit is 1 for a high-threshold alert
+and 0 for a low-threshold alert. TI does not specify which direction wins
+when both flags are latched. Effects on DATA_READY routing remain unspecified.
 Invalidate affected live alert/acknowledgement evidence and retain historical
 events. If the outcome is unknown, mark the affected evidence uncertain.
 Outside CONFIG/TEMP reads can consume the corresponding flags as well. The
@@ -234,10 +240,10 @@ apply to all six models where the capability exists.
 | --- | --- | --- |
 | Identity and shadow indices | After compatible identity where required, use one explicit `R` for each requested index, with selectors in model order. On a `0x1117` read, accept the last four BOM selections, retain revision 1, and refuse TMP116/N. On `0x1116`, accept TMP116/N only. Exercise zero, nonzero and externally changed shadow contents. | No dependent access after identity mismatch. No callback for invalid index, TMP116/N offset/reset or out-of-family selection. No read of `0x07` in a three-word EEPROM dump, no request for a fourth word, no bare read or burst. |
 | Startup | With proof absent and first compatible read completing at 50.9 ms on a 1 ms floor clock, tick 54 is the earliest safe tick for the 3 ms wait. After the wait require `R(0x48, 0x04, 2) => 0x0000` before dependent I/O. | No write or fresh result before the wait and guard, even with an early zero BUSY on TMP116/N. An old bind timestamp or CONFIG BUSY clear cannot authorize work. |
-| Busy or guard failure | With valid startup, `0x4000` permits only a paced `R(0x48, 0x04, 2)` on a timed path. After a timely `0x0000`, proceed within the same operation. Untimed fresh stops after `0x4000`. On partial read, timeout, expired budget or late success, stop using the attempt's guard. | No CONFIG condition polling as substitute, retry of a failed transfer, unsafe write or fresh result. If subsequent CONFIG shows BUSY, no dependent step before a new safe word. |
-| Unlocked | `R(0x48, 0x04, 2) => 0x8000` or `0xC000` terminates the operation with `EEPROM_UNSAFE`. Also test a later diagnostic zero and an ordinary recover before the owner's correction. | No shutdown, command reset, attempted relock or other data write. No fresh publication and no busy polling after EUN set. |
+| Busy or guard failure | With valid startup, `0x4000` permits only a paced `R(0x48, 0x04, 2)` on a timed path. After a timely `0x0000`, proceed within the same operation. Untimed fresh stops after `0x4000`. If CONFIG later returns `0x3000` (DATA_READY and BUSY), retain the returned flag evidence. Timed work needs a new safe word. Untimed fresh ends busy/not-ready. On partial read, timeout, expired budget or late success, stop using the attempt's guard. | No CONFIG condition polling as substitute, retry of a failed transfer, unsafe write or fresh result. No second guard read or TEMP read when untimed fresh sees CONFIG BUSY. |
+| Unlocked | `R(0x48, 0x04, 2) => 0x8000` or `0xC000` terminates a guarded operation with `EEPROM_UNSAFE`. Also exercise an initial diagnostic that sees EUN set, a later diagnostic zero and ordinary recover before the owner's correction. | No shutdown, command reset, attempted relock or other data write. No fresh publication and no busy polling after EUN set. |
 | Protected memory and raw escape | The checked transport refuses shadow writes. For a known supported OFFSET, permit `W(0x48, [0x07, MSB, LSB])` only for an explicitly managed offset change or owned-profile replay under the guard. | No `W(0x48, [0x04, MSB, LSB])`, including `[0x04, 0x00, 0x00]`. No data write to `0x05`, `0x06`, `0x08` on any model, or `0x07` on TMP116/N. Reject equivalent attempts through diagnostic, job and CLI dispatch. |
-| Supported reset | After safe preflight, with last verified stable code `0x0220` (continuous) or `0x0620` (shutdown), one `W(0x48, [0x01, 0x02, 0x22])` or `W(0x48, [0x01, 0x06, 0x22])`, respectively. Invalidate before the attempt. On success at 50.9 ms, a 1 ms floor clock allows postwait observation from tick 53. Vary changed/unchanged profile and EUN/BUSY/ACK outcomes independently. | No command on TMP116/N, without verified stable input or before startup/guard. No replay of flags or transient one-shot MOD, no resend after ambiguous completion, no postwait write on old proof or success inferred from bit 1 reading zero. |
+| Supported reset | After safe preflight, with last verified stable code `0x0220` (continuous) or `0x0620` (shutdown), one `W(0x48, [0x01, 0x02, 0x22])` or `W(0x48, [0x01, 0x06, 0x22])`, respectively. Invalidate before the attempt. On success at 50.9 ms, a 1 ms floor clock allows postwait observation from tick 53. Read compatible identity at `0x0F`, a complete safe word at `0x04` and the full profile. Vary changed/unchanged settings, EUN/BUSY and transport failure independently. | No command on TMP116/N, without verified stable input or before startup/guard. No replay of flags or transient one-shot MOD, no resend after ambiguous completion, no postwait write on old proof or success inferred from bit 1 reading zero. |
 | Recovery | Inject ambiguous CONFIG, second limit or managed offset writes. An explicit recovery establishes evidence again and verifies replay of nonfactory limits such as THIGH `0x1280` (+37 °C) and TLOW `0xFB00` (−10 °C). On supported parts, exercise OFFSET `0x0040` (+0.5 °C) as an owned setting and as an observed unmanaged value. Inject failed CONFIG/TEMP reads and possible flag loss. | No hidden reset, rollback or blind replay after partial failure. No unmanaged calibration write or fresh result from a diagnostic. |
 | Interference after the guard | Start with locked/idle evidence, then report an external power cycle, general call or write before the next dependent transfer. Separately report external ARA with the target winning, losing or unknown. | No write or fresh result using the invalidated guard. No use of old profile or conversion proof after reset. ARA cannot supply a fresh sample or erase retained historical alerts. |
 | Shared bus exclusions | Across all typed, diagnostic, recovery, job and CLI paths, including bind-only boot, check callback counts and addresses. Each operation that requires a guard must obtain its own passing word, including consecutive operations on one owner. | Zero sensor callbacks at `0x00` (including `W(0x00, [0x06])`), zero ARA callbacks at `0x0C`, zero broadcast sync and no unapproved route traffic. No sensor writes from bind, job admission/cancel/result consumption or teardown. |

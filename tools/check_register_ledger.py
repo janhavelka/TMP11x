@@ -155,6 +155,17 @@ def check_semantics(profile, register, fields, where):
         field = fields[field_name]
         if (field["mask"], field["access"], field["nvm_mask"]) != layout:
             raise ValueError(f"{where}.{field_name}: incorrect mask, access or NVM domain")
+    if name == "EEPROM_UL":
+        unlock = fields["EUN"]
+        if unlock["factory"] != "0":
+            raise ValueError(f"{where}.EUN: must power up locked (0)")
+        if unlock.get("encodings") != {
+            "0": "locked (shadow writes volatile)",
+            "1": "unlocked (writes can program EEPROM)",
+        }:
+            raise ValueError(f"{where}.EUN: expected locked=0 and unlocked=1")
+    if "SOFT_RESET" in fields and fields["SOFT_RESET"]["factory"] != "0":
+        raise ValueError(f"{where}.SOFT_RESET: expected zero readback")
     if name == "DEVICE_ID":
         did = 0x1116 if profile == "TMP116" else 0x117
         try:
@@ -192,6 +203,9 @@ def check_profile(name, profile, document, stages):
         if not isinstance(reset, dict):
             raise ValueError(f"{where}: missing addressed reset command record")
         pages(reset, document, where)
+        source_pages = {27, 28} if name == "TMP117" else {34, 35}
+        if not source_pages.issubset(reset["pages"]):
+            raise ValueError(f"{where}: cite both the CONFIG diagram and field table")
         for key, expected in (
             ("register", 0x01), ("command_mask", 0x0002), ("stable_mask", 0x0FFC),
             ("readback", 0), ("postwrite_wait_ms", 2),
