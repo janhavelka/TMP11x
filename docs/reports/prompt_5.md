@@ -1,6 +1,6 @@
 # Prompt 5 — Register and bitfield ledger
 
-**Phase a assessed on 2026-11-21. Phase b is next.** Entry was clean
+**Phase b implemented on 2026-11-21. Phase c review is next.** Phase a began on clean
 `main` at `1707f3fd36eabf2c74f76cb4e7ffc5034e465b6b`, equal to the
 local `origin/main`. Git history and the wrapper log confirm that prompt 4's
 acceptance commit reached upstream. The [sequence](../prompts/SEQUENCE.json)
@@ -105,9 +105,42 @@ the pinned map, CONFIG, unlock, ID, startup and serial pages.
 report links and PDF page anchors resolved. Git 2.52.0.windows.1 reported
 no whitespace errors in the working diff or the new report.
 
-Phase b can proceed with the four files above. Stages 6 and 7 refine the
-same ledger with timing, behavior and safety evidence. Stage 10 registers
-both Python commands in the host entrypoint. Stage 12 owns the reviewed
-C++ constants. Ledger validation and its regressions await implementation.
-Native driver tests, MCU links and physical evidence remain open. Stage 43
-owns the remote CI checkpoint. [Producer and consumer handoffs](../prompts/HANDOFFS.md).
+## Phase b implementation and focused verification
+
+Phase b began on clean `main` at `682749510c5f9f29647b929499fa82a09c020d9e`.
+The preceding commit request, Git history and wrapper log agree on the
+phase-a report and its verified upstream revision. The pinned PDFs and the
+six-model variant contract were present. Both local sibling headers still
+matched the cited checkouts. No sibling or production source changed.
+
+| Artifact | Delivered evidence |
+| --- | --- |
+| [Register ledger](../registers/tmp11x.json) (`register-ledger`) | Three exact-datasheet profiles cover six BOM selections. Each defines the ten mapped words, source tables, literal access codes, factory values, positioned field and NVM masks, read/write effects, prerequisites and release policy. Separate records cover the pointer byte, serial framing, ADD0 straps, bus timing and startup. |
+| [Feature coverage](../feature-coverage.md) (`feature-ledger`) | All 18 register rows, 20 behavior rows and eight exclusions have sources, per-model dispositions, planned implementation and test owners, and CLI routes or exclusions. The six evidence columns distinguish the current documentation from future driver, firmware and fixture results. |
+| [Offline validator](../../tools/check_register_ledger.py) and [regression suite](../../tools/test_check_register_ledger.py) (`register-validator`) | The default command validates the checked-in ledger from any working directory. A positional JSON path permits isolated mutation tests. The validator rejects duplicate keys during parsing, checks masks and addresses within each profile, and checks citations against the pinned archive manifest. |
+
+The ledger preserves 31 open source discrepancies and scope limits with
+paired claims and a bounded policy for each. In particular, the TEMP/CONFIG
+flag side effects are separate from access code `R`. The field tables give
+supported Soft_Reset access as `R/W`; its command role prevents setting
+bit 1 during ordinary replay. The TMP119 ID conflict remains open, and
+TMP117 Fig. 7-22 leaves the revision unspecified where Table 7-15 gives
+zero. Both profiles use the 12-bit DID for compatibility.
+
+| Focused check on the phase-b working tree | Result |
+| --- | --- |
+| `python -B scripts/check_references.py` | PASS. All 14 archived PDFs matched the manifest. |
+| Direct PyMuPDF comparison to the three register maps, detailed field tables and continuous-cycle tables | PASS. All 30 address/access entries, 70 field masks and literal access codes, and 96 nominal CONV × AVG cycle cells matched. Counts refer to the three independent TI tablesets. |
+| `python -B tools/check_register_ledger.py` | PASS. Six model selections, their register maps, fields, restricted writes and conflict citations validated. |
+| `python -B tools/test_check_register_ledger.py` | PASS. All 17 tests passed, including duplicate keys, overlap, duplicate and invalid pointers, missing provenance, wrong model/ID, MOD persistence, reset command role, forbidden EEPROM writes and unsupported conflict resolution. |
+| `python -B scripts/check_promptset.py` | PASS. All 55 stages, handoffs, coverage IDs, links and pinned PDF page bounds validated. |
+
+Python 3.12.10, PyMuPDF 1.27.2.2 and Git 2.52.0.windows.1 were used.
+The working diff and the newly added files passed whitespace checks. The
+wrapper owns staging, commit, push and upstream verification for this
+phase. Phase c reviews these artifacts against the original tables and
+challenges the failure cases. Phase d owns prompt completion and indexing.
+Stages 6 and 7 refine timing, behavior and safety on this ledger. Stage 10
+registers both Python commands, and stage 12 owns the C++ constants. Native
+driver, MCU, remote CI and physical checks were not run in phase b.
+[Producer and consumer handoffs](../prompts/HANDOFFS.md).

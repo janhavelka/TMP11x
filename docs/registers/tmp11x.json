@@ -1,0 +1,2095 @@
+{
+  "schema_version": 1,
+  "interpretation": {
+    "scope": "Each profile applies independently to its listed BOM models. Source paths resolve at repository root against docs/reference/manifest.json. Page numbers are one-based in that PDF. Fields inherit the register's source, table, owners, reset context, prerequisites and release policy.",
+    "numbers": "Addresses and positioned masks are unsigned JSON integers. Field factory and encoding values are unshifted. Whole-register factory values refer to TI's stated reset on factory settings. Limits, offset and EEPROM-eligible settings may already have been programmed. Uncertain or conflicting defaults are written out.",
+    "nvm_mask": "Register-positioned bits eligible for EEPROM storage in the silicon. Zero means the field is outside that storage domain. All release operations leave NVM unprogrammed.",
+    "policy": "observe permits a read of a hardware read-only register. deny-write permits observation and refuses all data writes even if hardware is R/W. guarded permits only the named typed volatile mutation after its prerequisites. mixed CONFIG separates status, stable settings and explicit commands. No public raw data writes.",
+    "owners": "Numbers identify forward stages for implementation and verification. The feature matrix records the evidence level per row and model."
+  },
+  "profiles": {
+    "TMP116": {
+      "models": ["TMP116", "TMP116N"],
+      "source": "docs/reference/source/TMP116-Digital-Temperature-Sensor-Datasheet-SBOS740A.pdf",
+      "reserved_pointers": [9, 10, 11, 12, 13, 14],
+      "pointer_upper_mask": 240,
+      "protocol": {
+        "pages": [6, 19, 20, 21, 22],
+        "owners": [9, 12, 26, 34, 35, 40],
+        "add0_7bit": {
+          "GND": 72,
+          "V+": 73,
+          "SDA": 74,
+          "SCL": 75
+        },
+        "pointer": "Power-up pointer 0x00. Device retains the last selected pointer. Reject a reserved or out-of-range selector before I/O; never truncate upper bits. Register auto-increment is undocumented.",
+        "read_word": "START, address+W, pointer, repeated START, address+R, MSB (controller ACK), LSB (controller NACK), STOP.",
+        "write_word": "START, address+W, pointer, MSB, LSB, STOP; target acknowledges address and bytes. Only typed, guarded volatile writes are permitted by release policy.",
+        "scl_khz": {
+          "min": 1,
+          "max": 400
+        },
+        "interface_timeout_ms": {
+          "min": 20,
+          "typ": 35,
+          "max": 40
+        },
+        "timeout_condition": "SDA release without clocks. Between START and STOP the controller holds SCL low or the target holds SDA low. Timeout resets the serial interface.",
+        "stop_behavior": "Source documents timeout recovery; STOP-triggered state-machine reset unconfirmed.",
+        "ownership": "Target never drives SCL. Application and adapter own clock, electrical timing, routing, serialization and bounded callback deadlines. The interface timeout is distinct from transfer and conversion budgets."
+      },
+      "startup": {
+        "pages": [17],
+        "writes": "All register writes ignored during the initial load. Reads are possible.",
+        "policy": "For managed operations, require the owner's power-stability contract, a valid internal FIRST_ACK origin and the startup guard before relying on readiness. The approximately 1.5 ms load interval has no specified maximum. Check lock and busy for each allowed mutation."
+      },
+      "registers": [
+        {
+          "address": 0,
+          "name": "TEMP",
+          "width": 16,
+          "access": "R",
+          "factory": "0x8000",
+          "reset": "Holds 0x8000 until the first conversion including averaging completes. The bit pattern alone cannot establish validity or freshness.",
+          "pages": [13, 14, 24, 25, 26],
+          "table": "5",
+          "owners": [16, 21, 26, 30, 32],
+          "read": "Reads the latest completed conversion or block average and consumes DATA_READY. A TEMP read does not acknowledge HIGH or LOW.",
+          "write": "No writable field.",
+          "prerequisites": "Bound to a BOM-selected target on a known route. Use an explicit pointer and one complete word.",
+          "policy": "observe",
+          "fields": [
+            {
+              "name": "T",
+              "mask": 65535,
+              "access": "R",
+              "factory": "0x8000",
+              "nvm_mask": 0,
+              "role": "measurement",
+              "read": "Signed two's-complement counts in units of 1/128 degree Celsius. Code range is -256 to +255.9921875 degrees Celsius. Measuring range and grade are separate.",
+              "write": "No writable field."
+            }
+          ]
+        },
+        {
+          "address": 1,
+          "name": "CONFIG",
+          "width": 16,
+          "access": "R/W",
+          "factory": "0x0220",
+          "reset": "At POR, load MOD0 and bits 9:2 from EEPROM. MOD1, status, commands and reserved bits are outside that domain.",
+          "pages": [13, 14, 15, 16, 17, 24, 26, 27],
+          "table": "6",
+          "owners": [17, 18, 19, 20, 21, 22, 25, 26, 32],
+          "read": "Consumes DATA_READY and acknowledges latched comparator flags in alert mode. Therm HIGH follows hysteresis and LOW stays zero. Retain observations even when subsequent steps fail.",
+          "write": "Apply only owned stable fields. Keep commands and reserved bits out of replay. MOD=11 belongs to an explicit one-shot. Addressed reset is unavailable.",
+          "prerequisites": "Bound target for status observation. For mutation, establish startup readiness, serialize the target, and check EEPROM_UL in this operation for EUN=0 and BUSY=0. Preserve uncertainty after an ambiguous write.",
+          "policy": "mixed",
+          "fields": [
+            {
+              "name": "HIGH",
+              "mask": 32768,
+              "access": "R",
+              "factory": "0",
+              "nvm_mask": 0,
+              "role": "status",
+              "read": "Alert mode latches a result above THIGH until acknowledgement by CONFIG read. In therm mode HIGH sets above THIGH, holds in band including equality, and clears below TLOW on conversion comparisons.",
+              "write": "No writable field.",
+              "encodings": {
+                "0": "unasserted",
+                "1": "latched high alert or active therm level"
+              }
+            },
+            {
+              "name": "LOW",
+              "mask": 16384,
+              "access": "R",
+              "factory": "0",
+              "nvm_mask": 0,
+              "role": "status",
+              "read": "Alert mode latches a result below TLOW until acknowledgement by CONFIG read. In therm mode LOW reads zero.",
+              "write": "No writable field.",
+              "encodings": {
+                "0": "unasserted (always zero in therm)",
+                "1": "latched low alert"
+              }
+            },
+            {
+              "name": "DATA_READY",
+              "mask": 8192,
+              "access": "R",
+              "factory": "0",
+              "nvm_mask": 0,
+              "role": "status",
+              "read": "Set on TEMP update after the complete conversion or average. Either CONFIG or TEMP read clears this single indication.",
+              "write": "No writable field.",
+              "encodings": {
+                "0": "no unconsumed indication",
+                "1": "result update indicated"
+              }
+            },
+            {
+              "name": "EEPROM_BUSY",
+              "mask": 4096,
+              "access": "R",
+              "factory": "0",
+              "nvm_mask": 0,
+              "role": "status",
+              "read": "Observed busy during programming. Startup indications disagree between the overview and field tables. Mirrors EEPROM_UL bit 14.",
+              "write": "No writable field.",
+              "encodings": {
+                "0": "busy flag clear",
+                "1": "busy flag set"
+              }
+            },
+            {
+              "name": "MOD",
+              "mask": 3072,
+              "access": "R/W",
+              "factory": "0",
+              "nvm_mask": 1024,
+              "role": "mode",
+              "read": "Writing binary 10 selects continuous conversion and reads back 00. One-shot MOD readback during and after conversion is unspecified.",
+              "write": "Only MOD0 (bit 10) is EEPROM-storable. Stable profile modes are continuous and shutdown. An owned one-shot requires a guarded shutdown write and status baseline, then one trigger.",
+              "encodings": {
+                "0": "continuous",
+                "1": "shutdown (aborts active conversion)",
+                "2": "continuous alias (reads back 00)",
+                "3": "one-shot from shutdown, physical return to shutdown after completion"
+              }
+            },
+            {
+              "name": "CONV",
+              "mask": 896,
+              "access": "R/W",
+              "factory": "4",
+              "nvm_mask": 896,
+              "role": "setting",
+              "read": "Read the current field value.",
+              "write": "Select the nominal continuous cycle. AVG sets a lower limit on the period. One-shot duration is independent of CONV.",
+              "encodings": {
+                "0": "15.5 ms",
+                "1": "125 ms",
+                "2": "250 ms",
+                "3": "500 ms",
+                "4": "1 s",
+                "5": "4 s",
+                "6": "8 s",
+                "7": "16 s"
+              },
+              "cycle_ms_by_conv_avg": [
+                [15.5, 125, 500, 1000],
+                [125, 125, 500, 1000],
+                [250, 250, 500, 1000],
+                [500, 500, 500, 1000],
+                [1000, 1000, 1000, 1000],
+                [4000, 4000, 4000, 4000],
+                [8000, 8000, 8000, 8000],
+                [16000, 16000, 16000, 16000]
+              ],
+              "cycle_basis": "Nominal continuous cycle in milliseconds, indexed by CONV code (row) and AVG code (column). The table rounds active intervals. Stage 6 owns conditioned min/typ/max timing vectors."
+            },
+            {
+              "name": "AVG",
+              "mask": 96,
+              "access": "R/W",
+              "factory": "1",
+              "nvm_mask": 96,
+              "role": "setting",
+              "read": "Read the current field value.",
+              "write": "Select conversions per accumulated block, with one TEMP update at completion.",
+              "encodings": {
+                "0": "1 conversion",
+                "1": "8 conversions",
+                "2": "32 conversions",
+                "3": "64 conversions"
+              }
+            },
+            {
+              "name": "THERM",
+              "mask": 16,
+              "access": "R/W",
+              "factory": "0",
+              "nvm_mask": 16,
+              "role": "setting",
+              "read": "Read the current field value.",
+              "write": "Apply through a guarded volatile CONFIG write.",
+              "encodings": {
+                "0": "alert comparator latches",
+                "1": "therm hysteresis"
+              }
+            },
+            {
+              "name": "POL",
+              "mask": 8,
+              "access": "R/W",
+              "factory": "0",
+              "nvm_mask": 8,
+              "role": "setting",
+              "read": "Read the current field value.",
+              "write": "Select polarity of the open-drain output. The board supplies the pullup.",
+              "encodings": {
+                "0": "active low",
+                "1": "active high"
+              }
+            },
+            {
+              "name": "DR_ALERT",
+              "mask": 4,
+              "access": "R/W",
+              "factory": "0",
+              "nvm_mask": 4,
+              "role": "setting",
+              "read": "Read the current field value.",
+              "write": "Select the ALERT pin source.",
+              "encodings": {
+                "0": "threshold flags",
+                "1": "DATA_READY"
+              }
+            },
+            {
+              "name": "RESERVED",
+              "mask": 3,
+              "access": "R",
+              "factory": "0",
+              "nvm_mask": 0,
+              "role": "reserved",
+              "read": "Unused bits read zero.",
+              "write": "Write zero when constructing a CONFIG word."
+            }
+          ]
+        },
+        {
+          "address": 2,
+          "name": "THIGH",
+          "width": 16,
+          "access": "R/W",
+          "factory": "0x6000",
+          "reset": "Power-up reloads the programmed word from EEPROM. A previous owner may have changed it.",
+          "pages": [17, 24, 28],
+          "table": "8",
+          "owners": [16, 18, 19, 22, 29, 32],
+          "read": "Read the high comparison threshold shadow. Signed two's-complement counts in units of 1/128 degree Celsius.",
+          "write": "With EEPROM locked, writes update the volatile shadow. With EEPROM unlocked, writes can program NVM.",
+          "prerequisites": "Bound target for shadow reads. For mutation, establish startup readiness, serialize the target, and check EEPROM_UL in this operation for EUN=0 and BUSY=0. Preserve uncertainty after an ambiguous write.",
+          "policy": "guarded",
+          "fields": [
+            {
+              "name": "H",
+              "mask": 65535,
+              "access": "R/W",
+              "factory": "0x6000",
+              "nvm_mask": 65535,
+              "role": "limit",
+              "read": "Read the high comparison threshold shadow. Signed two's-complement counts in units of 1/128 degree Celsius.",
+              "write": "With EEPROM locked, writes update the volatile shadow. With EEPROM unlocked, writes can program NVM."
+            }
+          ]
+        },
+        {
+          "address": 3,
+          "name": "TLOW",
+          "width": 16,
+          "access": "R/W",
+          "factory": "0x8000",
+          "reset": "Power-up reloads the programmed word from EEPROM. A previous owner may have changed it.",
+          "pages": [17, 24, 28],
+          "table": "9",
+          "owners": [16, 18, 19, 22, 29, 32],
+          "read": "Read the low comparison threshold shadow. Signed two's-complement counts in units of 1/128 degree Celsius.",
+          "write": "With EEPROM locked, writes update the volatile shadow. With EEPROM unlocked, writes can program NVM.",
+          "prerequisites": "Bound target for shadow reads. For mutation, establish startup readiness, serialize the target, and check EEPROM_UL in this operation for EUN=0 and BUSY=0. Preserve uncertainty after an ambiguous write.",
+          "policy": "guarded",
+          "fields": [
+            {
+              "name": "L",
+              "mask": 65535,
+              "access": "R/W",
+              "factory": "0x8000",
+              "nvm_mask": 65535,
+              "role": "limit",
+              "read": "Read the low comparison threshold shadow. Signed two's-complement counts in units of 1/128 degree Celsius.",
+              "write": "With EEPROM locked, writes update the volatile shadow. With EEPROM unlocked, writes can program NVM."
+            }
+          ]
+        },
+        {
+          "address": 4,
+          "name": "EEPROM_UL",
+          "width": 16,
+          "access": "R/W",
+          "factory": "0x0000",
+          "reset": "Locked at power-up. BUSY is live status. The documented general-call reset relocks EEPROM.",
+          "pages": [17, 24, 29],
+          "table": "10",
+          "owners": [7, 18, 21, 23, 24, 25, 26, 32],
+          "read": "Read EUN and BUSY together for a write or freshness guard without acknowledging CONFIG flags.",
+          "write": "The release denies every data write to this pointer, including relock.",
+          "prerequisites": "Bound to a BOM-selected target on a known route. Use an explicit pointer and one complete word.",
+          "policy": "deny-write",
+          "fields": [
+            {
+              "name": "EUN",
+              "mask": 32768,
+              "access": "R/W",
+              "factory": "0",
+              "nvm_mask": 0,
+              "role": "lock",
+              "read": "Reads the current unlock state.",
+              "write": "Silicon accepts lock control. The driver only observes it.",
+              "encodings": {
+                "0": "locked (shadow writes volatile)",
+                "1": "unlocked (writes can program EEPROM)"
+              }
+            },
+            {
+              "name": "BUSY",
+              "mask": 16384,
+              "access": "R",
+              "factory": "0",
+              "nvm_mask": 0,
+              "role": "status",
+              "read": "Observed busy during programming. Startup indications disagree between the overview and field tables. Mirrors CONFIG bit 12.",
+              "write": "No writable field.",
+              "encodings": {
+                "0": "busy flag clear",
+                "1": "busy flag set"
+              }
+            },
+            {
+              "name": "RESERVED",
+              "mask": 16383,
+              "access": "R",
+              "factory": "0",
+              "nvm_mask": 0,
+              "role": "reserved",
+              "read": "Unused bits read zero.",
+              "write": "No writable field."
+            }
+          ]
+        },
+        {
+          "address": 5,
+          "name": "EEPROM1",
+          "width": 16,
+          "access": "R/W",
+          "factory": "disputed: map 0x0000, field table unknown",
+          "reset": "Power-up reloads the programmed word from EEPROM. A previous owner may have changed it.",
+          "pages": [17, 24, 29],
+          "table": "11",
+          "owners": [7, 24, 26, 32],
+          "read": "Read one volatile EEPROM data shadow. Accept any 16-bit value, including zero. Current contents alone cannot authenticate factory data or prove physical NVM contents.",
+          "write": "With EEPROM locked, writes update the volatile shadow. With EEPROM unlocked, writes can program NVM. Data writes to these shadows are excluded even when locked.",
+          "prerequisites": "Bound to a BOM-selected target on a known route. Use an explicit pointer and one complete word.",
+          "policy": "deny-write",
+          "fields": [
+            {
+              "name": "D",
+              "mask": 65535,
+              "access": "R/W",
+              "factory": "disputed: map 0x0000, field table unknown",
+              "nvm_mask": 65535,
+              "role": "eeprom-data",
+              "read": "Read one volatile EEPROM data shadow. Accept any 16-bit value, including zero. Current contents alone cannot authenticate factory data or prove physical NVM contents.",
+              "write": "With EEPROM locked, writes update the volatile shadow. With EEPROM unlocked, writes can program NVM."
+            }
+          ]
+        },
+        {
+          "address": 6,
+          "name": "EEPROM2",
+          "width": 16,
+          "access": "R/W",
+          "factory": "disputed: map 0x0000, field table unknown",
+          "reset": "Power-up reloads the programmed word from EEPROM. A previous owner may have changed it.",
+          "pages": [17, 24, 30],
+          "table": "12",
+          "owners": [7, 24, 26, 32],
+          "read": "Read one volatile EEPROM data shadow. Accept any 16-bit value, including zero. Current contents alone cannot authenticate factory data or prove physical NVM contents.",
+          "write": "With EEPROM locked, writes update the volatile shadow. With EEPROM unlocked, writes can program NVM. Data writes to these shadows are excluded even when locked.",
+          "prerequisites": "Bound to a BOM-selected target on a known route. Use an explicit pointer and one complete word.",
+          "policy": "deny-write",
+          "fields": [
+            {
+              "name": "D",
+              "mask": 65535,
+              "access": "R/W",
+              "factory": "disputed: map 0x0000, field table unknown",
+              "nvm_mask": 65535,
+              "role": "eeprom-data",
+              "read": "Read one volatile EEPROM data shadow. Accept any 16-bit value, including zero. Current contents alone cannot authenticate factory data or prove physical NVM contents.",
+              "write": "With EEPROM locked, writes update the volatile shadow. With EEPROM unlocked, writes can program NVM."
+            }
+          ]
+        },
+        {
+          "address": 7,
+          "name": "EEPROM3",
+          "width": 16,
+          "access": "R/W",
+          "factory": "0x0000 (map and detailed table); actual factory traceability data may vary",
+          "reset": "Power-up reloads the programmed word from EEPROM. A previous owner may have changed it.",
+          "pages": [17, 24, 30],
+          "table": "13",
+          "owners": [7, 24, 26, 32],
+          "read": "Read one volatile EEPROM data shadow. Accept any 16-bit value, including zero. Current contents alone cannot authenticate factory data or prove physical NVM contents.",
+          "write": "With EEPROM locked, writes update the volatile shadow. With EEPROM unlocked, writes can program NVM. Data writes to these shadows are excluded even when locked.",
+          "prerequisites": "Bound to a BOM-selected target on a known route. Use an explicit pointer and one complete word.",
+          "policy": "deny-write",
+          "fields": [
+            {
+              "name": "D",
+              "mask": 65535,
+              "access": "R/W",
+              "factory": "0x0000 (map and detailed table); actual factory traceability data may vary",
+              "nvm_mask": 65535,
+              "role": "eeprom-data",
+              "read": "Read one volatile EEPROM data shadow. Accept any 16-bit value, including zero. Current contents alone cannot authenticate factory data or prove physical NVM contents.",
+              "write": "With EEPROM locked, writes update the volatile shadow. With EEPROM unlocked, writes can program NVM."
+            }
+          ]
+        },
+        {
+          "address": 8,
+          "name": "EEPROM4",
+          "width": 16,
+          "access": "R/W",
+          "factory": "disputed: map 0x0000, field table unknown",
+          "reset": "Power-up reloads the programmed word from EEPROM. A previous owner may have changed it.",
+          "pages": [17, 24, 31],
+          "table": "14",
+          "owners": [7, 24, 26, 32],
+          "read": "Read one volatile EEPROM data shadow. Accept any 16-bit value, including zero. Current contents alone cannot authenticate factory data or prove physical NVM contents.",
+          "write": "With EEPROM locked, writes update the volatile shadow. With EEPROM unlocked, writes can program NVM. Data writes to these shadows are excluded even when locked.",
+          "prerequisites": "Bound to a BOM-selected target on a known route. Use an explicit pointer and one complete word.",
+          "policy": "deny-write",
+          "fields": [
+            {
+              "name": "D",
+              "mask": 65535,
+              "access": "R/W",
+              "factory": "disputed: map 0x0000, field table unknown",
+              "nvm_mask": 65535,
+              "role": "eeprom-data",
+              "read": "Read one volatile EEPROM data shadow. Accept any 16-bit value, including zero. Current contents alone cannot authenticate factory data or prove physical NVM contents.",
+              "write": "With EEPROM locked, writes update the volatile shadow. With EEPROM unlocked, writes can program NVM."
+            }
+          ]
+        },
+        {
+          "address": 15,
+          "name": "DEVICE_ID",
+          "width": 16,
+          "access": "R",
+          "factory": "0x1116",
+          "reset": "Device identification fixed by silicon; revision is observed where specified.",
+          "pages": [24, 31],
+          "table": "15",
+          "owners": [4, 13, 26, 32],
+          "read": "Use the selected model's DID field for compatibility. Preserve the raw word and any revision. Select exact grade from the BOM.",
+          "write": "No writable field.",
+          "prerequisites": "Bound to a BOM-selected target on a known route. Use an explicit pointer and one complete word.",
+          "policy": "observe",
+          "fields": [
+            {
+              "name": "DID",
+              "mask": 65535,
+              "access": "R",
+              "factory": "0x1116",
+              "nvm_mask": 0,
+              "role": "identity",
+              "read": "Compare the entire word to 0x1116.",
+              "write": "No writable field."
+            }
+          ]
+        }
+      ]
+    },
+    "TMP117": {
+      "models": ["TMP117", "TMP117M", "TMP117N"],
+      "source": "docs/reference/source/TMP117-Digital-Temperature-Sensor-Datasheet-SNOSD82D.pdf",
+      "reserved_pointers": [9, 10, 11, 12, 13, 14],
+      "pointer_upper_mask": 240,
+      "protocol": {
+        "pages": [7, 20, 21, 22, 23],
+        "owners": [9, 12, 26, 34, 35, 40],
+        "add0_7bit": {
+          "GND": 72,
+          "V+": 73,
+          "SDA": 74,
+          "SCL": 75
+        },
+        "pointer": "Power-up pointer 0x00. Device retains the last selected pointer. Reject a reserved or out-of-range selector before I/O; never truncate upper bits. Register auto-increment is undocumented.",
+        "read_word": "START, address+W, pointer, repeated START, address+R, MSB (controller ACK), LSB (controller NACK), STOP.",
+        "write_word": "START, address+W, pointer, MSB, LSB, STOP; target acknowledges address and bytes. Only typed, guarded volatile writes are permitted by release policy.",
+        "scl_khz": {
+          "min": 1,
+          "max": 400
+        },
+        "interface_timeout_ms": {
+          "min": 20,
+          "typ": 35,
+          "max": 40
+        },
+        "timeout_condition": "SDA release without clocks. Between START and STOP the controller holds SCL low or the target holds SDA low. Timeout resets the serial interface.",
+        "stop_behavior": "STOP resets the I2C state machine, which waits for a new START.",
+        "ownership": "Target never drives SCL. Application and adapter own clock, electrical timing, routing, serialization and bounded callback deadlines. The interface timeout is distinct from transfer and conversion budgets."
+      },
+      "startup": {
+        "pages": [18],
+        "writes": "CONFIG and limit writes ignored during the initial load. Reads are possible. Response to an OFFSET write in this interval is unknown.",
+        "policy": "For managed operations, require the owner's power-stability contract, a valid internal FIRST_ACK origin and the startup guard before relying on readiness. The approximately 1.5 ms load interval has no specified maximum. Check lock and busy for each allowed mutation."
+      },
+      "registers": [
+        {
+          "address": 0,
+          "name": "TEMP",
+          "width": 16,
+          "access": "R",
+          "factory": "0x8000",
+          "reset": "Holds 0x8000 until the first conversion including averaging completes. The bit pattern alone cannot establish validity or freshness.",
+          "pages": [14, 15, 25, 26, 27],
+          "table": "7-5",
+          "owners": [16, 21, 26, 30, 32],
+          "read": "Reads the latest completed conversion or block average and consumes DATA_READY. A TEMP read does not acknowledge HIGH or LOW.",
+          "write": "No writable field.",
+          "prerequisites": "Bound to a BOM-selected target on a known route. Use an explicit pointer and one complete word.",
+          "policy": "observe",
+          "fields": [
+            {
+              "name": "T",
+              "mask": 65535,
+              "access": "R",
+              "factory": "0x8000",
+              "nvm_mask": 0,
+              "role": "measurement",
+              "read": "Signed two's-complement counts in units of 1/128 degree Celsius. Code range is -256 to +255.9921875 degrees Celsius. Measuring range and grade are separate.",
+              "write": "No writable field."
+            }
+          ]
+        },
+        {
+          "address": 1,
+          "name": "CONFIG",
+          "width": 16,
+          "access": "R/W",
+          "factory": "0x0220",
+          "reset": "At POR, load MOD0 and bits 9:2 from EEPROM. MOD1, status, commands and reserved bits are outside that domain.",
+          "pages": [14, 15, 16, 17, 18, 25, 27, 28],
+          "table": "7-6",
+          "owners": [17, 18, 19, 20, 21, 22, 25, 26, 32],
+          "read": "Consumes DATA_READY and acknowledges latched comparator flags in alert mode. Therm HIGH follows hysteresis and LOW stays zero. Retain observations even when subsequent steps fail.",
+          "write": "Apply only owned stable fields. Keep commands and reserved bits out of replay. MOD=11 belongs to an explicit one-shot. Bit 1 belongs to explicit addressed reset.",
+          "prerequisites": "Bound target for status observation. For mutation, establish startup readiness, serialize the target, and check EEPROM_UL in this operation for EUN=0 and BUSY=0. Preserve uncertainty after an ambiguous write.",
+          "policy": "mixed",
+          "fields": [
+            {
+              "name": "HIGH",
+              "mask": 32768,
+              "access": "R",
+              "factory": "0",
+              "nvm_mask": 0,
+              "role": "status",
+              "read": "Alert mode latches a result above THIGH until acknowledgement by CONFIG read. In therm mode HIGH sets above THIGH, holds in band including equality, and clears below TLOW on conversion comparisons.",
+              "write": "No writable field.",
+              "encodings": {
+                "0": "unasserted",
+                "1": "latched high alert or active therm level"
+              }
+            },
+            {
+              "name": "LOW",
+              "mask": 16384,
+              "access": "R",
+              "factory": "0",
+              "nvm_mask": 0,
+              "role": "status",
+              "read": "Alert mode latches a result below TLOW until acknowledgement by CONFIG read. In therm mode LOW reads zero.",
+              "write": "No writable field.",
+              "encodings": {
+                "0": "unasserted (always zero in therm)",
+                "1": "latched low alert"
+              }
+            },
+            {
+              "name": "DATA_READY",
+              "mask": 8192,
+              "access": "R",
+              "factory": "0",
+              "nvm_mask": 0,
+              "role": "status",
+              "read": "Set on TEMP update after the complete conversion or average. Either CONFIG or TEMP read clears this single indication.",
+              "write": "No writable field.",
+              "encodings": {
+                "0": "no unconsumed indication",
+                "1": "result update indicated"
+              }
+            },
+            {
+              "name": "EEPROM_BUSY",
+              "mask": 4096,
+              "access": "R",
+              "factory": "0",
+              "nvm_mask": 0,
+              "role": "status",
+              "read": "Observed busy during programming. The POR overview and field table describe busy during startup load. Mirrors EEPROM_UL bit 14.",
+              "write": "No writable field.",
+              "encodings": {
+                "0": "busy flag clear",
+                "1": "busy flag set"
+              }
+            },
+            {
+              "name": "MOD",
+              "mask": 3072,
+              "access": "R/W",
+              "factory": "0",
+              "nvm_mask": 1024,
+              "role": "mode",
+              "read": "Writing binary 10 selects continuous conversion and reads back 00. One-shot MOD readback during and after conversion is unspecified.",
+              "write": "Only MOD0 (bit 10) is EEPROM-storable. Stable profile modes are continuous and shutdown. An owned one-shot requires a guarded shutdown write and status baseline, then one trigger.",
+              "encodings": {
+                "0": "continuous",
+                "1": "shutdown (aborts active conversion)",
+                "2": "continuous alias (reads back 00)",
+                "3": "one-shot from shutdown, physical return to shutdown after completion"
+              }
+            },
+            {
+              "name": "CONV",
+              "mask": 896,
+              "access": "R/W",
+              "factory": "4",
+              "nvm_mask": 896,
+              "role": "setting",
+              "read": "Read the current field value.",
+              "write": "Select the nominal continuous cycle. AVG sets a lower limit on the period. One-shot duration is independent of CONV.",
+              "encodings": {
+                "0": "15.5 ms",
+                "1": "125 ms",
+                "2": "250 ms",
+                "3": "500 ms",
+                "4": "1 s",
+                "5": "4 s",
+                "6": "8 s",
+                "7": "16 s"
+              },
+              "cycle_ms_by_conv_avg": [
+                [15.5, 125, 500, 1000],
+                [125, 125, 500, 1000],
+                [250, 250, 500, 1000],
+                [500, 500, 500, 1000],
+                [1000, 1000, 1000, 1000],
+                [4000, 4000, 4000, 4000],
+                [8000, 8000, 8000, 8000],
+                [16000, 16000, 16000, 16000]
+              ],
+              "cycle_basis": "Nominal continuous cycle in milliseconds, indexed by CONV code (row) and AVG code (column). The table rounds active intervals. Stage 6 owns conditioned min/typ/max timing vectors."
+            },
+            {
+              "name": "AVG",
+              "mask": 96,
+              "access": "R/W",
+              "factory": "1",
+              "nvm_mask": 96,
+              "role": "setting",
+              "read": "Read the current field value.",
+              "write": "Select conversions per accumulated block, with one TEMP update at completion.",
+              "encodings": {
+                "0": "1 conversion",
+                "1": "8 conversions",
+                "2": "32 conversions",
+                "3": "64 conversions"
+              }
+            },
+            {
+              "name": "THERM",
+              "mask": 16,
+              "access": "R/W",
+              "factory": "0",
+              "nvm_mask": 16,
+              "role": "setting",
+              "read": "Read the current field value.",
+              "write": "Apply through a guarded volatile CONFIG write.",
+              "encodings": {
+                "0": "alert comparator latches",
+                "1": "therm hysteresis"
+              }
+            },
+            {
+              "name": "POL",
+              "mask": 8,
+              "access": "R/W",
+              "factory": "0",
+              "nvm_mask": 8,
+              "role": "setting",
+              "read": "Read the current field value.",
+              "write": "Select polarity of the open-drain output. The board supplies the pullup.",
+              "encodings": {
+                "0": "active low",
+                "1": "active high"
+              }
+            },
+            {
+              "name": "DR_ALERT",
+              "mask": 4,
+              "access": "R/W",
+              "factory": "0",
+              "nvm_mask": 4,
+              "role": "setting",
+              "read": "Read the current field value.",
+              "write": "Select the ALERT pin source.",
+              "encodings": {
+                "0": "threshold flags",
+                "1": "DATA_READY"
+              }
+            },
+            {
+              "name": "SOFT_RESET",
+              "mask": 2,
+              "access": "R/W",
+              "factory": "0",
+              "nvm_mask": 0,
+              "role": "command",
+              "read": "Always reads zero, including after a command. This bit cannot confirm completion.",
+              "write": "Write 1 issues the addressed 2 ms software reset. Ordinary CONFIG writes emit zero. EUN, shadow reload, companion bits and bus availability across this command remain unproven.",
+              "encodings": {
+                "0": "no reset command",
+                "1": "request addressed reset"
+              }
+            },
+            {
+              "name": "RESERVED",
+              "mask": 1,
+              "access": "R",
+              "factory": "0",
+              "nvm_mask": 0,
+              "role": "reserved",
+              "read": "Unused bits read zero.",
+              "write": "Write zero when constructing a CONFIG word."
+            }
+          ]
+        },
+        {
+          "address": 2,
+          "name": "THIGH",
+          "width": 16,
+          "access": "R/W",
+          "factory": "0x6000",
+          "reset": "Power-up reloads the programmed word from EEPROM. A previous owner may have changed it.",
+          "pages": [18, 25, 29],
+          "table": "7-8",
+          "owners": [16, 18, 19, 22, 29, 32],
+          "read": "Read the high comparison threshold shadow. Signed two's-complement counts in units of 1/128 degree Celsius.",
+          "write": "With EEPROM locked, writes update the volatile shadow. With EEPROM unlocked, writes can program NVM.",
+          "prerequisites": "Bound target for shadow reads. For mutation, establish startup readiness, serialize the target, and check EEPROM_UL in this operation for EUN=0 and BUSY=0. Preserve uncertainty after an ambiguous write.",
+          "policy": "guarded",
+          "fields": [
+            {
+              "name": "H",
+              "mask": 65535,
+              "access": "R/W",
+              "factory": "0x6000",
+              "nvm_mask": 65535,
+              "role": "limit",
+              "read": "Read the high comparison threshold shadow. Signed two's-complement counts in units of 1/128 degree Celsius.",
+              "write": "With EEPROM locked, writes update the volatile shadow. With EEPROM unlocked, writes can program NVM."
+            }
+          ]
+        },
+        {
+          "address": 3,
+          "name": "TLOW",
+          "width": 16,
+          "access": "R/W",
+          "factory": "0x8000",
+          "reset": "Power-up reloads the programmed word from EEPROM. A previous owner may have changed it.",
+          "pages": [18, 25, 29],
+          "table": "7-9",
+          "owners": [16, 18, 19, 22, 29, 32],
+          "read": "Read the low comparison threshold shadow. Signed two's-complement counts in units of 1/128 degree Celsius.",
+          "write": "With EEPROM locked, writes update the volatile shadow. With EEPROM unlocked, writes can program NVM.",
+          "prerequisites": "Bound target for shadow reads. For mutation, establish startup readiness, serialize the target, and check EEPROM_UL in this operation for EUN=0 and BUSY=0. Preserve uncertainty after an ambiguous write.",
+          "policy": "guarded",
+          "fields": [
+            {
+              "name": "L",
+              "mask": 65535,
+              "access": "R/W",
+              "factory": "0x8000",
+              "nvm_mask": 65535,
+              "role": "limit",
+              "read": "Read the low comparison threshold shadow. Signed two's-complement counts in units of 1/128 degree Celsius.",
+              "write": "With EEPROM locked, writes update the volatile shadow. With EEPROM unlocked, writes can program NVM."
+            }
+          ]
+        },
+        {
+          "address": 4,
+          "name": "EEPROM_UL",
+          "width": 16,
+          "access": "R/W",
+          "factory": "0x0000",
+          "reset": "Locked at power-up. BUSY is live status. The documented general-call reset relocks EEPROM.",
+          "pages": [18, 25, 30],
+          "table": "7-10",
+          "owners": [7, 18, 21, 23, 24, 25, 26, 32],
+          "read": "Read EUN and BUSY together for a write or freshness guard without acknowledging CONFIG flags.",
+          "write": "The release denies every data write to this pointer, including relock.",
+          "prerequisites": "Bound to a BOM-selected target on a known route. Use an explicit pointer and one complete word.",
+          "policy": "deny-write",
+          "fields": [
+            {
+              "name": "EUN",
+              "mask": 32768,
+              "access": "R/W",
+              "factory": "0",
+              "nvm_mask": 0,
+              "role": "lock",
+              "read": "Reads the current unlock state.",
+              "write": "Silicon accepts lock control. The driver only observes it.",
+              "encodings": {
+                "0": "locked (shadow writes volatile)",
+                "1": "unlocked (writes can program EEPROM)"
+              }
+            },
+            {
+              "name": "BUSY",
+              "mask": 16384,
+              "access": "R",
+              "factory": "0",
+              "nvm_mask": 0,
+              "role": "status",
+              "read": "Observed busy during programming. The POR overview and field table describe busy during startup load. Mirrors CONFIG bit 12.",
+              "write": "No writable field.",
+              "encodings": {
+                "0": "busy flag clear",
+                "1": "busy flag set"
+              }
+            },
+            {
+              "name": "RESERVED",
+              "mask": 16383,
+              "access": "R",
+              "factory": "0",
+              "nvm_mask": 0,
+              "role": "reserved",
+              "read": "Unused bits read zero.",
+              "write": "No writable field."
+            }
+          ]
+        },
+        {
+          "address": 5,
+          "name": "EEPROM1",
+          "width": 16,
+          "access": "R/W",
+          "factory": "unknown",
+          "reset": "Power-up reloads the programmed word from EEPROM. A previous owner may have changed it.",
+          "pages": [18, 25, 30],
+          "table": "7-11",
+          "owners": [7, 24, 26, 32],
+          "read": "Read one volatile EEPROM data shadow. Accept any 16-bit value, including zero. Current contents alone cannot authenticate factory data or prove physical NVM contents.",
+          "write": "With EEPROM locked, writes update the volatile shadow. With EEPROM unlocked, writes can program NVM. Data writes to these shadows are excluded even when locked.",
+          "prerequisites": "Bound to a BOM-selected target on a known route. Use an explicit pointer and one complete word.",
+          "policy": "deny-write",
+          "fields": [
+            {
+              "name": "D",
+              "mask": 65535,
+              "access": "R/W",
+              "factory": "unknown",
+              "nvm_mask": 65535,
+              "role": "eeprom-data",
+              "read": "Read one volatile EEPROM data shadow. Accept any 16-bit value, including zero. Current contents alone cannot authenticate factory data or prove physical NVM contents.",
+              "write": "With EEPROM locked, writes update the volatile shadow. With EEPROM unlocked, writes can program NVM."
+            }
+          ]
+        },
+        {
+          "address": 6,
+          "name": "EEPROM2",
+          "width": 16,
+          "access": "R/W",
+          "factory": "disputed: section heading 0x0000, map and field table unknown",
+          "reset": "Power-up reloads the programmed word from EEPROM. A previous owner may have changed it.",
+          "pages": [18, 25, 31],
+          "table": "7-12",
+          "owners": [7, 24, 26, 32],
+          "read": "Read one volatile EEPROM data shadow. Accept any 16-bit value, including zero. Current contents alone cannot authenticate factory data or prove physical NVM contents.",
+          "write": "With EEPROM locked, writes update the volatile shadow. With EEPROM unlocked, writes can program NVM. Data writes to these shadows are excluded even when locked.",
+          "prerequisites": "Bound to a BOM-selected target on a known route. Use an explicit pointer and one complete word.",
+          "policy": "deny-write",
+          "fields": [
+            {
+              "name": "D",
+              "mask": 65535,
+              "access": "R/W",
+              "factory": "disputed: section heading 0x0000, map and field table unknown",
+              "nvm_mask": 65535,
+              "role": "eeprom-data",
+              "read": "Read one volatile EEPROM data shadow. Accept any 16-bit value, including zero. Current contents alone cannot authenticate factory data or prove physical NVM contents.",
+              "write": "With EEPROM locked, writes update the volatile shadow. With EEPROM unlocked, writes can program NVM."
+            }
+          ]
+        },
+        {
+          "address": 7,
+          "name": "OFFSET",
+          "width": 16,
+          "access": "R/W",
+          "factory": "0x0000",
+          "reset": "Power-up reloads the programmed word from EEPROM. A previous owner may have changed it.",
+          "pages": [18, 25, 31],
+          "table": "7-13",
+          "owners": [16, 23, 25, 26, 29, 32],
+          "read": "Read the signed calibration shadow. Signed two's-complement counts in units of 1/128 degree Celsius.",
+          "write": "With EEPROM locked, writes update the volatile shadow. With EEPROM unlocked, writes can program NVM. The device adds the offset after linearization and saturates TEMP at the signed endpoints. Comparator ordering is unspecified.",
+          "prerequisites": "Bound target for shadow reads. For mutation, establish startup readiness, serialize the target, and check EEPROM_UL in this operation for EUN=0 and BUSY=0. Preserve uncertainty after an ambiguous write. Preserve existing calibration unless management was explicitly enabled. OFFSET writes during POR load have unspecified effects.",
+          "policy": "guarded",
+          "fields": [
+            {
+              "name": "D",
+              "mask": 65535,
+              "access": "R/W",
+              "factory": "0x0000",
+              "nvm_mask": 65535,
+              "role": "calibration",
+              "read": "Read the signed calibration shadow. Signed two's-complement counts in units of 1/128 degree Celsius.",
+              "write": "With EEPROM locked, writes update the volatile shadow. With EEPROM unlocked, writes can program NVM."
+            }
+          ]
+        },
+        {
+          "address": 8,
+          "name": "EEPROM3",
+          "width": 16,
+          "access": "R/W",
+          "factory": "unknown",
+          "reset": "Power-up reloads the programmed word from EEPROM. A previous owner may have changed it.",
+          "pages": [18, 25, 32],
+          "table": "7-14",
+          "owners": [7, 24, 26, 32],
+          "read": "Read one volatile EEPROM data shadow. Accept any 16-bit value, including zero. Current contents alone cannot authenticate factory data or prove physical NVM contents.",
+          "write": "With EEPROM locked, writes update the volatile shadow. With EEPROM unlocked, writes can program NVM. Data writes to these shadows are excluded even when locked.",
+          "prerequisites": "Bound to a BOM-selected target on a known route. Use an explicit pointer and one complete word.",
+          "policy": "deny-write",
+          "fields": [
+            {
+              "name": "D",
+              "mask": 65535,
+              "access": "R/W",
+              "factory": "unknown",
+              "nvm_mask": 65535,
+              "role": "eeprom-data",
+              "read": "Read one volatile EEPROM data shadow. Accept any 16-bit value, including zero. Current contents alone cannot authenticate factory data or prove physical NVM contents.",
+              "write": "With EEPROM locked, writes update the volatile shadow. With EEPROM unlocked, writes can program NVM."
+            }
+          ]
+        },
+        {
+          "address": 15,
+          "name": "DEVICE_ID",
+          "width": 16,
+          "access": "R",
+          "factory": "0x0117 (map and field table; figure leaves revision unspecified)",
+          "reset": "Device identification fixed by silicon; revision is observed where specified.",
+          "pages": [25, 32],
+          "table": "7-15",
+          "owners": [4, 13, 26, 32],
+          "read": "Use the selected model's DID field for compatibility. Preserve the raw word and any revision. Select exact grade from the BOM.",
+          "write": "No writable field.",
+          "prerequisites": "Bound to a BOM-selected target on a known route. Use an explicit pointer and one complete word.",
+          "policy": "observe",
+          "fields": [
+            {
+              "name": "REV",
+              "mask": 61440,
+              "access": "R",
+              "factory": "table 0; figure unspecified",
+              "nvm_mask": 0,
+              "role": "revision",
+              "read": "Read bits 15:12 as the silicon revision.",
+              "write": "No writable field."
+            },
+            {
+              "name": "DID",
+              "mask": 4095,
+              "access": "R",
+              "factory": "0x117",
+              "nvm_mask": 0,
+              "role": "identity",
+              "read": "Compare the low 12 bits to 0x117.",
+              "write": "No writable field."
+            }
+          ]
+        }
+      ]
+    },
+    "TMP119": {
+      "models": ["TMP119"],
+      "source": "docs/reference/source/TMP119-Digital-Temperature-Sensor-Datasheet-SNIS236.pdf",
+      "reserved_pointers": [9, 10, 11, 12, 13, 14],
+      "pointer_upper_mask": 240,
+      "protocol": {
+        "pages": [8, 9, 22, 23, 24, 25],
+        "owners": [9, 12, 26, 34, 35, 40],
+        "add0_7bit": {
+          "GND": 72,
+          "V+": 73,
+          "SDA": 74,
+          "SCL": 75
+        },
+        "pointer": "Power-up pointer 0x00. Device retains the last selected pointer. Reject a reserved or out-of-range selector before I/O; never truncate upper bits. Register auto-increment is undocumented.",
+        "read_word": "START, address+W, pointer, repeated START, address+R, MSB (controller ACK), LSB (controller NACK), STOP.",
+        "write_word": "START, address+W, pointer, MSB, LSB, STOP; target acknowledges address and bytes. Only typed, guarded volatile writes are permitted by release policy.",
+        "scl_khz": {
+          "min": 1,
+          "max": 400
+        },
+        "interface_timeout_ms": {
+          "min": 20,
+          "typ": 35,
+          "max": 40
+        },
+        "timeout_condition": "SDA release without clocks. Between START and STOP the controller holds SCL low or the target holds SDA low. Timeout resets the serial interface.",
+        "stop_behavior": "STOP resets the I2C state machine, which waits for a new START.",
+        "ownership": "Target never drives SCL. Application and adapter own clock, electrical timing, routing, serialization and bounded callback deadlines. The interface timeout is distinct from transfer and conversion budgets."
+      },
+      "startup": {
+        "pages": [20],
+        "writes": "CONFIG and limit writes ignored during the initial load. Reads are possible. Response to an OFFSET write in this interval is unknown.",
+        "policy": "For managed operations, require the owner's power-stability contract, a valid internal FIRST_ACK origin and the startup guard before relying on readiness. The approximately 1.5 ms load interval has no specified maximum. Check lock and busy for each allowed mutation."
+      },
+      "registers": [
+        {
+          "address": 0,
+          "name": "TEMP",
+          "width": 16,
+          "access": "R",
+          "factory": "0x8000",
+          "reset": "Holds 0x8000 until the first conversion including averaging completes. The bit pattern alone cannot establish validity or freshness.",
+          "pages": [16, 17, 32, 33, 34],
+          "table": "8-4",
+          "owners": [16, 21, 26, 30, 32],
+          "read": "Reads the latest completed conversion or block average and consumes DATA_READY. A TEMP read does not acknowledge HIGH or LOW.",
+          "write": "No writable field.",
+          "prerequisites": "Bound to a BOM-selected target on a known route. Use an explicit pointer and one complete word.",
+          "policy": "observe",
+          "fields": [
+            {
+              "name": "T",
+              "mask": 65535,
+              "access": "R",
+              "factory": "0x8000",
+              "nvm_mask": 0,
+              "role": "measurement",
+              "read": "Signed two's-complement counts in units of 1/128 degree Celsius. Code range is -256 to +255.9921875 degrees Celsius. Measuring range and grade are separate.",
+              "write": "No writable field."
+            }
+          ]
+        },
+        {
+          "address": 1,
+          "name": "CONFIG",
+          "width": 16,
+          "access": "R/W",
+          "factory": "0x0220",
+          "reset": "At POR, load MOD0 and bits 9:2 from EEPROM. MOD1, status, commands and reserved bits are outside that domain.",
+          "pages": [16, 17, 18, 19, 20, 32, 34, 35],
+          "table": "8-5",
+          "owners": [17, 18, 19, 20, 21, 22, 25, 26, 32],
+          "read": "Consumes DATA_READY and acknowledges latched comparator flags in alert mode. Therm HIGH follows hysteresis and LOW stays zero. Retain observations even when subsequent steps fail.",
+          "write": "Apply only owned stable fields. Keep commands and reserved bits out of replay. MOD=11 belongs to an explicit one-shot. Bit 1 belongs to explicit addressed reset.",
+          "prerequisites": "Bound target for status observation. For mutation, establish startup readiness, serialize the target, and check EEPROM_UL in this operation for EUN=0 and BUSY=0. Preserve uncertainty after an ambiguous write.",
+          "policy": "mixed",
+          "fields": [
+            {
+              "name": "HIGH",
+              "mask": 32768,
+              "access": "R",
+              "factory": "0",
+              "nvm_mask": 0,
+              "role": "status",
+              "read": "Alert mode latches a result above THIGH until acknowledgement by CONFIG read. In therm mode HIGH sets above THIGH, holds in band including equality, and clears below TLOW on conversion comparisons.",
+              "write": "No writable field.",
+              "encodings": {
+                "0": "unasserted",
+                "1": "latched high alert or active therm level"
+              }
+            },
+            {
+              "name": "LOW",
+              "mask": 16384,
+              "access": "R",
+              "factory": "0",
+              "nvm_mask": 0,
+              "role": "status",
+              "read": "Alert mode latches a result below TLOW until acknowledgement by CONFIG read. In therm mode LOW reads zero.",
+              "write": "No writable field.",
+              "encodings": {
+                "0": "unasserted (always zero in therm)",
+                "1": "latched low alert"
+              }
+            },
+            {
+              "name": "DATA_READY",
+              "mask": 8192,
+              "access": "R",
+              "factory": "0",
+              "nvm_mask": 0,
+              "role": "status",
+              "read": "Set on TEMP update after the complete conversion or average. Either CONFIG or TEMP read clears this single indication.",
+              "write": "No writable field.",
+              "encodings": {
+                "0": "no unconsumed indication",
+                "1": "result update indicated"
+              }
+            },
+            {
+              "name": "EEPROM_BUSY",
+              "mask": 4096,
+              "access": "R",
+              "factory": "0",
+              "nvm_mask": 0,
+              "role": "status",
+              "read": "Observed busy during programming. The POR overview and field table describe busy during startup load. Mirrors EEPROM_UL bit 14.",
+              "write": "No writable field.",
+              "encodings": {
+                "0": "busy flag clear",
+                "1": "busy flag set"
+              }
+            },
+            {
+              "name": "MOD",
+              "mask": 3072,
+              "access": "R/W",
+              "factory": "0",
+              "nvm_mask": 1024,
+              "role": "mode",
+              "read": "Writing binary 10 selects continuous conversion and reads back 00. One-shot MOD readback during and after conversion is unspecified.",
+              "write": "Only MOD0 (bit 10) is EEPROM-storable. Stable profile modes are continuous and shutdown. An owned one-shot requires a guarded shutdown write and status baseline, then one trigger.",
+              "encodings": {
+                "0": "continuous",
+                "1": "shutdown (aborts active conversion)",
+                "2": "continuous alias (reads back 00)",
+                "3": "one-shot from shutdown, physical return to shutdown after completion"
+              }
+            },
+            {
+              "name": "CONV",
+              "mask": 896,
+              "access": "R/W",
+              "factory": "4",
+              "nvm_mask": 896,
+              "role": "setting",
+              "read": "Read the current field value.",
+              "write": "Select the nominal continuous cycle. AVG sets a lower limit on the period. One-shot duration is independent of CONV.",
+              "encodings": {
+                "0": "15.5 ms",
+                "1": "125 ms",
+                "2": "250 ms",
+                "3": "500 ms",
+                "4": "1 s",
+                "5": "4 s",
+                "6": "8 s",
+                "7": "16 s"
+              },
+              "cycle_ms_by_conv_avg": [
+                [15.5, 125, 500, 1000],
+                [125, 125, 500, 1000],
+                [250, 250, 500, 1000],
+                [500, 500, 500, 1000],
+                [1000, 1000, 1000, 1000],
+                [4000, 4000, 4000, 4000],
+                [8000, 8000, 8000, 8000],
+                [16000, 16000, 16000, 16000]
+              ],
+              "cycle_basis": "Nominal continuous cycle in milliseconds, indexed by CONV code (row) and AVG code (column). The table rounds active intervals. Stage 6 owns conditioned min/typ/max timing vectors."
+            },
+            {
+              "name": "AVG",
+              "mask": 96,
+              "access": "R/W",
+              "factory": "1",
+              "nvm_mask": 96,
+              "role": "setting",
+              "read": "Read the current field value.",
+              "write": "Select conversions per accumulated block, with one TEMP update at completion.",
+              "encodings": {
+                "0": "1 conversion",
+                "1": "8 conversions",
+                "2": "32 conversions",
+                "3": "64 conversions"
+              }
+            },
+            {
+              "name": "THERM",
+              "mask": 16,
+              "access": "R/W",
+              "factory": "0",
+              "nvm_mask": 16,
+              "role": "setting",
+              "read": "Read the current field value.",
+              "write": "Apply through a guarded volatile CONFIG write.",
+              "encodings": {
+                "0": "alert comparator latches",
+                "1": "therm hysteresis"
+              }
+            },
+            {
+              "name": "POL",
+              "mask": 8,
+              "access": "R/W",
+              "factory": "0",
+              "nvm_mask": 8,
+              "role": "setting",
+              "read": "Read the current field value.",
+              "write": "Select polarity of the open-drain output. The board supplies the pullup.",
+              "encodings": {
+                "0": "active low",
+                "1": "active high"
+              }
+            },
+            {
+              "name": "DR_ALERT",
+              "mask": 4,
+              "access": "R/W",
+              "factory": "0",
+              "nvm_mask": 4,
+              "role": "setting",
+              "read": "Read the current field value.",
+              "write": "Select the ALERT pin source.",
+              "encodings": {
+                "0": "threshold flags",
+                "1": "DATA_READY"
+              }
+            },
+            {
+              "name": "SOFT_RESET",
+              "mask": 2,
+              "access": "R/W",
+              "factory": "0",
+              "nvm_mask": 0,
+              "role": "command",
+              "read": "Always reads zero, including after a command. This bit cannot confirm completion.",
+              "write": "Write 1 issues the addressed 2 ms software reset. Ordinary CONFIG writes emit zero. EUN, shadow reload, companion bits and bus availability across this command remain unproven.",
+              "encodings": {
+                "0": "no reset command",
+                "1": "request addressed reset"
+              }
+            },
+            {
+              "name": "RESERVED",
+              "mask": 1,
+              "access": "R",
+              "factory": "0",
+              "nvm_mask": 0,
+              "role": "reserved",
+              "read": "Unused bits read zero.",
+              "write": "Write zero when constructing a CONFIG word."
+            }
+          ]
+        },
+        {
+          "address": 2,
+          "name": "THIGH",
+          "width": 16,
+          "access": "R/W",
+          "factory": "0x6000",
+          "reset": "Power-up reloads the programmed word from EEPROM. A previous owner may have changed it.",
+          "pages": [20, 32, 36],
+          "table": "8-7",
+          "owners": [16, 18, 19, 22, 29, 32],
+          "read": "Read the high comparison threshold shadow. Signed two's-complement counts in units of 1/128 degree Celsius.",
+          "write": "With EEPROM locked, writes update the volatile shadow. With EEPROM unlocked, writes can program NVM.",
+          "prerequisites": "Bound target for shadow reads. For mutation, establish startup readiness, serialize the target, and check EEPROM_UL in this operation for EUN=0 and BUSY=0. Preserve uncertainty after an ambiguous write.",
+          "policy": "guarded",
+          "fields": [
+            {
+              "name": "H",
+              "mask": 65535,
+              "access": "R/W",
+              "factory": "0x6000",
+              "nvm_mask": 65535,
+              "role": "limit",
+              "read": "Read the high comparison threshold shadow. Signed two's-complement counts in units of 1/128 degree Celsius.",
+              "write": "With EEPROM locked, writes update the volatile shadow. With EEPROM unlocked, writes can program NVM."
+            }
+          ]
+        },
+        {
+          "address": 3,
+          "name": "TLOW",
+          "width": 16,
+          "access": "R/W",
+          "factory": "0x8000",
+          "reset": "Power-up reloads the programmed word from EEPROM. A previous owner may have changed it.",
+          "pages": [20, 32, 36],
+          "table": "8-8",
+          "owners": [16, 18, 19, 22, 29, 32],
+          "read": "Read the low comparison threshold shadow. Signed two's-complement counts in units of 1/128 degree Celsius.",
+          "write": "With EEPROM locked, writes update the volatile shadow. With EEPROM unlocked, writes can program NVM.",
+          "prerequisites": "Bound target for shadow reads. For mutation, establish startup readiness, serialize the target, and check EEPROM_UL in this operation for EUN=0 and BUSY=0. Preserve uncertainty after an ambiguous write.",
+          "policy": "guarded",
+          "fields": [
+            {
+              "name": "L",
+              "mask": 65535,
+              "access": "R/W",
+              "factory": "0x8000",
+              "nvm_mask": 65535,
+              "role": "limit",
+              "read": "Read the low comparison threshold shadow. Signed two's-complement counts in units of 1/128 degree Celsius.",
+              "write": "With EEPROM locked, writes update the volatile shadow. With EEPROM unlocked, writes can program NVM."
+            }
+          ]
+        },
+        {
+          "address": 4,
+          "name": "EEPROM_UL",
+          "width": 16,
+          "access": "R/W",
+          "factory": "0x0000",
+          "reset": "Locked at power-up. BUSY is live status. The documented general-call reset relocks EEPROM.",
+          "pages": [20, 32, 37],
+          "table": "8-9",
+          "owners": [7, 18, 21, 23, 24, 25, 26, 32],
+          "read": "Read EUN and BUSY together for a write or freshness guard without acknowledging CONFIG flags.",
+          "write": "The release denies every data write to this pointer, including relock.",
+          "prerequisites": "Bound to a BOM-selected target on a known route. Use an explicit pointer and one complete word.",
+          "policy": "deny-write",
+          "fields": [
+            {
+              "name": "EUN",
+              "mask": 32768,
+              "access": "R/W",
+              "factory": "0",
+              "nvm_mask": 0,
+              "role": "lock",
+              "read": "Reads the current unlock state.",
+              "write": "Silicon accepts lock control. The driver only observes it.",
+              "encodings": {
+                "0": "locked (shadow writes volatile)",
+                "1": "unlocked (writes can program EEPROM)"
+              }
+            },
+            {
+              "name": "BUSY",
+              "mask": 16384,
+              "access": "R",
+              "factory": "0",
+              "nvm_mask": 0,
+              "role": "status",
+              "read": "Observed busy during programming. The POR overview and field table describe busy during startup load. Mirrors CONFIG bit 12.",
+              "write": "No writable field.",
+              "encodings": {
+                "0": "busy flag clear",
+                "1": "busy flag set"
+              }
+            },
+            {
+              "name": "RESERVED",
+              "mask": 16383,
+              "access": "R",
+              "factory": "0",
+              "nvm_mask": 0,
+              "role": "reserved",
+              "read": "Unused bits read zero.",
+              "write": "No writable field."
+            }
+          ]
+        },
+        {
+          "address": 5,
+          "name": "EEPROM1",
+          "width": 16,
+          "access": "R/W",
+          "factory": "unknown",
+          "reset": "Power-up reloads the programmed word from EEPROM. A previous owner may have changed it.",
+          "pages": [20, 32, 37],
+          "table": "8-10",
+          "owners": [7, 24, 26, 32],
+          "read": "Read one volatile EEPROM data shadow. Accept any 16-bit value, including zero. Current contents alone cannot authenticate factory data or prove physical NVM contents.",
+          "write": "With EEPROM locked, writes update the volatile shadow. With EEPROM unlocked, writes can program NVM. Data writes to these shadows are excluded even when locked.",
+          "prerequisites": "Bound to a BOM-selected target on a known route. Use an explicit pointer and one complete word.",
+          "policy": "deny-write",
+          "fields": [
+            {
+              "name": "D",
+              "mask": 65535,
+              "access": "R/W",
+              "factory": "unknown",
+              "nvm_mask": 65535,
+              "role": "eeprom-data",
+              "read": "Read one volatile EEPROM data shadow. Accept any 16-bit value, including zero. Current contents alone cannot authenticate factory data or prove physical NVM contents.",
+              "write": "With EEPROM locked, writes update the volatile shadow. With EEPROM unlocked, writes can program NVM."
+            }
+          ]
+        },
+        {
+          "address": 6,
+          "name": "EEPROM2",
+          "width": 16,
+          "access": "R/W",
+          "factory": "disputed: section heading 0x0000, map and field table unknown",
+          "reset": "Power-up reloads the programmed word from EEPROM. A previous owner may have changed it.",
+          "pages": [20, 32, 38],
+          "table": "8-11",
+          "owners": [7, 24, 26, 32],
+          "read": "Read one volatile EEPROM data shadow. Accept any 16-bit value, including zero. Current contents alone cannot authenticate factory data or prove physical NVM contents.",
+          "write": "With EEPROM locked, writes update the volatile shadow. With EEPROM unlocked, writes can program NVM. Data writes to these shadows are excluded even when locked.",
+          "prerequisites": "Bound to a BOM-selected target on a known route. Use an explicit pointer and one complete word.",
+          "policy": "deny-write",
+          "fields": [
+            {
+              "name": "D",
+              "mask": 65535,
+              "access": "R/W",
+              "factory": "disputed: section heading 0x0000, map and field table unknown",
+              "nvm_mask": 65535,
+              "role": "eeprom-data",
+              "read": "Read one volatile EEPROM data shadow. Accept any 16-bit value, including zero. Current contents alone cannot authenticate factory data or prove physical NVM contents.",
+              "write": "With EEPROM locked, writes update the volatile shadow. With EEPROM unlocked, writes can program NVM."
+            }
+          ]
+        },
+        {
+          "address": 7,
+          "name": "OFFSET",
+          "width": 16,
+          "access": "R/W",
+          "factory": "0x0000",
+          "reset": "Power-up reloads the programmed word from EEPROM. A previous owner may have changed it.",
+          "pages": [20, 32, 38],
+          "table": "8-12",
+          "owners": [16, 23, 25, 26, 29, 32],
+          "read": "Read the signed calibration shadow. Signed two's-complement counts in units of 1/128 degree Celsius.",
+          "write": "With EEPROM locked, writes update the volatile shadow. With EEPROM unlocked, writes can program NVM. The device adds the offset after linearization and saturates TEMP at the signed endpoints. Comparator ordering is unspecified.",
+          "prerequisites": "Bound target for shadow reads. For mutation, establish startup readiness, serialize the target, and check EEPROM_UL in this operation for EUN=0 and BUSY=0. Preserve uncertainty after an ambiguous write. Preserve existing calibration unless management was explicitly enabled. OFFSET writes during POR load have unspecified effects.",
+          "policy": "guarded",
+          "fields": [
+            {
+              "name": "D",
+              "mask": 65535,
+              "access": "R/W",
+              "factory": "0x0000",
+              "nvm_mask": 65535,
+              "role": "calibration",
+              "read": "Read the signed calibration shadow. Signed two's-complement counts in units of 1/128 degree Celsius.",
+              "write": "With EEPROM locked, writes update the volatile shadow. With EEPROM unlocked, writes can program NVM."
+            }
+          ]
+        },
+        {
+          "address": 8,
+          "name": "EEPROM3",
+          "width": 16,
+          "access": "R/W",
+          "factory": "unknown",
+          "reset": "Power-up reloads the programmed word from EEPROM. A previous owner may have changed it.",
+          "pages": [20, 32, 39],
+          "table": "8-13",
+          "owners": [7, 24, 26, 32],
+          "read": "Read one volatile EEPROM data shadow. Accept any 16-bit value, including zero. Current contents alone cannot authenticate factory data or prove physical NVM contents.",
+          "write": "With EEPROM locked, writes update the volatile shadow. With EEPROM unlocked, writes can program NVM. Data writes to these shadows are excluded even when locked.",
+          "prerequisites": "Bound to a BOM-selected target on a known route. Use an explicit pointer and one complete word.",
+          "policy": "deny-write",
+          "fields": [
+            {
+              "name": "D",
+              "mask": 65535,
+              "access": "R/W",
+              "factory": "unknown",
+              "nvm_mask": 65535,
+              "role": "eeprom-data",
+              "read": "Read one volatile EEPROM data shadow. Accept any 16-bit value, including zero. Current contents alone cannot authenticate factory data or prove physical NVM contents.",
+              "write": "With EEPROM locked, writes update the volatile shadow. With EEPROM unlocked, writes can program NVM."
+            }
+          ]
+        },
+        {
+          "address": 15,
+          "name": "DEVICE_ID",
+          "width": 16,
+          "access": "R",
+          "factory": "disputed: map 0x0117, detailed table 0x2117",
+          "reset": "Device identification fixed by silicon; revision is observed where specified.",
+          "pages": [32, 39],
+          "table": "8-14",
+          "owners": [4, 13, 26, 32],
+          "read": "Use the selected model's DID field for compatibility. Preserve the raw word and any revision. Select exact grade from the BOM.",
+          "write": "No writable field.",
+          "prerequisites": "Bound to a BOM-selected target on a known route. Use an explicit pointer and one complete word.",
+          "policy": "observe",
+          "fields": [
+            {
+              "name": "REV",
+              "mask": 61440,
+              "access": "R",
+              "factory": "disputed: 0 or 2",
+              "nvm_mask": 0,
+              "role": "revision",
+              "read": "Read bits 15:12 as the silicon revision.",
+              "write": "No writable field."
+            },
+            {
+              "name": "DID",
+              "mask": 4095,
+              "access": "R",
+              "factory": "0x117",
+              "nvm_mask": 0,
+              "role": "identity",
+              "read": "Compare the low 12 bits to 0x117.",
+              "write": "No writable field."
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "conflicts": [
+    {
+      "id": "tmp116-startup-busy",
+      "status": "open",
+      "sources": [
+        {
+          "profile": "TMP116",
+          "pages": [17],
+          "claim": "Reset-load overview describes EEPROM_UL busy as clear during load."
+        },
+        {
+          "profile": "TMP116",
+          "pages": [26, 29],
+          "claim": "CONFIG and EEPROM_UL field tables describe busy during power-up."
+        }
+      ],
+      "policy": "A clear bit cannot prove startup completion. Require readiness evidence and an operation-local lock/busy check before mutation."
+    },
+    {
+      "id": "tmp116-shadow-defaults",
+      "status": "open",
+      "sources": [
+        {
+          "profile": "TMP116",
+          "pages": [24],
+          "claim": "Map gives zero for EEPROM1 through EEPROM4."
+        },
+        {
+          "profile": "TMP116",
+          "pages": [29, 30, 31],
+          "claim": "Detailed tables show unknown for EEPROM1, EEPROM2 and EEPROM4, and zero for EEPROM3."
+        },
+        {
+          "profile": "TMP116",
+          "pages": [17, 29],
+          "claim": "Factory traceability information occupies these data locations."
+        }
+      ],
+      "policy": "Observe arbitrary contents in all four shadows; preserve them. Document factory table values separately from programmed startup and measured contents."
+    },
+    {
+      "id": "tmp116-operating-range",
+      "status": "open",
+      "sources": [
+        {
+          "profile": "TMP116",
+          "pages": [4],
+          "claim": "Recommended ambient range extends from -55 to +150 degrees Celsius."
+        },
+        {
+          "profile": "TMP116",
+          "pages": [5, 10, 43],
+          "claim": "Electrical specifications, operating prose and pinned orderables extend to +125 degrees Celsius."
+        }
+      ],
+      "policy": "Use exact grade and electrical conditions for performance claims; leave the +125 to +150 discrepancy visible."
+    },
+    {
+      "id": "tmp116-alert-connection",
+      "status": "open",
+      "sources": [
+        {
+          "profile": "TMP116",
+          "pages": [3, 32],
+          "claim": "Pin description and functional circuit use an external pullup for ALERT."
+        },
+        {
+          "profile": "TMP116",
+          "pages": [32, 36],
+          "claim": "Application prose recommends grounding without an unused-pin qualifier. The power-filter drawing omits signal connections."
+        }
+      ],
+      "policy": "Use a pullup and controller input for an active ALERT signal. Seek vendor clarification for unused-pin guidance."
+    },
+    {
+      "id": "tmp117-data-word-count",
+      "status": "open",
+      "sources": [
+        {
+          "profile": "TMP117",
+          "pages": [18, 20, 30],
+          "claim": "EEPROM overview, internal structure figure and EEPROM1 text refer to four data words."
+        },
+        {
+          "profile": "TMP117",
+          "pages": [25, 30, 31, 32],
+          "claim": "Map and individual data/offset sections assign three EEPROM words at 0x05, 0x06 and 0x08. Offset is at 0x07."
+        }
+      ],
+      "policy": "Use only the three mapped data words. Never traverse the offset as an EEPROM word."
+    },
+    {
+      "id": "tmp117-stored-fields",
+      "status": "open",
+      "sources": [
+        {
+          "profile": "TMP117",
+          "pages": [18],
+          "claim": "The startup list includes limits and several CONFIG settings but omits DR/Alert and OFFSET."
+        },
+        {
+          "profile": "TMP117",
+          "pages": [25, 27, 28],
+          "claim": "Map footnote covers OFFSET, and the CONFIG footnotes mark DR/Alert EEPROM-storable."
+        }
+      ],
+      "policy": "Treat both as EEPROM-backed. Preserve prior offset unless managed, and guard every volatile write."
+    },
+    {
+      "id": "tmp117-eeprom2-default",
+      "status": "open",
+      "sources": [
+        {
+          "profile": "TMP117",
+          "pages": [31],
+          "claim": "EEPROM2 section heading gives reset 0x0000."
+        },
+        {
+          "profile": "TMP117",
+          "pages": [25, 31],
+          "claim": "Map, bit figure and field table give unknown reset contents."
+        }
+      ],
+      "policy": "Accept any EEPROM2 observation and retain its provenance as a volatile shadow."
+    },
+    {
+      "id": "tmp117-reset-access",
+      "status": "open",
+      "sources": [
+        {
+          "profile": "TMP117",
+          "pages": [27],
+          "claim": "CONFIG figure shows Soft_Reset as R-0."
+        },
+        {
+          "profile": "TMP117",
+          "pages": [28],
+          "claim": "Detailed CONFIG table gives R/W, write one to reset for 2 ms, always reads zero."
+        },
+        {
+          "profile": "TMP117",
+          "pages": [18],
+          "claim": "The EEPROM overview explicitly attributes relock to general-call reset."
+        }
+      ],
+      "policy": "Keep the command out of replay. Require a guarded addressed reset and later observations. EUN, reload, companion-bit effects and ACK availability remain open for addressed reset."
+    },
+    {
+      "id": "tmp117-one-shot-alert",
+      "status": "open",
+      "sources": [
+        {
+          "profile": "TMP117",
+          "pages": [15],
+          "claim": "One-shot prose mentions setting an ALERT flag along with Data_Ready."
+        },
+        {
+          "profile": "TMP117",
+          "pages": [27, 28],
+          "claim": "CONFIG defines comparator flags, DATA_READY and selectable ALERT routing; there is no separate generic one-shot ALERT field."
+        }
+      ],
+      "policy": "Use DATA_READY for completion and the specified comparator/routing conditions for HIGH, LOW and the pin. Do not infer a threshold crossing from shot completion."
+    },
+    {
+      "id": "tmp117-shutdown-current",
+      "status": "open",
+      "sources": [
+        {
+          "profile": "TMP117",
+          "pages": [14],
+          "claim": "Shutdown prose gives 250 nA."
+        },
+        {
+          "profile": "TMP117",
+          "pages": [6],
+          "claim": "Electrical table gives 150 nA typical at 25 degrees Celsius with inactive bus and SCL/SDA/ADD0 tied to V+."
+        }
+      ],
+      "policy": "Use the exact conditioned electrical row; retain maximum separately and avoid inferring current from a mode read."
+    },
+    {
+      "id": "tmp119-data-word-count",
+      "status": "open",
+      "sources": [
+        {
+          "profile": "TMP119",
+          "pages": [20, 22, 37],
+          "claim": "EEPROM overview, internal structure figure and EEPROM1 text refer to four data words."
+        },
+        {
+          "profile": "TMP119",
+          "pages": [32, 37, 38, 39],
+          "claim": "Map and individual data/offset sections assign three EEPROM words at 0x05, 0x06 and 0x08. Offset is at 0x07."
+        }
+      ],
+      "policy": "Use only the three mapped data words. Never traverse the offset as an EEPROM word."
+    },
+    {
+      "id": "tmp119-stored-fields",
+      "status": "open",
+      "sources": [
+        {
+          "profile": "TMP119",
+          "pages": [20],
+          "claim": "The startup list includes limits and several CONFIG settings but omits DR/Alert and OFFSET."
+        },
+        {
+          "profile": "TMP119",
+          "pages": [32, 34, 35],
+          "claim": "Map footnote covers OFFSET, and the CONFIG footnotes mark DR/Alert EEPROM-storable."
+        }
+      ],
+      "policy": "Treat both as EEPROM-backed. Preserve prior offset unless managed, and guard every volatile write."
+    },
+    {
+      "id": "tmp119-eeprom2-default",
+      "status": "open",
+      "sources": [
+        {
+          "profile": "TMP119",
+          "pages": [38],
+          "claim": "EEPROM2 section heading gives reset 0x0000."
+        },
+        {
+          "profile": "TMP119",
+          "pages": [32, 38],
+          "claim": "Map, bit figure and field table give unknown reset contents."
+        }
+      ],
+      "policy": "Accept any EEPROM2 observation and retain its provenance as a volatile shadow."
+    },
+    {
+      "id": "tmp119-reset-access",
+      "status": "open",
+      "sources": [
+        {
+          "profile": "TMP119",
+          "pages": [34],
+          "claim": "CONFIG figure shows Soft_Reset as R-0."
+        },
+        {
+          "profile": "TMP119",
+          "pages": [35],
+          "claim": "Detailed CONFIG table gives R/W, write one to reset for 2 ms, always reads zero."
+        },
+        {
+          "profile": "TMP119",
+          "pages": [20],
+          "claim": "The EEPROM overview explicitly attributes relock to general-call reset."
+        }
+      ],
+      "policy": "Keep the command out of replay. Require a guarded addressed reset and later observations. EUN, reload, companion-bit effects and ACK availability remain open for addressed reset."
+    },
+    {
+      "id": "tmp119-one-shot-alert",
+      "status": "open",
+      "sources": [
+        {
+          "profile": "TMP119",
+          "pages": [17],
+          "claim": "One-shot prose mentions setting an ALERT flag along with Data_Ready."
+        },
+        {
+          "profile": "TMP119",
+          "pages": [34, 35],
+          "claim": "CONFIG defines comparator flags, DATA_READY and selectable ALERT routing; there is no separate generic one-shot ALERT field."
+        }
+      ],
+      "policy": "Use DATA_READY for completion and the specified comparator/routing conditions for HIGH, LOW and the pin. Do not infer a threshold crossing from shot completion."
+    },
+    {
+      "id": "tmp119-shutdown-current",
+      "status": "open",
+      "sources": [
+        {
+          "profile": "TMP119",
+          "pages": [4, 17],
+          "claim": "Shutdown prose gives 250 nA, also 0.25 microampere in the portfolio comparison."
+        },
+        {
+          "profile": "TMP119",
+          "pages": [8],
+          "claim": "Electrical table gives 150 nA typical at 25 degrees Celsius with inactive bus and SCL/SDA/ADD0 tied to V+."
+        }
+      ],
+      "policy": "Use the exact conditioned electrical row; retain maximum separately and avoid inferring current from a mode read."
+    },
+    {
+      "id": "tmp116-program-current",
+      "status": "open",
+      "sources": [
+        {
+          "profile": "TMP116",
+          "pages": [17],
+          "claim": "Programming prose gives 230 microamperes."
+        },
+        {
+          "profile": "TMP116",
+          "pages": [5],
+          "claim": "Electrical table gives typical 240 microamperes with ADC off and serial bus inactive."
+        }
+      ],
+      "policy": "Use the electrical condition for reference; EEPROM programming is outside release scope."
+    },
+    {
+      "id": "tmp117-program-current",
+      "status": "open",
+      "sources": [
+        {
+          "profile": "TMP117",
+          "pages": [18],
+          "claim": "Programming prose gives 230 microamperes."
+        },
+        {
+          "profile": "TMP117",
+          "pages": [6],
+          "claim": "Electrical table gives typical 240 microamperes with ADC off and serial bus inactive."
+        }
+      ],
+      "policy": "Use the electrical condition for reference; EEPROM programming is outside release scope."
+    },
+    {
+      "id": "tmp119-program-current",
+      "status": "open",
+      "sources": [
+        {
+          "profile": "TMP119",
+          "pages": [20],
+          "claim": "Programming prose gives 230 microamperes."
+        },
+        {
+          "profile": "TMP119",
+          "pages": [8],
+          "claim": "Electrical table gives typical 240 microamperes with ADC off and serial bus inactive."
+        }
+      ],
+      "policy": "Use the electrical condition for reference; EEPROM programming is outside release scope."
+    },
+    {
+      "id": "tmp116-conv-cycle",
+      "status": "open",
+      "sources": [
+        {
+          "profile": "TMP116",
+          "pages": [26],
+          "claim": "CONV field description refers to the table for standby time."
+        },
+        {
+          "profile": "TMP116",
+          "pages": [12, 13, 27],
+          "claim": "Continuous timing and the cycle table describe the complete cycle including the averaging block."
+        }
+      ],
+      "policy": "Use the continuous cycle matrix, with zero standby when the active block fills the cycle. CONV does not set one-shot duration."
+    },
+    {
+      "id": "tmp117-conv-cycle",
+      "status": "open",
+      "sources": [
+        {
+          "profile": "TMP117",
+          "pages": [27],
+          "claim": "CONV field description refers to the table for standby time."
+        },
+        {
+          "profile": "TMP117",
+          "pages": [13, 14, 28],
+          "claim": "Continuous timing and the cycle table describe the complete cycle including the averaging block."
+        }
+      ],
+      "policy": "Use the continuous cycle matrix, with zero standby when the active block fills the cycle. CONV does not set one-shot duration."
+    },
+    {
+      "id": "tmp119-conv-cycle",
+      "status": "open",
+      "sources": [
+        {
+          "profile": "TMP119",
+          "pages": [34],
+          "claim": "CONV field description refers to the table for standby time."
+        },
+        {
+          "profile": "TMP119",
+          "pages": [16, 17, 35],
+          "claim": "Continuous timing and the cycle table describe the complete cycle including the averaging block."
+        }
+      ],
+      "policy": "Use the continuous cycle matrix, with zero standby when the active block fills the cycle. CONV does not set one-shot duration."
+    },
+    {
+      "id": "tmp117-address-reference",
+      "status": "open",
+      "sources": [
+        {
+          "profile": "TMP117",
+          "pages": [33],
+          "claim": "Application section points to Table 7-1 for ADD0 selection."
+        },
+        {
+          "profile": "TMP117",
+          "pages": [21],
+          "claim": "Table 7-2 supplies the four ADD0 straps and addresses."
+        }
+      ],
+      "policy": "Use Table 7-2 and seven-bit addresses."
+    },
+    {
+      "id": "tmp117-supply-summary",
+      "status": "open",
+      "sources": [
+        {
+          "profile": "TMP117",
+          "pages": [35],
+          "claim": "Application power guidance describes a 1.7 V minimum."
+        },
+        {
+          "profile": "TMP117",
+          "pages": [5],
+          "claim": "Recommended minimum depends on temperature: 1.7 V through +70 degrees Celsius and 1.8 V across the wider interval."
+        }
+      ],
+      "policy": "Use the temperature-conditioned rail and orderable limits."
+    },
+    {
+      "id": "tmp117-revision-default",
+      "status": "open",
+      "sources": [
+        {
+          "profile": "TMP117",
+          "pages": [32],
+          "claim": "Figure 7-22 shows R-x for the upper four bits."
+        },
+        {
+          "profile": "TMP117",
+          "pages": [25, 32],
+          "claim": "Register map and Table 7-15 give default revision zero."
+        }
+      ],
+      "policy": "Record raw revision; check only the low 12-bit DID for family compatibility."
+    },
+    {
+      "id": "tmp119-id-default",
+      "status": "open",
+      "sources": [
+        {
+          "profile": "TMP119",
+          "pages": [32],
+          "claim": "Register map gives device ID reset 0x0117."
+        },
+        {
+          "profile": "TMP119",
+          "pages": [39],
+          "claim": "Detailed device-ID section gives 0x2117 with revision 2."
+        }
+      ],
+      "policy": "Retain both reference words. Compare DID=0x117 separately from observed revision. Exact model and grade come from the BOM."
+    },
+    {
+      "id": "tmp119-accuracy-summary",
+      "status": "open",
+      "sources": [
+        {
+          "profile": "TMP119",
+          "pages": [4],
+          "claim": "Portfolio table quotes maximum error 0.11 degrees Celsius at -40 and 0.15 at +85."
+        },
+        {
+          "profile": "TMP119",
+          "pages": [7],
+          "claim": "Exact electrical rows give 0.12 degrees Celsius over -40 to +85 and 0.09 over -25 to +85."
+        }
+      ],
+      "policy": "Use the detailed grade's limits and stated measurement, assembly, supply and operating conditions."
+    },
+    {
+      "id": "tmp119-summary-tmp116-supply",
+      "status": "open",
+      "sources": [
+        {
+          "profile": "TMP119",
+          "pages": [4],
+          "claim": "Portfolio table gives TMP116/N supply as 3.0 to 3.6 V."
+        },
+        {
+          "profile": "TMP116",
+          "pages": [4, 5],
+          "claim": "The exact-part recommended supply spans 1.9 to 5.5 V; accuracy rows have individual voltage conditions."
+        }
+      ],
+      "policy": "Use SBOS740A operating and accuracy conditions for TMP116/N."
+    },
+    {
+      "id": "tmp119-characterization-speed",
+      "status": "open",
+      "sources": [
+        {
+          "profile": "TMP119",
+          "pages": [11],
+          "claim": "Current characterization includes a curve at 1 MHz."
+        },
+        {
+          "profile": "TMP119",
+          "pages": [8, 9, 22],
+          "claim": "Specified two-wire clock range ends at 400 kHz."
+        }
+      ],
+      "policy": "Limit integration guidance to the specified 1 to 400 kHz."
+    },
+    {
+      "id": "tmp119m-orderable",
+      "status": "open",
+      "sources": [
+        {
+          "profile": "TMP119",
+          "pages": [7],
+          "claim": "Electrical table lists accuracy rows for TMP119M."
+        },
+        {
+          "profile": "TMP119",
+          "pages": [45],
+          "claim": "Pinned package addendum lists TMP119AIYBGR and TMP119AIYBGR.A."
+        }
+      ],
+      "policy": "Keep TMP119M outside the six selected BOM models pending exact-part orderable evidence."
+    },
+    {
+      "id": "tmp119-address-reference",
+      "status": "open",
+      "sources": [
+        {
+          "profile": "TMP119",
+          "pages": [28],
+          "claim": "Application text points to Table 7-1 for addressing."
+        },
+        {
+          "profile": "TMP119",
+          "pages": [23],
+          "claim": "Table 7-2 lists the ADD0 pin connections and target addresses."
+        }
+      ],
+      "policy": "Use Table 7-2 for ADD0 strap selections."
+    }
+  ]
+}
