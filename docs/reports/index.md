@@ -21,6 +21,7 @@ containing commit without a self-referential hash inside that commit.
 | [5 — register and bitfield ledger](prompt_5.md) | COMPLETE | Six BOM selections, 46 coverage rows, 31 retained open source records and 22 validator regressions | Stages 6 and 7 refine timing and safety. Driver, MCU, CI and physical qualification remain open. |
 | [6 — conversion timing, freshness and alerts](prompt_6.md) | COMPLETE | Three pinned timing tables, read-effect contract and literal vectors checked for six BOM selections | Read-clear timing, TEMP byte latching and other silicon unknowns remain open |
 | [7 — EEPROM, identity and reset safety](prompt_7.md) | COMPLETE | Six model gates, operation-local guard, protected shadow access, addressed-reset policy, eight exclusions and nine research transcripts | Audit 45 reviews the research. TMP116 POR busy and addressed-reset effects remain open. |
+| [45 — preparation and silicon audit](prompt_45.md) | COMPLETE | Independent review of stages 1–7, four verified corrections and repeated archive, ledger, vector and safety checks | Stage 8 consumes the audit. Source unknowns, optional TI access gaps and physical qualification remain open. |
 
 See [PROGRESS.md](../prompts/PROGRESS.md) for scheduled audit stages 45–55 and
 current execution status. Hardware qualification remains NOT RUN and the

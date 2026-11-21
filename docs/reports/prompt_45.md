@@ -166,3 +166,37 @@ the CONFIG clear edge, TEMP byte latching, offset/comparator ordering and
 addressed-reset side effects retain their evidence gates. The optional TI
 license manifest and linked TMP116 discussion remain unavailable. Native
 driver execution, MCU links, remote CI and physical qualification were NOT RUN.
+
+## Phase d acceptance — 2026-11-21
+
+**COMPLETE.** The audit produces `audit-1-7` for stage 8. All eleven
+inputs from stages 1–7 were present and matched their producer reports and
+handoff entries. The two independent reviews are recorded above. All four
+confirmed findings were corrected, and no audit finding remains open.
+
+Acceptance started on clean `main` at
+`f80231ce882bed6036402f98809a27398ab548e2`, equal to local `origin/main`.
+The commit message, parent and ten changed paths match the phase-c baseline
+and wrapper request. The wrapper logged upstream equality at 18:48:40
+Prague time. The wrapper owns staging, commit and upstream verification
+for this acceptance update.
+
+| Acceptance check | Result |
+| --- | --- |
+| `python -B scripts/check_promptset.py` and `python -B scripts/test_check_promptset.py` | PASS. 55 stages and 36 regressions. Stage 8 follows audit 45 and consumes its report. |
+| `python -B scripts/check_references.py` and `python -B scripts/test_check_references.py` | PASS. 14 pinned PDF paths, sizes and hashes, plus nine regressions. Opened all 14 originals and confirmed the manifest page counts. |
+| `python -B tools/check_register_ledger.py` and `python -B tools/test_check_register_ledger.py` | PASS. Six BOM selections and 31 regressions, including missing and reversed addressed-reset encodings. |
+| Peer and toolchain spot checks | PASS. Rechecked the pinned TMP1x2 bind order and health gate, eight C++ test registrations, CI pins and the identical MIT license blob. `scripts/pio.cmd --version` selected Core 6.2.0 at `C:\pio`. |
+| Inline `python -B -` source and vector checks | PASS. Matched 96 cycle cells and 32 TMP116 standby footnotes to the original PDFs. Recalculated 36 active times, 11 signed words, 14 host quantization cases, three offset clamps, eight pin routes and two averaging blocks with an abort. Exhaustively checked each identity mask against its cited field table. |
+| Inline `python -B -` safety checks | PASS. Checked all 65,536 guard inputs, nine safety transcripts, eight exclusions, 46 coverage IDs, shadow and reset gates, reset command words and both wait boundaries. |
+| Completion records | PASS. All 100 local links in the report, report index and progress ledger resolved, including the cited PDF pages and Markdown anchors. |
+| Git whitespace | PASS. `git diff --check 31879b6 HEAD`, `git diff --check` and `git diff --cached --check`. The index was empty before wrapper staging. |
+
+Checks used Python 3.12.10, PyMuPDF 1.27.2.2 and Git 2.52.0.windows.1.
+TMP116 startup BUSY, the exact CONFIG clear edge, TEMP byte latching, TMP117/119
+offset/comparator ordering and addressed-reset reload, EUN, companion-bit and
+ACK effects remain open. The TMP117 DATA_READY capture retains its routing
+discrepancy. The linked TMP116 discussion and optional TI software license
+manifest remain unavailable. Native driver execution, MCU links, remote CI
+and physical qualification were NOT RUN. Stage 43 owns the first remote
+CI checkpoint. [Handoff inventory](../prompts/HANDOFFS.md).
