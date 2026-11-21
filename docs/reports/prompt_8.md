@@ -109,3 +109,72 @@ Git 2.52.0.windows.1 reported zero commits on either side of
 `HEAD...origin/main`. Native driver execution, MCU links, remote CI and
 physical qualification were NOT RUN. Independent review of the authored
 API and ownership documents belongs to phase c.
+
+## Phase b implementation and evidence
+
+The phase-b baseline was clean `main` at
+`5e9aa94b6bfbee819e5448ff50e503e958b85f25`. Git history shows the
+phase-a report was the only path in that commit. The wrapper logged upstream
+equality at 19:16:00 Prague time. The seven prerequisite stage rows and all
+eight input artifacts still match the phase-a inventory.
+
+The `api-contract` handoff now has both documents. The [public API contract](../api-contracts.md)
+specifies the copied binding, configuration and sample types, output validity,
+state gates, callback accounting and ordered apply/acquisition sequences.
+The [architecture](../architecture.md) assigns a single register owner per
+function, gives both consumer sketches and maps all 46 coverage IDs to the
+public API, jobs, CLI or application. Stage 9 consumes this contract for
+deadline and result details after stage 8 acceptance. Stage 46 reviews both
+contracts before production work. Source headers follow their named feature
+stages, including stage 23 for configurable offset.
+
+Two read-only research assignments checked the peer integration surface and
+the coverage-to-CLI mapping. Locally inspected heads were TMP1x2 `c91bac6`,
+OPT4001 `f17d494`, ADS1115 `1aab07b` and FieldCore-node `c40ea83`. All four
+trees were clean, and the inspected source/test paths matched the pins in
+the phase-a table. No sibling suite ran. The two application wrappers in the
+sketch return the respective package's own Status. Each delegates one
+bounded call to the shared bus. TMP11x preserves physical success when the
+owner clock detects late completion. TMP1x2's initialization gate on health
+transitions and its replacement-before-validation binding order do not fit
+this contract. The contract draws on OPT4001's captured-ready bookkeeping
+and ADS1115's first dirty fault and verification boundary. No driver source
+was ported.
+
+Rechecked the local TI PDF text for startup, CONFIG, lock/busy, the `0x07`
+split and ID. Pages inspected were SBOS740A 17, 24, 26, 29, 31;
+SNOSD82D 18, 25, 27–28, 30–32; and SNIS236 20, 32, 34–35, 37–39.
+The documents preserve the source conflicts and open questions listed above.
+The guard observes bits 15:14 in `0x04`, the ID is model-matched at `0x0F`,
+and every diagnostic dump gets its own compatible first ID observation.
+[Register evidence](../registers/tmp11x.json), [reset and guard transcripts](../eeprom-and-reset-policy.md).
+
+### Cases traced against the contract
+
+| Case | Expected public and physical outcome |
+| --- | --- |
+| Short combined TEMP read | The adapter sees one received byte of two and returns a terminal error. One tracked failure on managed latest, unchanged sample/cache and possible lost readiness. The neutral diagnostic reports the error without changing health. |
+| One-shot preflight drift | For desired `0x0620`, safe `0x04` followed by observed stable `0x0640` detects AVG drift. Two reads, zero CONFIG writes, dirty state. A clean matching run instead writes SD `0x0620`, baselines CONFIG, writes OS `0x0E20` once, waits for new readiness and reads TEMP. |
+| Late trigger and retained result | Successful OS write finishing at/after expiry counts a physical success and establishes trigger ownership. Job result is timeout with no new sample. A probe or dump before take returns BUSY with zero callbacks. Cancel/take never restores or retriggers. |
+| Partial limit/configure apply | Raising [0,10] to [15,20] in guarded SD writes high before low. The first data-write attempt commits the candidate. Ambiguous low write or failed final CONFIG readback leaves dirty and preserves historical samples. Verified recovery must include both limit words. |
+| Mixed generations | Captured alert evidence survives a later zero, composite failure and reset with original/mixed provenance. A cached sample keeps its acquisition kind, observation time, generation, trust and offset. Re-reading an old TEMP word after an offset change gives no evidence of a new conversion. |
+| Model-specific dump | Both maps allow ten callbacks for an identity-first full dump. The EEPROM snapshot takes six on TMP116/N and five on TMP117/M/N or TMP119. Only the four-shadow map includes `0x07` in that snapshot. A mismatched first ID stops both dumps after one callback. |
+
+These are document and literal-vector checks. Native driver execution belongs
+to the implementation stages. [Source vectors](../registers/behavior-vectors.json).
+
+### Focused checks
+
+Python 3.12.10 passed `python -B scripts/check_promptset.py` (55 stages),
+`python -B scripts/check_references.py` (14 pinned PDF hashes),
+`python -B tools/check_register_ledger.py` (six BOM models) and
+`python -B tools/test_check_register_ledger.py` (31 regressions).
+A focused Python comparison found each of R01–R18, F01–F20 and X01–X08
+exactly once in the same order in FULL_COVERAGE, the feature ledger and the
+new architecture. The full and EEPROM dump orders/counts agreed with all
+three register maps. The documented one-shot order and SD/OS words were
+checked against the managed one-shot vector. Local Markdown targets and
+whitespace were checked across all three changed files, including the two
+new documents. The Git index remained empty. Native driver and MCU links,
+remote CI and physical qualification were NOT RUN. Phase c owns the fresh
+API and ownership review. No phase-b blocker remains.

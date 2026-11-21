@@ -1,0 +1,178 @@
+# TMP11x architecture and register ownership
+
+One `TMP11x::TMP11x` instance owns the observations, desired profile and
+operation slot for one bound sensor. The board owns access to that sensor
+and its bus. Synchronous calls drive the same resumable register steps as
+cooperative jobs. The application can service another target while a
+conversion or startup interval runs. [Public API and operation gates](api-contracts.md).
+
+## Code and package boundaries
+
+| Public header under `include/TMP11x/` | Contents |
+| --- | --- |
+| `Status.h` | SDK-independent errors, static messages, status and predicates. |
+| `Config.h` | Value types, model and capability queries, callback types, binding and desired sensor settings. Stage 23 adds the configurable hardware offset. |
+| `CommandTable.h` | Checked map, access classes and field constants for the selected family. Stage 12 derives these from the reviewed ledger. A register identifier grants no write permission. |
+| `TMP11x.h` | Device class, typed observations, lifecycle, measurements, configuration, diagnostics and operation interface. Introduce each method with its feature stage. |
+| `Version.h` | Checked-in generated package version. Stage 10 makes `library.json` its source. |
+
+Implementation belongs in `src/`. Each public header must compile on its
+own as standard C++17. Installed consumers need only the public headers and
+library. Keep SDK handles, GPIO setup, FreeRTOS, heap allocation, logging,
+tasks, sleeps, retry loops and bus recovery outside the core. The Arduino
+and ESP-IDF examples have separate adapters and one CLI in `examples/common/`.
+Native IDF builds directly against the portable library. Keep examples,
+test doubles, host scripts and restricted vendor PDFs outside the exported
+runtime surface. [Toolchain and package plan](toolchain-and-package-plan.md).
+
+## Which code decides each register action
+
+| Owner | Exclusive decision and callers |
+| --- | --- |
+| Model and transport (11–12) | One pure model/capability table supplies family, ID policy, EEPROM index map, offset/reset support. One checked transport maps the requested function to a permitted single-word transfer and accounts its physical outcome once. Deny holes/aliases, any data write to TEMP/ID/EEPROM_UL/shadows, and command encodings on the ordinary CONFIG path. Private typed commands have distinct permission. No transfer accepts an arbitrary caller-supplied bus address. |
+| Identity (13, public at 14) | `0x0F` decode and family match. Probe, begin/recover and ordered dumps invoke it. Public identity/probe are neutral. The same physical read inside replay is tracked. Model selection stays with the BOM. |
+| Configuration (17–20, 22–23, 25) | One encoder/expected-state comparison for CONFIG. The configuration engine owns `0x04` safety decisions, stable CONFIG fields, THIGH/TLOW and supported managed OFFSET, including ordered apply and final verification. It supplies the guarded SD/command encoder to measurement and the explicit reset command at 25. Stage 19 owns common observation bookkeeping for CONFIG/TEMP and generation/trust invalidation. Every reader calls it. Stage 22 exposes retained alert events. |
+| Measurement (16, 21) | One signed-word codec for TEMP, limits and offset. One acquisition engine owns the TEMP-to-Sample publication point, continuous-ready evidence, one-shot preflight/baseline/trigger sequence, and last-good sample. It asks configuration to compare CONFIG and enforce the guard. It never installs a new profile. |
+| Diagnostics (24, 26) | Shadow access maps a one-based word index through the selected capability. Diagnostics own observation formatting, ID-first traversal and the fixed dump order. They reuse the same decoders, checked transport and read-effect bookkeeping. A raw view never applies a profile, publishes a managed sample or programs EEPROM. |
+
+Stage 14 owns bus-silent binding and stage 15 owns transport health. Stage 18
+supplies real initialize/recover and a resumable full-profile apply with a
+single physical callback per step. Stage 19 extends trust, observation and
+invalidation. Stages 20 and 22 submit typed settings to that engine. Stage 23
+extends it with offset, including unmanaged calibration provenance in the
+stage 21 acquisition engine. Stage 27 assembles the synchronous consumer and
+cache helpers. Stage 28 supplies one admission/result slot. Stage 29 attaches
+initialize/configure/recover to apply, and 30 attaches the three read kinds
+to acquisition. Pending waits store the due time in the current operation.
+Polling is application-driven. Stage 31 exercises failures in those existing
+engines. Declarations become available when a stage can execute and test
+them. [Stage handoffs](prompts/HANDOFFS.md).
+
+## Two packages on one bus
+
+These adjacent consumer functions use application-provided adapter functions
+over the **same** `BoardBus` object. The example BOM places a TMP112 at
+`0x48` and a TMP117 at `0x49`. Both adapters borrow the bus through
+`i2cUser` and map controller outcomes to their package's own `Status`.
+`boardMillis` reads the board clock. Each sensor object and the bus outlive
+the calls. Bring-up here is an explicit request to initialize both devices.
+
+```cpp
+#include <TMP1x2/TMP1x2.h>
+#include <TMP11x/TMP11x.h>
+
+TMP1x2::Status bringUpTmp112(BoardBus& bus, TMP1x2::TMP1x2& sensor) {
+    TMP1x2::Config cfg{};
+    cfg.model = TMP1x2::Model::TMP112;
+    cfg.i2cAddress = 0x48;
+    cfg.i2cUser = &bus;
+    cfg.i2cWrite = tmp1x2Write;
+    cfg.i2cWriteRead = tmp1x2WriteRead;
+    cfg.nowMs = boardMillis;
+    cfg.timeUser = &bus;
+    auto bound = sensor.bind(cfg);
+    if (!bound.ok()) return bound;
+    return sensor.begin();
+}
+
+TMP11x::Status bringUpTmp117(BoardBus& bus, TMP11x::TMP11x& sensor) {
+    TMP11x::Config cfg{};
+    cfg.model = TMP11x::Model::TMP117;
+    cfg.i2cAddress = 0x49;
+    cfg.i2cUser = &bus;
+    cfg.i2cWrite = tmp11xWrite;
+    cfg.i2cWriteRead = tmp11xWriteRead;
+    cfg.nowMs = boardMillis;
+    cfg.timeUser = &bus;
+    auto bound = sensor.bind(cfg);
+    if (!bound.ok()) return bound;
+    return sensor.begin();
+}
+```
+
+After successful bring-up the same owner calls `tmp112.readSample(a)` with a
+`TMP1x2::Sample` and `tmp117.readLatest(b)` with a `TMP11x::Sample` and
+handles each returned status. An observation-only TMP117 consumer stops
+after bind and invokes `readIdentity` or a checked diagnostic. On a mux,
+each target context carries its route and a reference to this bus. Under
+one application lock, select that route through STOP, perform one sensor
+callback, then release the lock. Budget lock delay, routing and transfer
+together. Count extra mux transactions separately. Serialize ownership of
+the *same sensor* across dependent transfers and waits even when the bus
+itself is released. Neither package depends on the other or inherits from
+a common driver. [Peer sources and consumers](library-comparison.md).
+
+## Register-to-interface map
+
+Each row names the semantic owner and its public route. The job column gives
+the stage 29/30 path. “Sync” denotes a bounded observation or explicit
+command with a synchronous API. “Local” denotes memory-only work that needs
+no transfer budget or job slot. A job reads the same hardware through the
+same owners. CLI commands are the planned shared routes for stages 37/38.
+For all rows, unsupported capability, address, pointer or index is rejected
+before the callback. [Source pages and test owners](feature-coverage.md),
+[CLI grammar and observation rules](prompts/CLI_CONTRACT.md).
+
+| ID | Owner and public route | Job | CLI |
+| --- | --- | --- | --- |
+| R01 | Measurement decodes TEMP in `readLatest` and the explicit fresh APIs. Bound-only `readRegister` can return the startup word. `getLastSample` reads the cache. | READ (all kinds), cache local | `read`, `read --fresh`, `oneshot`, `latest` |
+| R02 | Configuration retains HIGH/LOW on each CONFIG read. `getAlertStatus` and `takeAlertEvents` expose the sticky alert-mode history or separate therm level. | Shared side effect in jobs, inspect/take local | `config`, `status` |
+| R03 | Measurement consumes eligible DATA_READY once after the generation baseline. CONFIG/TEMP observation bookkeeping includes diagnostic reads. | READ continuous fresh/one-shot | `read --fresh`, `config`, `dump` |
+| R04 | Configuration compares BUSY from `0x04` and observes the CONFIG mirror on existing CONFIG reads. Renew a lost guard before dependent work. | All apply and fresh jobs | `begin`, `recover`, `read --fresh`, `status` |
+| R05 | Configuration owns the two replayable modes and canonical CC alias. Measurement owns the single explicit OS trigger. | CONFIGURE or READ one-shot | `mode`, `shutdown`, `oneshot` |
+| R06 | Configuration `setCycle` selects one of eight CONV codes. Timing estimates combine cycle and averaging. | CONFIGURE, estimates local | `cycle`, `config` |
+| R07 | Configuration `setAveraging` selects the block size. Measurement schedules the OS poll from the count and model-specific active-time bound. | CONFIGURE, READ | `avg`, `oneshot` |
+| R08 | Configuration `setAlert` selects alert/therm. CONFIG observation decodes flags in their observed mode. | CONFIGURE, alert inspection local | `alert`, `config`, `status` |
+| R09 | Configuration `setAlert` selects polarity. Optional GPIO reader reports the physical level of the open-drain pin. | CONFIGURE, GPIO sampled by owner | `alert`, `config` |
+| R10 | Configuration `setAlert` routes threshold or DATA_READY to ALERT. Compare routing independently of the returned flags. | CONFIGURE | `alert`, `config` |
+| R11 | Configuration `reset` issues addressed bit 1 on TMP117/M/N or TMP119. TMP116/N refuses. Ordinary CONFIG writes zero the command. | Sync explicit command, excluded from replay | `reset`, `config` |
+| R12 | Configuration `setLimits` and `readLimits` write/verify and observe both signed limits in THIGH/TLOW. | CONFIGURE, full replay | `limits`, `dump`, `recover` |
+| R13 | Configuration owns EUN/BUSY policy. Diagnostics report the raw `0x04` word. Every data write to this pointer is denied. | Guard in apply/fresh jobs, diagnostic sync | `dump`, guarded setters |
+| R14 | Diagnostics `readEepromWord`, `readEepromSnapshot` on TMP116/N map indices 1–4 to `05/06/07/08` hex. | Sync bounded shadow reads | `eeprom`, `dump` |
+| R15 | Same API maps 1–3 to `05/06/08` hex on TMP117/M/N and TMP119. Index 4 rejects. | Sync bounded shadow reads | `eeprom`, `dump` |
+| R16 | Configuration `readTemperatureOffset`/`setTemperatureOffset` access `0x07` on supporting models. Diagnostic dump labels it by selected model. TMP116/N refuses typed offset even for zero. | CONFIGURE and full replay, observe-only when unmanaged | `offset`, `settings`, `dump` |
+| R17 | Identity `readIdentity`/`probe` check a complete `0x0F` word. A failed identity-first composite stops there. | In apply jobs, explicit probe sync | `identity`, authorized `discover`, `dump` |
+| R18 | Transport validates each mapped selector before framing. Refuse `0x09–0x0E` or upper pointer bits. Dump enumerates documented pointers only. | All jobs inherit, no extra operation | `dump` |
+
+## Behavior and integration map
+
+| ID | API or application responsibility | Job and CLI mapping |
+| --- | --- | --- |
+| F01 | `Config::model` selects the exact ordered part. `IdentityInfo` reports observed compatibility. Packaging and accuracy grade require BOM evidence. | Bind/capabilities local, identity sync. `bind`, `model`, `caps`, `identity`. |
+| F02 | `i2cAddress` comes from ADD0 tied to GND/V+/SDA/SCL for `0x48/49/4A/4B`. Board owner resolves collisions and selects a known compatible route. | Binding local, discovery explicitly application-scoped. `addr`, `bind`, `discover`. |
+| F03 | Transport emits one explicit pointer per word even though the pointer is retained. Controller ACKs the MSB, NACKs the LSB, then STOP. Data writes are pointer/MSB/LSB. | Every transfer uses the same framing. `xfer` reports adapter attempts, including neutral traffic. |
+| F04 | Board controls 1–400 kHz bus. Sensor does not drive SCL. The 20–40 ms held-line/no-clock timeout is independent of callback and job budgets. STOP/interface reset details differ for TMP116. | Job deadline clips each adapter call. `bus` and `xfer` report board state. |
+| F05 | Begin/recover establishes missing FIRST_ACK proof under stable power, waits the 3 ms policy interval, checks lock/busy, then verifies actual writes. Initial TEMP validity is separate. | INITIALIZE/RECOVER. `begin`, `recover`, `invalidate`. |
+| F06 | `setMode`/`setCycle`/`setAveraging` cover 32 CC combinations. Managed OS from desired SD uses one trigger and AVG-dependent timing. Aborted partial blocks supply no result. | CONFIGURE, READ one-shot. `mode`, `cycle`, `avg`, `oneshot`. |
+| F07 | Apply establishes SD, an observed baseline and a verified mode for every profile change, including limit-only. Same-value CONFIG writes have undocumented conversion effects. | CONFIGURE/RECOVER. `mode`, `cycle`, `avg`, `recover`. |
+| F08 | A single combined TEMP transfer preserves framing. Byte coherence at a concurrent CC update is unresolved. Completed owned OS under exclusive ownership yields stable TEMP. | All READ kinds. `read`, `read --fresh`, `oneshot`. |
+| F09 | Alert-mode thresholds are strict excursions. CONFIG acknowledges the flags, and a later excursion can reassert. Therm HIGH holds at equality and in the band, LOW is zero. GPIO observation is separate. TMP116 block-end comparison is inferred. | CONFIGURE, retained status local. `limits`, `alert`, `status`. |
+| F10 | Supported chips saturate TEMP after offset. Observe raw counts without double correction. Offset/comparator ordering remains open. TMP116/N lacks hardware offset. | CONFIGURE and READ. `offset`, `limits`, `read`. |
+| F11 | Desired, observed, verified and dirty settings cover CONFIG, both limits and opt-in supported offset. Recover verifies every owned field and observes supported unmanaged calibration. | INITIALIZE/CONFIGURE/RECOVER. `settings`, `config`, `recover`. |
+| F12 | After power loss or outside reset/write/ARA, invalidate affected assumptions and preserve historical evidence. Addressed reset has its own device gate, encoding, wait and observations. | Invalidation local, reset sync, RECOVER for explicit replay. `invalidate`, `reset`, `recover`. |
+| F13 | Read current EEPROM shadows in index and byte order, accepting zero or arbitrary words. Owner retains the shipment lot and independently establishes provenance. | Sync bounded snapshot. `eeprom`, `dump`. |
+| F14 | One slot for INITIALIZE, CONFIGURE, RECOVER, READ. Each start returns a token. A request acknowledgement and a terminal job result have separate records. Observation firmware starts with bind only. | `job start init/configure/recover/read/tryfresh/oneshot`, `job step`, `job auto`, `jobs`, `job result`. |
+| F15 | ID-first dumps record order, incomplete prefixes and destructive read effects. A TMP116/N or TMP117-family mismatch stops after one ID callback. | Explicit bounded diagnostics sync. `identity`, `status`, `config`, `dump`. |
+| F16 | Board integrator owns logic levels, pulls, local bypass, package mounting, thermal paths, strain, leakage and bus activity during conversion. | No sensor job. `bus` reports adapter configuration. [Board guide](board-integration.md). |
+| F17 | Public value gives raw word, signed counts and °C. Accuracy depends on exact grade, supply, temperature range, averaging, timing and assembly. | READ. `read` reports observation. Physical accuracy needs an independent reference. |
+| F18 | Exclusive owner, passive physical health, finite work and post-callback deadline apply to every operation. Cancellation retains uncertain effects and terminal identity. | `health`, `xfer`, `job cancel`, `job result`. Health/counter queries and result handling are local. |
+| F19 | Check all six BOM selections and TMP114/TMP118 negative responders in stages 13/32–33. Mismatch ends the attempt with no alternate-family scan. | Identity in apply jobs, sync observation. `bind`, `identity`, authorized `discover`. |
+| F20 | Stage 33 tests native consumers, 34–36 link S2/S3/P4 targets, 42 exercises the installed package, 43 verifies exact-SHA CI, and 40–41 qualify the actual fixture. | Application/build evidence, no sensor job. `version`, `bus`, `xfer` identify the run. |
+
+## Deliberate release limits
+
+| ID | Boundary across typed calls, jobs and shared CLI |
+| --- | --- |
+| X01 | No EEPROM unlock, relock, programming, persistent startup change or shadow data writes, including with EUN clear. `eeprom` reads only. |
+| X02 | No general-call address `0x00` or broadcast synchronization. TEMP pointer `0x00` always goes to the bound unicast address. |
+| X03 | No SMBus alert-response transactions at `0x0C`. Outside ARA may change the pin and makes live evidence uncertain. `config` uses addressed CONFIG acknowledgement. |
+| X04 | No arbitrary data writes, bare current-pointer reads or multiword bursts. A checked read or typed guarded mutation is required. |
+| X05 | The application owns bus rate, pin pulls, mux, interrupt handling, controller recovery and retries. `bus` and `xfer` expose information. |
+| X06 | EEPROM shadows cannot authenticate a factory ID or certificate. No API/job/CLI certifies calibrated system accuracy. |
+| X07 | TMP114/N, TMP118, TMP102/112/1075/110 and speculative TMP119M are outside this map. Reject unsupported model selections and incompatible responses. No foreign UID procedure or alternate ID probing. |
+| X08 | No CRC/PEC, fault queue, extended mode or conversion sample counter. `caps` reports supported capabilities only. |
+
+The [register ledger](registers/tmp11x.json) and [literal behavior vectors](registers/behavior-vectors.json)
+supply independent inputs to the later implementation tests. This mapping
+assigns delivery and test ownership. Evidence for an installed consumer,
+a firmware link, CI and a physical fixture belongs to its respective stage.

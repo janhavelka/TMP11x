@@ -1,0 +1,310 @@
+# TMP11x public API contract
+
+This is the design for the C++17 class `TMP11x::TMP11x`, included through
+`<TMP11x/TMP11x.h>`. A bus owner can bind a sensor and inspect its registers
+without changing its configuration. An application taking measurements
+explicitly initializes a profile and chooses how to acquire each sample.
+Feature stages introduce the declarations with their implementations.
+[Implementation owners and coverage](architecture.md).
+
+## Binding and sensor settings
+
+`Config` is a value copied on acceptance. Its binding fields identify the
+device, the borrowed resources and the transport policy for the lifetime of
+that binding. Its `settings` member is a `SensorSettings` value. The driver
+keeps its own desired copy. Only explicit `bind(config)` or `begin(config)`
+can install a different binding.
+
+| Binding field | Meaning and validation |
+| --- | --- |
+| `model`, `i2cAddress` | Select one of `Model::{TMP116,TMP116N,TMP117,TMP117M,TMP117N,TMP119}` from the BOM. Supply the unshifted seven-bit address `0x48–0x4B` of the known target. |
+| `i2cWrite`, `i2cWriteRead`, `i2cUser` | Both synchronous callbacks are required. One opaque context serves both. A stateless function may use `nullptr`. |
+| `i2cTimeoutMs`, `operationTimeoutMs` | Positive bounded millisecond intervals, each at most `INT32_MAX`. The former caps one callback. The latter bounds synchronous apply and reset, including waits. Explicit blocking-read and job budgets cover their entire call or job. |
+| `nowMs`, `timeUser` | Optional `uint32_t (*)(void*)`, monotonic milliseconds in a single epoch. Its value at physical completion timestamps observations. The state table identifies operations that require it. Replacing or restarting the epoch requires rebind. |
+| `readAlertPin`, `gpioUser` | Optional `Status (*)(bool& high, void*)` reading the physical GPIO level. The context identifies the pin. A missing hook makes this observation unavailable. No pin setup or interrupt handling occurs. |
+| `offlineThreshold` | Positive consecutive tracked failure count at which health becomes OFFLINE. |
+
+Callback signatures in namespace `TMP11x` use `Status` from `Status.h`.
+
+```cpp
+using I2cWriteFn = Status (*)(uint8_t address, const uint8_t* tx, size_t txLen,
+                              uint32_t timeoutMs, void* user);
+using I2cWriteReadFn = Status (*)(uint8_t address, const uint8_t* tx, size_t txLen,
+                                  uint8_t* rx, size_t rxLen, uint32_t timeoutMs,
+                                  void* user);
+```
+
+All non-owning contexts may be null if their functions support it. The owner
+keeps resources alive through return from the last callback and serializes
+access to the instance, including getters. Each callback must return a
+terminal result, complete within its budget including lock acquisition, and
+release all borrowed buffers before returning. Callback re-entry and ISR use
+are unsupported. A successful word read completes one pointer byte and both
+MSB-first data bytes in a single repeated-START transfer. A successful write
+completes pointer, MSB and LSB. The adapter checks lengths and reports a short
+transfer as an error even if the controller returned success. A status-only
+core cannot infer missing bytes from a buffer's contents.
+
+| `SensorSettings` field | Replay contract |
+| --- | --- |
+| `mode`, `cycle`, `averaging` | `Mode::{CONTINUOUS,SHUTDOWN}`, `Cycle` codes 0–7 in TI table order, `Averaging` for 1/8/32/64 conversions. Encode continuous as 00 and accept alias 10. One-shot and addressed reset each have a separate operation. |
+| `alertMode`, `polarity`, `pinFunction` | `AlertMode::{ALERT,THERM}`, `Polarity::{ACTIVE_LOW,ACTIVE_HIGH}`, `PinFunction::{THRESHOLD,DATA_READY}`. All eight combinations are supported. Observe the raw pin independently. |
+| `limits` | `Limits{lowCounts, highCounts}` in exact signed 16-bit counts. Both words belong to the target. Validate therm mode with `lowCounts <= highCounts`, including when entering therm. |
+| `managedOffsetCounts` (stage 23) | `std::optional<int16_t>` in the same units. Disengaged by default. Engaged zero is a request to apply, verify and later replay zero. Reject any engaged value on TMP116/N before I2C. Releasing ownership preserves the live value. |
+
+For `Config{}` the proposed target is continuous, cycle code 4, eight-sample
+averaging, alert mode, active-low threshold output, low −32768 and high
+24576 counts. These are software defaults. Only a verified readback
+describes the device. Callback pointers start null. Defaults of 50 ms per
+callback, 1000 ms per synchronous apply/reset and five consecutive failures
+are transport policy. The owner selects model and address before binding.
+`Capabilities` reports `hasOffset`, `hasAddressedReset` and `eepromWordCount`
+for a validated selection without observing hardware.
+
+Stage 11 supplies binding and CONFIG/limits. Stages 18–21 can verify all
+then-owned fields and publish samples with unknown offset provenance. Stage
+23 adds the optional member, setter, readback, observation of unmanaged
+calibration on supporting devices, and recovery through the same engine.
+TMP116/N apply never accesses `0x07`. Validate every available enum, field
+and capability before accepting a target. The signed codec uses
+`counts / 128.0` °C. For Celsius inputs, reject nonfinite or outside
+[−256, +255.9921875] before conversion, round to nearest count with ties
+away from zero, and check the rounded range before narrowing. For decoding
+use representable signed arithmetic. These bounds describe register values.
+The exact-part operating and accuracy limits are given in the [board guide](board-integration.md).
+
+## Status and retained evidence
+
+`Status{Err code, int32_t detail, const char* msg}` has static-lifetime
+message text, `ok()`, `is(Err)`, `inProgress()`, `Status::Ok()`,
+`Status::Error(...)` and `errorName(Err)`. `OK` denotes successful completion
+of the requested action. `IN_PROGRESS` belongs to the operation engine.
+Normalize a nonterminal or incoherent adapter status to `I2C_ERROR` and
+retain its diagnostic detail. Use `I2C_NACK_ADDR` or `I2C_NACK_DATA` only
+when the adapter knows the phase. Preserve a generic NACK, bus error, short
+transfer or transport timeout with its actual cause. The API distinguishes
+`INVALID_PARAM`, `INVALID_CONFIG`, `NOT_BOUND`, `NOT_INITIALIZED`,
+`UNSUPPORTED`, `CLOCK_REQUIRED`, `BUSY`, `IDENTITY_MISMATCH`,
+`EEPROM_UNSAFE`, `CONFIG_DIRTY`, `CONFIG_MISMATCH`,
+`MEASUREMENT_NOT_READY`, `OPERATION_TIMEOUT`, `WORK_LIMIT`, `CANCELLED`,
+`RESULT_NOT_AVAILABLE` and `TOKEN_MISMATCH`. Driver-side refusals add
+zero physical outcomes.
+
+| Public value | Evidence carried |
+| --- | --- |
+| `IdentityInfo` | Selected BOM model and bound address, complete raw ID when available, recognized group, revision and its validity, compatibility with the selection. TMP116/N requires exactly `0x1116` and has no decoded revision. TMP117/M/N and TMP119 require low 12 bits `0x117` and expose the high nibble even for an unfamiliar revision. Compatible family, exact ordering code and physical authentication are distinct claims. |
+| `HealthSnapshot` | `DriverState`, initialized flag, saturating total successes/failures and consecutive failures, last physical fault/status, observation time and validity. Start at `UNINIT` on accepted bind or teardown. Each tracked terminal success sets `READY` and clears the streak. Each tracked failure increments it and sets `DEGRADED` below the threshold or `OFFLINE` at/above it. Preserve the last fault across success. |
+| `SettingsSnapshot` | Desired settings, observed raw/decoded fields with per-field validity and times, last verified generation/time, current trust (`UNKNOWN`, `DIRTY` or `VERIFIED`), first unresolved dirty reason and affected fields. Partial observations stay partial. A detected stable mismatch leaves the target intact. |
+| `Sample` | `uint16_t raw`, `int16_t counts`, `double celsius`, `uint32_t observedAtMs`, `bool timestampValid`, `ReadKind acquisitionKind`, `bool freshConversion`, `uint32_t profileGeneration`, `ConfigTrust configTrust` and `OffsetProvenance offset`. The latter distinguishes unknown, unavailable on this model, observed unmanaged counts and verified managed counts, with validity for the recorded counts. Unknown is the only populated offset state before stage 23. |
+| `AlertStatus` | Pending alert-mode HIGH/LOW events, separately observed therm HIGH level and validity, source of CONFIG read, generation/mode, observation time/validity and possible history loss. A mixed/unknown marker bounds the record when events span profiles, modes or uncertain observations. |
+| `RegisterObservation`, `RegisterSnapshot`, `EepromSnapshot` | Selected model, identity evidence, ordered pointers and complete raw words, time validity, read effects and uncertainty per observation. Preserve completed prefix and first unsuccessful pointer in a failed composite. Report only available fields. EEPROM snapshot records lock/busy and one-based indexed shadows. |
+| `OperationResult` | Token, kind, terminal operation status, last physical status/validity, callback count, observed read effects and possible writes, optional timely sample. Result copies expose alert evidence without draining it. |
+
+`isOnline()` is a bus-silent `initialized && (state == READY || state ==
+DEGRADED)`. Tracked callbacks drive health even before initialization. A
+successful managed ID transfer followed by a family mismatch counts one
+success. The mismatch ends the operation. Public probe and diagnostics are
+health-neutral on both success and failure. OFFLINE leaves admission open.
+Invalidating device trust preserves transport history. This differs from the
+initialization-gated transitions in [TMP1x2](library-comparison.md).
+
+All output references stay unchanged on failure, including a rejected start
+token, failed sample, scalar read and unmatched result token. There are two
+evidence-bearing exceptions. `readIdentity` returns a complete incompatible
+word in `IdentityInfo` alongside mismatch. An admitted diagnostic snapshot
+returns a labelled partial snapshot on transfer failure or mismatch, including
+an incompatible ID when received. Precondition rejection preserves its
+output. Private observations, physical health, potential write effects and
+flag bookkeeping survive a composite failure. A `takeResult` of a
+matching terminal token succeeds at retrieval even when the job's own
+status in the returned record is failure.
+
+## Operation gates
+
+The following are member signatures in abbreviated C++ notation. Actions
+return `Status` unless a value/predicate is indicated. “Free” means no active
+job and no unconsumed terminal result. Local rejection uses zero sensor
+callbacks. “Tracked” means one health outcome per physical callback,
+including callbacks inside an otherwise failed operation. Reads of several
+words always use individual checked transfers.
+
+| Entry point | Required state | Work on acceptance |
+| --- | --- | --- |
+| `bind(const Config&)`, `end()`, `unbind()` | Free. Validate the complete new binding/profile before changing the instance. | Zero callbacks. Accepted bind installs target directly, discards old observations and starts uninitialized with unknown trust. End clears observations, health, startup and initialization, retaining binding and desired settings. Unbind also drops the binding. Teardown may be called on an empty instance. |
+| `begin(const Config&)`, `begin()`, `recover()` | Free and clock. First overload is an explicit validated bind followed by begin. The other two need an existing binding. Dirty, invalidated and previously failed instances may recover. | Tracked identity, startup, operation guard and full replay. Accepted replacement persists even if subsequent initialization fails. Hardware shutdown requires an explicit request. |
+| `invalidateDeviceState()` | Bound and free. | Zero callbacks. Clear startup origin/proof, initialized, live trust, current ready baseline, outstanding shot provenance and live alert level. Retain binding, target, health and historical samples/events under their original provenance. |
+| `readIdentity(IdentityInfo&)`, `probe()` | Bound, free, known authorized target. | One neutral ID read at `0x0F`. Probe returns compatibility status. No initialization/guard or clock required. |
+| `readRegister(uint8_t pointer, RegisterObservation&)`, `readEepromWord(uint8_t index, uint16_t&)` | Bound, free, mapped pointer or valid one-based shadow index. | One neutral word read. A lone observation can have unknown identity/startup/profile/freshness. Label pointer `0x07` by selected model. EEPROM words accept every bit pattern. Unsupported requests reject locally. |
+| `readRegisterSnapshot(RegisterSnapshot&)`, `readEepromSnapshot(EepromSnapshot&)` | Bound and free. | Neutral bounded dump. Read ID first, stop on error/mismatch. Full dump then reads permitted pointers `0x00` through `0x08` in ascending order, for ten callbacks including ID. EEPROM snapshot then reads `0x04` and exactly four or three mapped shadows, for six or five callbacks. No data writes. |
+| `readConfiguration(ConfigurationObservation&)`, `readLimits(Limits&)`, `readTemperatureOffset(int16_t&)`, `verifyConfiguration()` | Initialized, bound, free. Offset requires capability. | Tracked reads. CONFIG alone consumes flags. Read both limits, or one offset, as requested. Verify reads CONFIG and both limits, adding supported offset from stage 23. Compare owned fields and record actual unmanaged calibration. Partial reads update observed validity. Verification reports drift and can confirm an already clean profile. Repair of dirty or invalidated state requires full verified replay. |
+| `configure(const Config&)`, `setMode(Mode)`, `setCycle(Cycle)`, `setAveraging(Averaging)`, `setLimits(Limits)`, `setAlert(AlertMode, Polarity, PinFunction)`, `setTemperatureOffset(double celsius)` | Initialized, verified, free, stable power, clock, valid candidate and capability. Configure compares every binding field, including callback/context identities and transport policy. `setMode(SHUTDOWN)` is the explicit shutdown operation. | Tracked guarded apply, including for limit-only or pin-only changes. The offset setter validates/quantizes the Celsius request and opts into management. Use configure with disengaged offset to release it. On known drift use recover. |
+| `readLatest(Sample&)` | Initialized and free, including dirty. Either desired mode. | One tracked TEMP, no guard. Freshness false. With no clock the timestamp is invalid. |
+| `tryReadFresh(Sample&)` | Initialized, verified clean, retained startup proof, desired continuous and free. | Untimed, at most three tracked callbacks (guard, CONFIG if needed, TEMP if eligible). One attempt. A wait condition returns immediately. |
+| `readFreshBlocking(Sample&, uint32_t timeoutMs)`, `readOneShotBlocking(Sample&, uint32_t timeoutMs)` | Same trust/ownership as try-fresh, clock and positive bounded deadline. Continuous for the former, shutdown for the latter. | Tracked, paced continuous observation or one guarded trigger followed by polling. Each step uses at most one callback. |
+| `reset()` | Initialized, free, supported model, verified stable CONFIG, valid startup proof, clock and guard. | One addressed command plus bounded observations described below. No replay on return. Later explicit recover can reapply the retained target. |
+| `getSettingsSnapshot()`, `healthSnapshot()`, `isOnline()`, `getLastSample(Sample&)`, `getAlertStatus()`, `takeAlertEvents(AlertStatus&)` | Memory-only, available even while a job/result owns the slot. Missing sample yields not-ready. | Zero sensor callbacks. Only take drains the captured alert events/loss indication. It leaves therm observation and hardware alone. A sample-age query needs a valid timestamp and the same clock epoch. |
+| `readAlertPinLevel(bool& high)` | Bound with GPIO hook. Owner-serialized. | One optional GPIO observation, zero I2C. Exposes the physical level, independent of pending events and fresh evidence. |
+| `startInitialize`, `startConfigure`, `startRecover`, `startRead` | Free, bound, clock and the corresponding synchronous gates. INITIALIZE reuses binding. Configure validates binding equality and a copied candidate. | Admission has zero I2C. Only a subsequent poll executes the shared engine. |
+| `poll(nowMs, maxTransfers)`, `cancel()`, `takeResult(token, out)` | Active job for work/cancel, matching terminal token for take. | Poll spends at most the caller's callback budget. Cancel and take use zero. Terminal ownership persists until matching take, even on timeout or cancellation. |
+
+`getSettingsSnapshot()`, `healthSnapshot()` and `getAlertStatus()` return
+value copies. `getLastSampleAgeMs(uint32_t& age)` returns a status and uses
+the authoritative clock only when the cached time is valid in that epoch.
+A clockless binding supports identity and bounded diagnostics. The
+latest-value read engine itself requires no clock for decoding or
+publication, while public managed initialization requires one.
+
+Jobs use `OperationKind::{INITIALIZE,CONFIGURE,RECOVER,READ}` and an explicit
+`ReadKind::{LATEST,CONTINUOUS_FRESH,ONE_SHOT}`. Start signatures take
+`(uint32_t nowMs, uint32_t timeoutMs, OperationToken& token)`, prepended
+by `const Config&` for configure or `ReadKind` for read. `poll(uint32_t
+nowMs, uint8_t maxTransfers)` returns pending while work remains. Start and
+poll retain the peer's `nowMs` argument for source familiarity. The hook
+alone governs deadlines, timestamps and due times. During active or retained
+ownership, unrelated I2C, a new start, bind, end, unbind and invalidation
+return BUSY without changing state. After power loss stop using the old
+proof, cancel if active, take the terminal result, invalidate, restore
+stable power and explicitly recover. A retained failure is observable once.
+
+Every timed path samples the clock before and after the callback, clips
+its timeout to the remaining whole-operation budget, and expires at equality.
+Use unsigned elapsed differences with finite positive relative durations
+at most `INT32_MAX`. Continuity and service within one wrap are owner
+obligations. A zero-budget poll can expire the job and never calls the bus.
+Blocking wrappers bound CPU steps as well as time, including a stuck clock.
+Cooperative waits return pending without a sleep/yield or a held bus lock.
+Stage 9 specifies the owner-facing scheduling, work limits and token
+lifetime in detail. [Owner contract brief](prompts/9_owner-deadline-contract.md).
+
+## Startup, apply and reset
+
+1. Validate locally. Begin/recover and configuration replay read compatible ID
+   before dependent access. If startup proof is missing in begin/recover,
+   timestamp that operation's first successful compatible read at completion
+   (`FIRST_ACK`). Under the owner's continuous stable-power/no-external-reset
+   guarantee, wait at least 3 ms from that origin, rounded conservatively for
+   clock resolution. A read can succeed during load. TMP116's BUSY descriptions
+   conflict, and the approximate 1.5 ms POR time lacks a specified maximum.
+   Never use a failed operation's pending origin, a binding time or a caller
+   seed. Retain established proof while the guarantee holds.
+2. Obtain a new `0x04` word for each mutation or fresh acquisition. EUN bit
+   15 set latches `EEPROM_UNSAFE` immediately, including on diagnostics or
+   with BUSY also set. Ordinary recovery, shutdown, addressed reset and a
+   later diagnostic zero cannot clear it. The owner must power-cycle or
+   arrange external relock, invalidate and re-establish startup and ownership.
+   With EUN clear and BUSY bit 14 set, only a timed path may pace successful
+   `0x04` rereads within remaining work/deadline. An untimed try ends here.
+   No retry follows a failed transfer. A later observed BUSY (including
+   CONFIG bit 12) cancels the guard without itself implying drift. Renew it
+   before dependent work, or stop. Interference, reset, rebind or ambiguity
+   also ends the guard. Never carry it to the next operation.
+3. Read current stable fields/limits as needed for safe ordering. Establish
+   explicit shutdown. A settings candidate becomes the retained desired
+   target immediately before the **first mutating callback attempt**,
+   including this SD write. A pre-write refusal/cancellation preserves the
+   previous desired settings. Mark the profile dirty and discard current
+   conversion evidence when mutation begins. Accepted bind installs its
+   target earlier. Use canonical CONFIG words (stable bits 11:2, continuous
+   00 or shutdown 01, zero status, command and reserved bits).
+4. In guarded SD apply and read back the target stable fields and both limits.
+   Read and preserve supported unmanaged offset, or apply and read back an
+   explicitly managed target. Choose limit order using the known current
+   pair. For [0,10] → [15,20] write high first. When lowering high below old
+   low, write low first. For an unknown or inverted initial pair, require
+   full apply/recovery, establish a valid verified pair before entering
+   therm, and keep intermediate observations untrusted. On a transition to
+   therm, defer setting T/nA until the requested pair is established.
+   Separate writes
+   can transiently change comparator/pin behavior. Stop after failure and
+   retain the candidate and partial observations for explicit recovery.
+5. Consume old readiness with a CONFIG read in the expected SD profile.
+   Write the desired mode. Read CONFIG again, check **every** stable field,
+   feed alert bookkeeping and consume its readiness as the new generation
+   baseline. Only timely verification of the entire owned target commits a
+   new verified generation, clears dirty and admits initialized acquisition.
+   Failure at the last read leaves dirty even when every write ACKed.
+   If that CONFIG reports BUSY, keep its read effects, renew the guard at
+   `0x04` within the remaining budget and repeat final verification before
+   committing the generation.
+   Reconfiguration of an already initialized target can therefore leave
+   latest reads available with untrusted provenance. No rollback is implicit.
+
+Device reset uses the last verified stable settings with canonical MOD=00/01,
+zero status/reserved bits and bit 1 set on TMP117/M/N or TMP119 only. Discard
+startup/guard, initialization, live profile/alert trust and shot/ready
+evidence immediately before the single command attempt. Preserve desired
+settings and historical events/samples. A failed attempt leaves uncertain
+effects. After physical success wait at least 2 ms from completion, rounded
+up, before any post-reset observation. Establish a new postwait compatible
+ID/FIRST_ACK, observe startup wait, safe `0x04` and full profile readback.
+Report mismatch/unsafe/transport failure explicitly. Keep initialization
+clear until explicit begin/recover. No observed reset bit, factory image,
+EEPROM reload, EUN state or bus availability is assumed. [Safety policy
+and per-model evidence](eeprom-and-reset-policy.md).
+
+## Acquisition and read effects
+
+- **Latest.** A timely complete TEMP read publishes the word, including
+  possible startup sentinel `0x8000` or an old value after a settings
+  change. Record the generation and trust *at observation*. Latest alone
+  does not attribute the stored word to a conversion under those settings.
+  `0x8000` decodes to −256 °C and can be a confirmed saturated result.
+- **Continuous fresh.** Obtain this operation's safe `0x04`. If the current
+  generation lacks a baseline, the first destructive baseline read consumes
+  old readiness without publishing it. Otherwise use one unconsumed ready
+  observation of the same verified generation, or compare CONFIG and require
+  DATA_READY set. Then read TEMP once. A not-ready try preserves caller
+  output and cache. Blocking and cooperative fresh requests pace CONFIG
+  checks at the nominal CONV × AVG table period within the whole deadline.
+  Time, a changed temperature or a GPIO transition supplies no fresh proof.
+- **Owned one-shot.** Require desired shutdown, initialization and verified
+  clean settings locally. Read `0x04`, then CONFIG and compare all owned
+  stable CONFIG fields **before any CONFIG write**. Mismatch or unowned
+  MOD=11 latches dirty with zero CONFIG writes. Write guarded SD to abort
+  residual work, read and compare CONFIG in SD to consume stale readiness,
+  then write MOD=11 **once**. Keep desired shutdown. From physical trigger
+  completion, schedule the first readiness poll at AVG count × the applicable
+  single-conversion maximum, rounded up for the authoritative clock. Later
+  polls follow the bounded pacing policy. Require new DATA_READY for this
+  trigger, then read TEMP. MOD is never proof of completion or quiescence.
+- **Trigger ownership.** A terminally successful trigger permits MOD=01 or
+  11 as compatible with desired shutdown during the shot and after
+  completion, timeout or cancellation, until a successful explicit SD write
+   or invalidation/rebind. All other fields must still match. A late trigger
+  retains physical ownership and returns timeout. An ambiguous SD/trigger
+  invalidates trust and cannot establish verified shutdown or a new owned
+  trigger. Cancel/timeout performs no restore or retrigger. A later explicit
+  shot must pass its own preflight and SD/baseline boundary.
+- **Every CONFIG/TEMP reader.** Compare observed CONFIG against the expected
+  stable fields for the current step when known. On drift, retain its flags,
+  mark dirty and stop dependent acquisition even if ready was set. CONFIG
+  consumes DATA_READY and acknowledges alert-mode HIGH/LOW. OR captured
+  alert events into the bounded historical record before any later step.
+  A later zero cannot erase them. Therm HIGH is a live hysteresis level
+  and LOW is zero. TEMP consumes DATA_READY only. Diagnostic CONFIG may
+  retain eligible same-generation readiness. TEMP, ambiguous destructive
+  reads, reset or outside access consume or invalidate that evidence.
+  Failed destructive reads mark possible loss and preserve prior alerts.
+- **Publication.** A late successful read updates physical health (when
+  tracked), observed words and read effects, even in a failed composite.
+  It cannot publish a sample, replace the last good cache, mark initialized
+  or clear dirty. Late writes retain their physical effects. Cached samples
+  are immutable acquisition records. After reconfiguration, invalidation or
+  reset, expose them as historical. Sample-age validity requires the same
+  clock epoch and a known observation time, including a valid zero. Record
+  offset observations independently of conversion attribution. Only a new
+  confirmed conversion under the verified generation may be attributed to
+  its changed offset. Never add the chip's offset to TEMP again.
+
+For example, a cached fresh generation-7 sample at raw `0x0C80` remains
+25 °C with its generation-7 offset and observation time after a verified
+offset change creates generation 8. A latest read of the same bits under
+generation 8 reports `freshConversion=false`. A later generation-8 ready
+observation plus a timely TEMP read can publish a fresh 25 °C again.
+
+A ready bit can coalesce conversions. An MSB-first combined read is required,
+but TEMP byte latching during a simultaneous continuous update is unspecified.
+Under exclusive ownership a completed one-shot in shutdown has a stable TEMP.
+Missed events return not-ready or timeout. The polling intervals, timing
+conditions and unresolved TMP117 DATA_READY observation are recorded in
+[conversion behavior and vectors](device-behavior.md).
