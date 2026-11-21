@@ -10,8 +10,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 VERSION_PATTERN = re.compile(r"(0|[1-9][0-9]{0,4})\.(0|[1-9][0-9]{0,4})\.(0|[1-9][0-9]{0,4})")
-# The repository keeps this one scalar on a line so other YAML stays untouched.
-IDF_VERSION_LINE = re.compile(rb"^version:([^\r\n]*)", re.MULTILINE)
+# Keep the version on the first content line so it cannot be part of another scalar.
+IDF_VERSION_LINE = re.compile(rb"""^(?:version|"version"|'version')[ \t]*:([^\r\n]*)""", re.MULTILINE)
 IDF_VERSION_VALUE = re.compile(rb'[ \t]+"[^"\r\n]*"([ \t]+(?:#[^\r\n]*)?)?')
 
 
@@ -70,6 +70,9 @@ def sync_outputs(check_only: bool) -> bool:
     if len(fields) != 1:
         raise ValueError(f"{idf}: expected exactly one top-level version field")
     field = fields[0]
+    leading_lines = current_idf[:field.start()].splitlines()
+    if any(line.strip() and not line.lstrip().startswith(b"#") for line in leading_lines):
+        raise ValueError(f"{idf}: expected the version on the first content line")
     value = IDF_VERSION_VALUE.fullmatch(field[1])
     if value is None:
         raise ValueError(f"{idf}: expected a double-quoted version on one line")
@@ -86,22 +89,26 @@ def sync_outputs(check_only: bool) -> bool:
     except FileNotFoundError:
         current_header = None
 
-    outputs = (
+    candidates = (
         (header, current_header, render_version_header(version, components)),
         (idf, current_idf, expected_idf),
     )
-    clean = True
-    for path, current, expected in outputs:
-        if current == expected:
-            continue
-        clean = False
-        if check_only:
+    updates = [(path, current, expected) for path, current, expected in candidates if current != expected]
+    if check_only:
+        for path, _, _ in updates:
             print(f"Out of date: {path}", file=sys.stderr)
-        else:
-            path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_bytes(expected)
-            print(f"Updated: {path}")
-    return clean
+        return not updates
+
+    # Check existing mirrors for writability before changing either one.
+    for path, current, _ in updates:
+        if current is not None:
+            with path.open("r+b"):
+                pass
+    for path, _, expected in updates:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(expected)
+        print(f"Updated: {path}")
+    return True
 
 
 def main() -> int:

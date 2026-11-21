@@ -166,3 +166,45 @@ were **NOT RUN**. Stages 34–36 own the link cases, stage 42 owns the installed
 and extracted package tests, and stages 40–41 own fixture evidence. Remote CI
 was **NOT RUN** per the stage 43 checkpoint policy. The phase-b result is
 pending the wrapper commit and upstream check.
+
+## Phase c review, 2026-11-21
+
+**PARTIAL.** Fresh review and fixes are complete. Phase d owns final
+acceptance, the report index and the progress row.
+
+The review began on clean `main` at
+`7ac4ab14d91e455529d076c39c7765534d8928ce`, with 0/0 divergence from
+`origin/main`. Parent `43ffbbb0f5710614265395bd8328bb64066dc12b`, subject
+and all 19 paths matched `commit_20261121-222703.json`. The wrapper logged
+that commit at 22:36:32 and verified upstream equality at 22:36:35 Prague
+time. No unexpected changes or local CI workflows were present. The selected
+TMP1x2 and OPT4001 files still matched their pinned blobs at the local
+revisions above. Both peer MIT notices and the retained license shared
+blob `c2240ead2e094fb7de9622cc25c3ba68f4d05acf`.
+
+The build reviewer verified the portable target, the out-of-line version
+symbol, C++17 propagation and tests-off example. ESP-IDF 5.5.5's early
+requirements pass returns from `idf_component_register` before it reaches
+the compile feature declaration. Ordinary registration sets `COMPONENT_LIB`
+before that declaration. The package reviewer checked the version authority,
+package file selection and source attribution. Both reviews are complete.
+
+| Confirmed finding | Correction and regression |
+| --- | --- |
+| The read-only check accepted a literal `version: "0.1.0"` inside a multiline description while Component Manager loaded the actual `"version": "9.8.7"`. Duplicate version keys with quotes or space before the colon also escaped detection. | Require the double-quoted version value on the first content line and recognize these duplicate key spellings. Preserve leading comments, inline comments and CRLF. Both CLI checks reject the reproduced false pass without modifying the scratch mirrors. |
+| With a changed authority and a read-only ESP-IDF manifest on Windows, `sync` changed the header before failing. | Check both drifted existing mirrors for write access before changing either. The reproduced failure now leaves both mirrors intact. Restoring write access and rerunning `sync` repairs both. |
+
+The new [version regressions](../../scripts/test_generate_version.py) exercise
+both findings, preserve the dependency-free Python tooling and run through
+`version_generator_regressions` in CTest. [Testing guide](../testing.md).
+
+| Check | Phase-c result |
+| --- | --- |
+| `cmake -S . -B build-tests-phase-c-final -G "MinGW Makefiles" -DTMP11X_BUILD_TESTS=ON -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_STANDARD=11 -DCMAKE_CXX_EXTENSIONS=OFF -DCMAKE_EXPORT_COMPILE_COMMANDS=ON`, then build and `ctest --test-dir build-tests-phase-c-final --output-on-failure` | PASS, CMake/CTest 4.0.1, GCC 15.1.0 and Python 3.12.10. All six registered cases passed, including three new version regression cases and the 31 stage-5 regressions. Independent Release negative builds still rejected the wrong linked version and inconsistent numeric constants. |
+| Renamed-source tests-off consumer in `build-consumer-phase-c-final` with both `CMAKE_DISABLE_FIND_PACKAGE_Python3` and `CMAKE_DISABLE_FIND_PACKAGE_Git` set | PASS. The copied consumer linked and printed `0.1.0`, with zero CTest registrations. Standalone `g++ -std=c++17 -pedantic-errors -Wall -Wextra -Werror -fsyntax-only` header compile passed. `nm -C` on the reviewed static library showed an external `TMP11x::version()` symbol. |
+| `python -B scripts/test_generate_version.py -v`, `python -B build-version-phase-b/verify_generator.py`, generator `sync` and `check`, thin checker | PASS. The baseline and current CLI were compared on the malformed mirror and the Windows write failure in ignored scratch copies. Missing header reproduction, independent drift, repeat sync and invalid authority still passed their existing checks. |
+| `scripts/pio.cmd package pack --output build-package-phase-c-final/TMP11x.tar.gz` and `tar -tf build-package-phase-c-final/TMP11x.tar.gz` | PASS with Core 6.2.0 and the same blob-verified offline SPDX response as phase b. The ten regular files matched the checkout byte for byte, including the revised CMake file. SHA-256 `ccd758b9b2179867f1cd7d1e38f221a5c3b490a800a088a880627d3a3585e17d`. ESP-IDF Component Manager 2.5.2 parsed version `0.1.0` in component upload mode and selected the same ten regular files. |
+| `python -B scripts/check_promptset.py`, `python -B scripts/check_references.py` and local links and whitespace | PASS, 55 stages and 14 pinned PDFs. The wrapper owns the staged diff check, commit and upstream verification for this review. |
+
+MCU links, extracted and relocated install qualification, remote CI and
+physical qualification remain **NOT RUN** under their named owners.

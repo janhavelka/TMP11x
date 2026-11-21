@@ -21,6 +21,7 @@ CTest registers these cases when `TMP11X_BUILD_TESTS=ON`.
 | `version_cpp` | Rebuild the version string from its numeric constants and compare it with the header string and the linked library's version. The executable checks its results in Release builds. |
 | `version_generator_check` | Compare `Version.h` and the ESP-IDF manifest's version with `library.json` using the generator's check command. |
 | `version_sync` | Run the delegated version check through the checker script. |
+| `version_generator_regressions` | Exercise IDF version drift and an unwritable mirror. |
 | `register_ledger` | Validate the six-model register ledger and its references. |
 | `register_ledger_regressions` | Exercise the ledger validator against valid and deliberately inconsistent inputs. |
 
@@ -48,9 +49,9 @@ when it matches the version in the header.
 
 From the checkout root, edit the `version` in `library.json` and run `sync`
 to update the generated header and the top-level version in
-`idf_component.yml`. Use three decimal components in `X.Y.Z` form, each in
-the range 0 through 65535. Both check commands are read-only and exit nonzero
-on drift.
+`idf_component.yml`. Keep the double-quoted IDF version on the first content
+line. Use three decimal components in `X.Y.Z` form, each in the range 0
+through 65535. Both check commands are read-only and exit nonzero on drift.
 
 ```sh
 python scripts/generate_version.py sync

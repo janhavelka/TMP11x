@@ -27,6 +27,8 @@ if(TMP11X_BUILD_TESTS)
     COMMAND "${Python3_EXECUTABLE}" -B "${CMAKE_CURRENT_SOURCE_DIR}/scripts/generate_version.py" check)
   add_test(NAME version_sync
     COMMAND "${Python3_EXECUTABLE}" -B "${CMAKE_CURRENT_SOURCE_DIR}/tools/check_version_sync.py")
+  add_test(NAME version_generator_regressions
+    COMMAND "${Python3_EXECUTABLE}" -B "${CMAKE_CURRENT_SOURCE_DIR}/scripts/test_generate_version.py")
   add_test(NAME register_ledger
     COMMAND "${Python3_EXECUTABLE}" -B "${CMAKE_CURRENT_SOURCE_DIR}/tools/check_register_ledger.py")
   add_test(NAME register_ledger_regressions
