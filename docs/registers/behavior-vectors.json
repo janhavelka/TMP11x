@@ -111,7 +111,7 @@
       "conversion_window_slack_ms": 10,
       "one_shot_repeat_interval_ms": 5,
       "startup_wait_from_first_ack_ms": 3,
-      "clock": "Use the authoritative monotonic clock at transfer completion. For a clock with step q, round a scheduled wait d upward to ceil(d/q)*q. Example timestamps are clock ticks expressed in milliseconds. A fixed operation deadline covers preflight, waits, callbacks and result acquisition. Never extend it at a trigger, baseline or poll.",
+      "clock": "Use the authoritative monotonic clock at transfer completion. Examples use exact tick-aligned events unless specified. For a wait d after a known tick-aligned completion t, the due tick is t + ceil(d/q)*q for clock step q. If t is a floor-clock reading with unknown sub-tick phase, use t + q as the upper bound on physical completion before adding the rounded wait. The fixed deadline still covers preflight, waits, callbacks and result acquisition.",
       "continuous": "The nominal conversion-window budget is max(1.25 * cycle, active upper estimate) + 10 ms. Default readiness checks are separated by one nominal cycle from the verified generation baseline or last completed poll. An overdue poll can run once if budget permits; never replay missed polls. An untimed attempt has caller-owned pacing.",
       "one_shot": "Use active upper estimate + 10 ms for a default conversion-window budget, independent of CONV. First poll follows successful trigger completion by the rounded-up active upper estimate. If ready is clear, pace subsequent polls from the completed poll. No retrigger. The 10 ms slack is finite and cannot guarantee that a late owner or a slow bus can finish.",
       "deadline": "conversion_window_budget_ms is the unrounded default duration used to size the conversion portion of a whole-operation budget. Round that duration up to clock resolution when deriving a default cap. The schedule cases state any caller-selected whole-operation cap explicitly. An operation must separately admit all required preflight and terminal transfers under its absolute cap. A due time past the deadline expires without a transfer. Clip every callback to the remaining budget and resample after it. A late physical success supplies only observed evidence and its physical transport outcome.",
@@ -232,6 +232,20 @@
         "new_startup_guard_due_ms": 56,
         "guard_read_word": "0x8000",
         "expect": "Read 0x04 at or after t=56. EUN=1 refuses all subsequent writes. Neither the 2 ms reset interval nor the separate policy wait establishes relock or EEPROM reload. TMP116 has no corresponding command."
+      },
+      {
+        "id": "reset-and-first-ack-between-ticks",
+        "sources": ["SNOSD82D pp.7,18,28", "library FIRST_ACK and floor-clock policy"],
+        "conditions": "TMP117 with stable power. The driver sees whole milliseconds rounded down. Fractional times are visible only to the test observer. The original deadline is tick 57.",
+        "clock_step_ms": 1,
+        "reset_physical_done_ms": 50.9,
+        "reset_clock_reading_ms": 50,
+        "earliest_post_reset_read_ms": 53,
+        "first_ack_physical_done_ms": 53.8,
+        "first_ack_clock_reading_ms": 53,
+        "startup_guard_due_ms": 57,
+        "absolute_deadline_ms": 57,
+        "expect": "Tick 52 gives only 1.1 ms after reset. Read no earlier than tick 53. The compatible read completes before tick 54, so the 3 ms FIRST_ACK wait permits the guard at tick 57. With zero remaining budget, issue zero guard reads and zero writes."
       }
     ]
   },
@@ -350,6 +364,7 @@
         {"given": "guard reads 0x4000 repeatedly until deadline", "outcome": "paced guard reads only; timeout", "config_writes": 0},
         {"given": "guard reads 0x4000 then 0x0000 before deadline", "outcome": "preflight CONFIG only after safe guard"},
         {"given": "guard read fails", "outcome": "stop without retry", "config_writes": 0},
+        {"given": "0x04 was safe, but preflight CONFIG is 0xB620 (HIGH, DATA_READY, EEPROM_Busy and matching SD stable fields)", "outcome": "retain HIGH and record consumed readiness, invalidate the guard; no SD write or trigger until a timed 0x04 recheck establishes locked and idle", "dirty_from_busy_alone": false},
         {"given": "desired 0x0620, preflight stable fields 0x0640", "outcome": "AVG drift; latch dirty", "config_writes": 0},
         {"given": "preflight MOD=11 without retained owned trigger", "outcome": "latch dirty", "config_writes": 0},
         {"given": "earlier terminally successful trigger; completion, cancellation or timeout retained provenance", "preflight_MOD_permitted": ["01","11"], "outcome": "compare other stable fields, explicitly enter SD, baseline, then trigger once on this new request"},
@@ -361,7 +376,7 @@
     {
       "id": "continuous-generation-change",
       "source": ["blocks", "flags", "startup_and_guard", "words"],
-      "condition": "Repeat separately for a limit-only change, a routing/polarity-only change and AVG/CONV changes. Old generation G is verified in CC. A conversion can complete as soon as CC restarts.",
+      "condition": "Repeat separately for a limit-only change, a routing/polarity-only change and AVG/CONV changes. Old generation G is verified in CC. Both generations use alert mode. A conversion can complete as soon as CC restarts.",
       "steps": [
         {"event": "admit, validate requested profile, read operation-local 0x04", "guard_word": "0x0000"},
         {"event": "enter SD explicitly", "new_generation_trusted": false},
@@ -371,7 +386,7 @@
         {"event": "final CONFIG readback", "stable_fields_match": true, "returned_HIGH_LOW_ready": [1,0,1], "retained_alert": "HIGH", "baseline_generation": "G+1", "fresh": false},
         {"event": "later guarded acquisition observes new ready, reads TEMP once successfully", "sample_generation": "G+1", "fresh": true}
       ],
-      "alternate": "A failed or mismatched final readback leaves the profile dirty and supplies no new trusted baseline. A single discarded block after a live settings rewrite has unknown provenance."
+      "alternate": "A failed or mismatched final readback leaves the profile dirty and supplies no new trusted baseline. If that CONFIG instead matches stable fields but reports EEPROM_Busy, record its read effects and invalidate the guard. Resume guarded verification only after a safe 0x04 read within the deadline. A single discarded block after a live settings rewrite has unknown provenance."
     },
     {
       "id": "continuous-try-fresh-and-diagnostics",
@@ -388,6 +403,8 @@
       ],
       "alternates": [
         {"given": "try-fresh guard returns busy with EUN=0", "guard_reads": 1, "CONFIG_reads": 0, "fresh": false},
+        {"given": "0x04 was safe, but the untimed readiness poll returns 0xB220 under desired CC 0x0220", "outcome": "capture HIGH and consumed ready, invalidate the guard on CONFIG.Busy and return busy without waiting", "TEMP_reads": 0, "fresh": false, "dirty_from_busy_alone": false},
+        {"given": "desired CC 0x0220, guarded poll returns 0xA240 (HIGH, DATA_READY and different AVG)", "outcome": "retain HIGH with uncertain generation, discard fresh evidence and latch dirty", "TEMP_reads": 0, "fresh": false},
         {"given": "retained readiness followed by diagnostic TEMP", "outcome": "consume/invalidate outstanding result evidence; a later try cannot reuse it"},
         {"given": "failed CONFIG may have consumed flags", "outcome": "mark possible alert and readiness loss; keep existing sticky events and invalidate ambiguous ready evidence"},
         {"given": "failed TEMP may have consumed readiness", "outcome": "invalidate ambiguous ready evidence; keep comparator observations; do not dirty settings solely for a failed read"},
@@ -401,7 +418,7 @@
     {
       "id": "ready-during-config-read",
       "source": ["flags", "tmp117_race"],
-      "condition": "Reported TMP117 continuous-mode interleaving with DR/Alert routing. Applicability to other models and the exact internal clear edge remain unknown.",
+      "condition": "Reported TMP117 continuous-mode interleaving. The author describes DATA_READY routing on bit 2 but quotes 0x0040. Table 7-6 assigns DR/Alert to 0x0004 and 0x0040 to AVG. Actual configuration, applicability to other models and the exact internal clear edge remain uncertain.",
       "steps": [
         {"event": "begin CONFIG read while ready is clear"},
         {"event": "conversion overlaps transaction; ready indication pulses on ALERT", "returned_ready": 0},

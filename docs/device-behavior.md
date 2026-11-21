@@ -63,18 +63,25 @@ TMP117 specifies **one-shot mode**. Using its row for continuous active time
 is an extrapolation. TMP119 specifies **no internal averaging**. On TMP117
 and TMP119 the table conditions are −55 to +70 °C at 1.7–5.5 V, or −55 to
 +150 °C at 1.8–5.5 V. Typical values on all three are at +25 °C and 3.3 V.
-The multi-conversion rows are arithmetic bounds for the constituent conversions.
-They do not include controller time. Increasing AVG trades a longer active
-interval for more samples per result. The precision, current and thermal
-conditions of the exact BOM part still apply.
+The multi-conversion rows assume successive conversions under those conditions
+with no added block overhead. They exclude controller time. Increasing AVG
+trades a longer active interval for more samples per result. The precision,
+current and thermal conditions of the exact BOM part still apply.
 [TMP116 p.5](reference/source/TMP116-Digital-Temperature-Sensor-Datasheet-SBOS740A.pdf#page=5),
 [TMP117 p.6](reference/source/TMP117-Digital-Temperature-Sensor-Datasheet-SNOSD82D.pdf#page=6),
 [TMP119 p.7](reference/source/TMP119-Digital-Temperature-Sensor-Datasheet-SNIS236.pdf#page=7).
 
 ## Polling and deadlines
 
-Use the owner's authoritative monotonic clock. Round a scheduled interval
-up to a whole clock tick. Fix the whole-operation deadline at admission.
+Use the owner's authoritative monotonic clock. For a wait measured from
+callback completion, schedule the first tick at or after the latest possible
+completion time plus the required interval. For a known tick-aligned completion,
+round the interval up to whole ticks. If a floor clock reports tick `t` with
+resolution `q` and the sub-tick phase is unknown, use `t + q` as the upper
+bound for scheduling that wait. This applies to startup, addressed reset and paced
+conversion polls. For example, a reset finishing at 50.9 ms reads as 50 ms on
+a 1 ms floor clock. Tick 53 is safe for the 2 ms wait. Fix the whole-operation
+deadline at admission.
 It covers guard, preflight, trigger or baseline, wait, CONFIG polls and TEMP
 read, including time inside each callback. A callback gets at most the
 remaining budget. Re-read the clock on return. A physical success can
@@ -94,8 +101,8 @@ helper when its clock fails to advance. Keep the bus available between steps.
 The 25% margin, 10 ms slack and 5 ms OS poll interval are library policy.
 For a whole-operation budget, allow separately for setup and transfers at
 admission. A wait origin never renews that budget. For example, on TMP117
-at AVG 01 an OS trigger completing at 104 ms gives an expected duration of
-124 ms and first CONFIG eligibility at 244 ms on a 1 ms clock. A deadline
+at AVG 01 an OS trigger completing exactly at 104 ms gives an expected
+duration of 124 ms and first CONFIG eligibility at 244 ms on a 1 ms clock. A deadline
 of 240 ms precludes that poll. In CC at CONV 010 / AVG 01 the nominal
 period is 250 ms. The corresponding window is 323 ms on that clock
 (`max(312.5, 140) + 10`, rounded up). A zero-ready poll can therefore
@@ -146,7 +153,11 @@ and reuse it only under uninterrupted exclusive ownership within that operation.
 EUN=1 refuses immediately, including a proposed shutdown. On BUSY=1 with
 EUN=0, a timed operation can make paced 0x04 reads within its deadline and
 work cap. An untimed operation returns busy/not-ready. A failed transfer ends
-the attempt. CONFIG would consume flags and cannot substitute for 0x04.
+the attempt. If any subsequent CONFIG read returns EEPROM_Busy=1, retain its
+flag observations and invalidate the operation's guard. A timed path must
+re-establish locked/idle at 0x04 before another write or fresh acquisition
+step. An untimed attempt returns busy. BUSY alone leaves stable-field trust
+unchanged. CONFIG would consume flags and cannot substitute for 0x04.
 [Lifecycle and guard contract](prompts/ENGINEERING.md).
 
 Accepted bind/rebind, end/unbind, reported power loss/reset or a driver reset
@@ -213,17 +224,23 @@ ready bit under trusted continuous settings establishes only that an update
 occurred since the baseline. Another update can occur between CONFIG and
 TEMP or during the two-byte TEMP transfer. Use one combined pointer and word
 read. TI does not specify a TEMP byte latch across a simultaneous update.
+Attributing the two received bytes to one CC result assumes word coherence
+if the read overlaps an update.
 A completed owned one-shot has a stable shutdown result when the owner
 excludes further writes and conversions.
 
-A TMP117 user observed a conversion while CONFIG was being read. The read
-returned ready clear, the routed ALERT deasserted and the next poll also
+A TMP117 user reported a conversion while CONFIG was being read. The read
+returned ready clear, the observed ALERT pin deasserted and the next poll also
 returned clear. TI recommended one-shot for capturing individual readings.
 This establishes a possible missed indication on TMP117. The bit-level
 clear edge, frequency and applicability to other parts remain unresolved.
+The report describes routing bit 2, but also gives CONFIG as `0x0040`.
+The TMP117 register map assigns DR/Alert to `0x0004`. Use the reported
+interleaving as a possible observation and the register map for encoding.
 Sparse polls limit traffic and can still miss an indication. On a missed
 event, a later latest-value read can report the word with freshness unproven.
-[TI E2E thread 1019457](https://e2e.ti.com/support/sensors-group/sensors/f/sensors-forum/1019457/tmp117-data_ready-flag-cleared-incorrectly-if-data-becomes-ready-during-read-of-configuration-register).
+[TI E2E thread 1019457](https://e2e.ti.com/support/sensors-group/sensors/f/sensors-forum/1019457/tmp117-data_ready-flag-cleared-incorrectly-if-data-becomes-ready-during-read-of-configuration-register),
+[TMP117 Table 7-6](reference/source/TMP117-Digital-Temperature-Sensor-Datasheet-SNOSD82D.pdf#page=27).
 
 ### Managed acquisition boundaries
 
@@ -260,11 +277,19 @@ event, a later latest-value read can report the word with freshness unproven.
    the sequence depends on its flags. Outside access requires invalidation
    and verified recovery. Cached results preserve their original provenance.
 
+During acquisition and apply verification, compare each CONFIG observation
+with the stable fields expected at that step, including the owned-shot MOD
+exception. Drift on a baseline,
+readback or ready poll latches dirty and ends the operation even if DATA_READY
+is set. Retain the flags with their observed mode and provenance. Publish no
+sample from that observation.
+
 ## Comparator and pin evidence
 
 Alert mode (T/nA=0) latches HIGH on a result strictly above THIGH and LOW on a
-result strictly below TLOW. Equality sets neither flag. Returning in range
-does not clear an event. CONFIG acknowledges the flags. A later out-of-range
+result strictly below TLOW. Equality with a limit does not set its corresponding
+flag. Returning in range leaves a latched event intact. CONFIG acknowledges
+the flags. A later out-of-range
 conversion can assert them again even if temperature never re-entered the
 window. Software retains returned events until explicit bus-silent consumption.
 A later zero cannot erase a pending event. Store the read source, generation

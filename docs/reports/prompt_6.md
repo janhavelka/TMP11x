@@ -1,6 +1,6 @@
 # Prompt 6 — Conversion timing, freshness and alerts
 
-**PARTIAL. Phases a and b completed on 2026-11-21.** Prompt 6 is the first unfinished
+**PARTIAL. Phases a through c completed on 2026-11-21.** Prompt 6 is the first unfinished
 entry in the sequence. Its prerequisites are prompts 3 and 5. The clean entry
 revision was `4a8e4dcb2d4993b361b4d1f2e8081a6cdc1a37cf` on `main`,
 equal to the local `origin/main`. Prompt 5's acceptance request matches the
@@ -188,3 +188,38 @@ the pinned documents with Python 3.12.10 and PyMuPDF 1.27.2.2. Git 2.52.0.window
 reported a clean index. The wrapper owns staging, commit, push and upstream
 verification for this phase. Phase c owns the fresh-session review. Driver
 tests, MCU links, remote CI and physical qualification were not run.
+
+## Phase c review
+
+The reviewed revision was `bf016d2c403553f8b0d7b1107514e31b6d8fe133` on
+clean `main`. Its message and four paths matched the phase b request.
+The wrapper recorded upstream verification at 16:37:09 Prague time.
+Two read-only reviewers independently examined timing and event semantics.
+The lead checked their findings against the pinned tables, research artifacts
+and stages 7, 19 and 21. The two sibling checkouts and their GitHub main
+revisions matched the phase a comparison.
+
+| Finding | Correction and evidence |
+|---|---|
+| Rounding the interval alone can shorten a physical wait when callback completion falls between clock ticks. | The scheduling rule now accounts for the resolution of the completion timestamp. In `reset-and-first-ack-between-ticks`, reset finishes at 50.9 ms. Tick 53 permits the next read. FIRST_ACK at 53.8 ms permits the guard at tick 57, where the original deadline leaves zero transfer budget. The aligned examples still use their original due times. [Reset command](../reference/source/TMP117-Digital-Temperature-Sensor-Datasheet-SNOSD82D.pdf#page=28), [vectors](../registers/behavior-vectors.json). |
+| A safe 0x04 at entry does not cover a later CONFIG observation of busy or changed settings. | `0xB620` at SD preflight and `0xB220` on a CC readiness poll invalidate the guard while preserving HIGH. An untimed attempt stops. A timed path must recheck 0x04 before proceeding. `0xA240` under desired `0x0220` reveals AVG drift and latches dirty. All three suppress fresh publication at that observation. [CONFIG fields](../reference/source/TMP117-Digital-Temperature-Sensor-Datasheet-SNOSD82D.pdf#page=27), [trust contract](../prompts/19_config-trust.md). |
+| A continuous readback fixture retained HIGH without specifying the comparator mode. The equality wording also combined two independent limit comparisons. | Both generations of the sticky-HIGH fixture now explicitly use alert mode. Each comparator applies a strict inequality against its own threshold. The therm trace retains HIGH as a hysteresis level across a partial-block abort. [TMP116 pp.15–16](../reference/source/TMP116-Digital-Temperature-Sensor-Datasheet-SBOS740A.pdf#page=15), [behavior contract](../device-behavior.md). |
+| The TMP117 race report gives incompatible routing details. | The author describes bit 2 but gives CONFIG as `0x0040`, which selects AVG bit 6. The register map gives DR/Alert as `0x0004`. The trace retains the reported pin transition and two zero observations. Actual routing, exact clear edge and TEMP byte coherence remain open. Thread 909104 was also accessible. The linked TMP116 thread 822036 still returned HTTP 403. [Reported capture](https://e2e.ti.com/support/sensors-group/sensors/f/sensors-forum/1019457/tmp117-data_ready-flag-cleared-incorrectly-if-data-becomes-ready-during-read-of-configuration-register), [TMP117 register map](../reference/source/TMP117-Digital-Temperature-Sensor-Datasheet-SNOSD82D.pdf#page=27). |
+
+Focused Python 3.12.10 and PyMuPDF 1.27.2.2 assertions passed on the
+reviewed worktree. Direct PDF extraction matched 96 nominal cycle cells,
+32 TMP116 standby notes and the single-conversion rows underlying all 36
+derived active values. Arithmetic checks covered five scheduling cases,
+three clock origins, three new CONFIG words, 11 signed words, 14 quantization
+cases, three offset clamps, two complete averaging blocks, the partial
+block and eight pin routes. The trace review also checked both comparator
+modes, owned-shot provenance after cancellation or ambiguous transfers,
+diagnostic read order and F13 invalidation with changed or repeated shadows.
+
+`python -B scripts/check_references.py` passed for 14 pinned PDFs.
+`python -B tools/check_register_ledger.py` passed for six selected models
+and `python -B tools/test_check_register_ledger.py` passed all 22 tests.
+`python -B scripts/check_promptset.py` passed for 55 stages. Local link,
+PDF page and Git whitespace checks passed. Phase d owns final acceptance
+and the progress/index update. Driver tests, MCU links, remote CI and
+physical qualification were not run in phase c.

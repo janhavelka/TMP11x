@@ -44,7 +44,7 @@
         "reset_typ_ms": 1.5,
         "reset_max_ms": null,
         "writes": "All register writes ignored during the initial load. Reads are possible.",
-        "policy": "When startup proof is absent, begin/recover timestamps completion of its first successful compatible read. Allow 3 ms from FIRST_ACK (library policy, rounded up), require continuous stable power and verify owned writes. Reuse proof until invalidated. Each managed mutation or fresh acquisition also checks 0x04 for locked and idle."
+        "policy": "When startup proof is absent, begin/recover timestamps completion of its first successful compatible read. Wait at least 3 ms from FIRST_ACK, allowing for clock resolution (library policy), require continuous stable power and verify owned writes. Reuse proof until invalidated. Each managed mutation or fresh acquisition also checks 0x04 for locked and idle."
       },
       "registers": [
         {
@@ -138,7 +138,7 @@
               "factory": "0",
               "nvm_mask": 0,
               "role": "status",
-              "read": "Observed busy during programming. Startup indications disagree between the overview and field tables. Mirrors EEPROM_UL bit 14.",
+              "read": "Observed busy during programming. Startup indications disagree between the overview and field tables. Mirrors EEPROM_UL bit 14. Observing busy invalidates the current operation's locked/idle guard.",
               "write": "No writable field.",
               "encodings": {
                 "0": "busy flag clear",
@@ -546,7 +546,7 @@
         "reset_typ_ms": 1.5,
         "reset_max_ms": null,
         "writes": "CONFIG and limit writes ignored during the initial load. Reads are possible. Response to an OFFSET write in this interval is unknown.",
-        "policy": "When startup proof is absent, begin/recover timestamps completion of its first successful compatible read. Allow 3 ms from FIRST_ACK (library policy, rounded up), require continuous stable power and verify owned writes. Reuse proof until invalidated. Each managed mutation or fresh acquisition also checks 0x04 for locked and idle."
+        "policy": "When startup proof is absent, begin/recover timestamps completion of its first successful compatible read. Wait at least 3 ms from FIRST_ACK, allowing for clock resolution (library policy), require continuous stable power and verify owned writes. Reuse proof until invalidated. Each managed mutation or fresh acquisition also checks 0x04 for locked and idle."
       },
       "registers": [
         {
@@ -640,7 +640,7 @@
               "factory": "0",
               "nvm_mask": 0,
               "role": "status",
-              "read": "Observed busy during programming. The POR overview and field table describe busy during startup load. Mirrors EEPROM_UL bit 14.",
+              "read": "Observed busy during programming. The POR overview and field table describe busy during startup load. Mirrors EEPROM_UL bit 14. Observing busy invalidates the current operation's locked/idle guard.",
               "write": "No writable field.",
               "encodings": {
                 "0": "busy flag clear",
@@ -1072,7 +1072,7 @@
         "reset_typ_ms": 1.5,
         "reset_max_ms": null,
         "writes": "CONFIG and limit writes ignored during the initial load. Reads are possible. Response to an OFFSET write in this interval is unknown.",
-        "policy": "When startup proof is absent, begin/recover timestamps completion of its first successful compatible read. Allow 3 ms from FIRST_ACK (library policy, rounded up), require continuous stable power and verify owned writes. Reuse proof until invalidated. Each managed mutation or fresh acquisition also checks 0x04 for locked and idle."
+        "policy": "When startup proof is absent, begin/recover timestamps completion of its first successful compatible read. Wait at least 3 ms from FIRST_ACK, allowing for clock resolution (library policy), require continuous stable power and verify owned writes. Reuse proof until invalidated. Each managed mutation or fresh acquisition also checks 0x04 for locked and idle."
       },
       "registers": [
         {
@@ -1166,7 +1166,7 @@
               "factory": "0",
               "nvm_mask": 0,
               "role": "status",
-              "read": "Observed busy during programming. The POR overview and field table describe busy during startup load. Mirrors EEPROM_UL bit 14.",
+              "read": "Observed busy during programming. The POR overview and field table describe busy during startup load. Mirrors EEPROM_UL bit 14. Observing busy invalidates the current operation's locked/idle guard.",
               "write": "No writable field.",
               "encodings": {
                 "0": "busy flag clear",
