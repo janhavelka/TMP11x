@@ -24,6 +24,7 @@ containing commit without a self-referential hash inside that commit.
 | [45 — preparation and silicon audit](prompt_45.md) | COMPLETE | Independent review of stages 1–7, four verified corrections and repeated archive, ledger, vector and safety checks | Stage 8 consumes the audit. Source unknowns, optional TI access gaps and physical qualification remain open. |
 | [8 — public API and variant architecture](prompt_8.md) | COMPLETE | Two independently reviewed contracts, six BOM model gates and 46 API, job, CLI and application mappings | Stage 9 owns deadline and result details. Stage 46 reviews both stages before source implementation. |
 | [9 — cooperative ownership, timing and results](prompt_9.md) | COMPLETE | Eleven acceptance traces cover clipped deadlines, bus budgets, freshness, partial effects and exactly-once results | Stage 46 audits stages 8–9. Driver tests, MCU links, CI and physical qualification remain stage-owned. |
+| [46 — public API and cooperative owner contract audit](prompt_46.md) | COMPLETE | Independent review, guarded comparator transitions, unmanaged offset invalidation, passive inspection and retained late read evidence | Stage 10 consumes the audit. Silicon unknowns and physical qualification remain open. |
 
 See [PROGRESS.md](../prompts/PROGRESS.md) for scheduled audit stages 45–55 and
 current execution status. Hardware qualification remains NOT RUN and the

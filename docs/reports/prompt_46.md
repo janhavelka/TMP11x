@@ -213,3 +213,50 @@ consumes it through the existing `job-lifecycle` dependency.
 Native driver tests, MCU links, remote CI and physical qualification were
 NOT RUN. Phase d owns final acceptance, the report index and the progress
 row. The silicon uncertainties in phase a remain open.
+
+## Phase d acceptance, 2026-11-21
+
+**COMPLETE.** Stage 46 delivers the `audit-8-9` handoff. The two independent
+phase-c reviews are recorded above. Acceptance began on clean `main` at
+`2ba9c775fea013498fd05bdcd6a464b69b47033e`, with zero divergence from the
+local `origin/main`. Git confirmed the parent `2c7572989577cc1d38d579139633b6e9ec2a15f7`,
+subject and all 13 paths against the phase-c commit request. The wrapper
+logged upstream equality at 21:50:02 Prague time. The phase-d commit and
+push are pending wrapper processing.
+
+Rechecked the [public API](../api-contracts.md), [architecture](../architecture.md)
+and [owner contract](../owner-operations.md) against the [pinned TI sources](../reference/manifest.json),
+[register ledger](../registers/tmp11x.json) and [literal vectors](../registers/behavior-vectors.json).
+The four peer checkouts remain clean at the phase-a local revisions. All
+21 peer blobs selected for this acceptance match their phase-a source pins.
+The documented coexistence sketch shares an application bus at distinct
+addresses and maps each adapter outcome to its package's own status.
+The clock clipping, passive inspection and dirty-state precedents were used
+as design evidence. The TMP1x2 register map and scheduler remain outside
+the TMP11x core.
+
+| Scope | Accepted evidence |
+| --- | --- |
+| Public surface, model and register ownership | Matched all 46 ordered R/F/X rows in the architecture, feature matrix and coverage inventory. The six BOM selections use three maps. TMP116/N exposes EEPROM3 at `0x07` and refuses offset and addressed reset before I²C. The other models expose offset there and support the guarded addressed reset path. ID-first incompatible dumps stop after one neutral callback. Complete register dumps use ten reads and EEPROM dumps use six or five. Observation-mode firmware can bind without settings writes. |
+| Guarded replay and comparator transitions | FIRST_ACK and the operation-local lock/busy guard precede mutation. For therm [0,10] to alert [20,10] °C, verify guarded SD/alert `0x0620` before writing TLOW `0x0A00`. Failed, mismatched and late readbacks permit zero inverting writes. For the reverse transition, verify TLOW `0x0000` and THIGH `0x0500` before entering therm. A partial write leaves the candidate dirty for explicit recovery. |
+| Acquisition and destructive reads | Dirty, initialized shutdown admits LATEST for one timely TEMP with dirty trust and freshness false. An unexplained unmanaged OFFSET change from `0x0000` to `0x0040` preserves the observed word and historical calibration, invalidates live state and prevents a fresh read from spending any callbacks until recovery. Recovery preserves unmanaged calibration and consumes stale readiness at its baseline. The owned shot uses seven callbacks with one trigger. AVG drift at callback six retains HIGH and consumed readiness and stops before TEMP. Failed CONFIG or TEMP discards ambiguous ready evidence and preserves historical alert observations. |
+| Deadlines, bus ownership and cancellation | The twelve owner traces cover hook timing, budget clipping, mux serialization, zero-budget expiry, bounded work, and the first attempted write boundary. At wrap, 12 ms admitted from `0xFFFFFFF8` leaves 3 ms at tick 1 and expires at tick 4. Complete TEMP at expiry retains raw `0x0C80` and tick 4 as a physical success. An adapter-detected short read reports physical failure and possible readiness loss. Expiry before dispatch has zero callbacks. All three retain the timeout and the prior cache. Only the complete read supplies `lastRead`. |
+| Slot and retained result | Passive snapshots do no I²C or clock sampling. Before timeout is observed, cancel can retain `CANCELLED`. A zero-budget poll can retain timeout. Unrelated I²C and lifecycle operations remain gated while active or pending. Foreign and stale tokens preserve the record and output. One matching take transfers the result, including failure, and frees the slot. |
+
+| Check | Phase-d result |
+| --- | --- |
+| `python -B scripts/check_promptset.py`, `python -B scripts/test_check_promptset.py -q` | PASS with Python 3.12.10. 55 stages and 36 regressions. |
+| `python -B scripts/check_references.py`, `python -B scripts/test_check_references.py -q` | PASS. 14 pinned PDFs and nine regressions. |
+| `python -B tools/check_register_ledger.py`, `python -B tools/test_check_register_ledger.py` | PASS. Six BOM models and 31 regressions. |
+| Inline `python -B -` source and contract checks | PASS. Checked 24 pinned pages with PyMuPDF 1.27.2.2 across the timeout table/prose, maps, CONFIG, limits, guard, pointer `0x07` and ID. Checked all three coverage maps, the 8/9/46/10 sequence and dependencies, both limit alternates, the seven-callback shot and the retained read and slot traces. |
+| `g++ -std=c++17 -Wall -Wextra -Werror -pedantic -fsyntax-only -x c++ -` | PASS with GCC 15.1.0. Compiled 150 published and generated assertions for unsigned wrap/equality and minimum waits. Inline Python also checked admission rounding and the coarse-clock service bound. |
+| Local Markdown and Git | PASS. Checked local links and anchors in the closure files, the committed phase-c diff, working diff and empty index with Git 2.52.0.windows.1. |
+
+Stage 10 consumes this report with the stage 8 and 9 contracts, the tooling
+plan and the register validator. Native driver tests and MCU links were
+NOT RUN. Remote CI was NOT RUN under the stage 43 checkpoint policy.
+Physical qualification was NOT RUN and the fixture is unconfirmed. The
+phase-a silicon uncertainties remain open, including TMP116 POR BUSY,
+the CONFIG clear edge, TEMP byte latching, one-shot MOD readback,
+offset/comparator ordering, addressed-reset effects and TMP117 DATA_READY
+routing. None blocks this design audit.
