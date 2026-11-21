@@ -12,15 +12,10 @@ ID and show about 25 °C. The bench run can confirm the sensor transaction and
 temperature plausibility. Only a run on the product can qualify that product's
 bus, thermal layout and application behavior.
 
-- **Start with a known TMP117 bench fixture.** An isolated evaluation board
-  or identified breakout makes it easier to isolate sensor and software
-  problems. It leaves the eventual product wiring, shared bus and thermal
-  environment to be qualified on the product. An evaluation board requires
-  verified exclusive access to the sensor bus.
-- **Start on the intended product board if it is available.** One campaign can
-  collect product-specific bus and measurement evidence sooner. Bring-up and
-  sensor faults are harder to separate, and a board delay delays the first
-  physical run.
+| Option | Pros | Cons |
+| --- | --- | --- |
+| Start with an identified, isolated TMP117 evaluation board or breakout. | Few variables make sensor and software faults easier to isolate. | An evaluation board needs verified exclusive sensor-bus access. Product wiring, shared-bus behavior and thermal accuracy need a later product run. |
+| Start with the product board if available. | Hardware effort goes directly into evidence for the intended bus, enclosure and workload. | Sensor faults are harder to separate from board bring-up issues, and the first physical run depends on board availability. |
 
 Identify the physical board, model or grade, route, ADD0 strap, supply, pullups,
 ALERT wiring and available instruments. Use a current linked observation image.
@@ -39,38 +34,53 @@ application. A successful compile does not identify the product's wiring.
 **Example.** Two populated modules are both strapped to `0x48`. They cannot
 be treated as two independently addressed sensors on the same active segment.
 
-- **Use unique ADD0 addresses on a direct shared bus when the board permits.**
-  This avoids route-switch traffic and simplifies transfer ownership. Fixed
-  straps or an existing peer can limit the available addresses.
-- **Use distinct routes if addresses cannot be changed.** A board with a mux
-  can isolate the two modules. The application owner must verify route
-  selection and include its traffic in the deadline and cancellation tests.
+| Option | Pros | Cons |
+| --- | --- | --- |
+| Fit unique ADD0 straps on the same segment when the board permits. | One bus, no route-switch transfers, and simple scheduling. | Needs a free address for each device. Fixed straps and existing peers can rule it out. |
+| Put devices with the same fixed address on separate channels of an existing or planned mux. | Keeps both devices individually addressable without changing their straps. | Needs mux hardware and verified route selection. The owner must include route-switch traffic in deadline and cancellation tests. |
 
 [Address straps](board-integration.md#pins-and-add0-straps) · [P4 shared-bus consumer](prompts/36_p4-consumer.md)
 
-## What must the first product prove about accuracy and freshness?
+## How should the first product meet its temperature accuracy target?
 
-Choose the operating temperatures, acceptable error, and sample age or latency
-the product needs. Those requirements determine whether the default reporting
-route is enough and what must be measured on the fitted board.
+Specify what temperature is being measured, the operating range, and the
+allowed error and response time. Compare the fitted sensor with a suitable
+reference under the intended workload before choosing a mitigation.
 
 **Example.** A sensor agrees with a reference on a quiet bench at room
-temperature. In the product, the processor warms the board and other I²C
-devices are active during conversions. The same sensor can report a different
-temperature or deliver a fresh value later than the consumer needs.
+temperature. In the enclosure it reads higher when the processor is busy.
+Repeat the comparison with typical and heavy loads. If active conversions or
+I²C activity drive the error, compare a quieter conversion schedule. If heat
+from the processor dominates, test the sensor location and thermal path.
 
-- **Start with measured periodic reads on the actual bus.** Validate sample
-  age and error at representative temperatures and traffic. This uses the
-  simplest scheduling route. Sparse points only establish performance under
-  their recorded conditions.
-- **Add conversion-aware scheduling if the product needs it.** The application
-  can compare quieter conversion windows or alternate settings under the same
-  thermal setup, with traffic from real peers. This can improve performance
-  when traffic limits it and adds scheduling constraints for the other devices.
-  Tighter accuracy claims need a suitable calibrated reference and operating
-  range evidence under either route.
+| Option | Pros | Cons |
+| --- | --- | --- |
+| Keep the fitted layout and normal schedule if they meet the measured limits. | No board or scheduler changes. | Qualification covers the tested range and loads. A room-temperature check alone leaves the rest of the range open. |
+| Reduce conversion duty or move unrelated I²C work away from conversions if measurement identifies that cause. | Can reduce workload-dependent error without a board change. | Lower duty can slow updates. Quiet windows can delay other bus clients. Recheck both against product timing needs. |
+| Improve coupling to the measured surface or air and isolate the sensor from nearby heat sources if board heat dominates. | Addresses the measured source of bias while retaining the required reporting cadence if the revised placement meets it. | Requires a prototype or assembly change and renewed checks for settling time and error. |
 
-[Accuracy conditions](board-integration.md#guaranteed-accuracy) · [Thermal layout](board-integration.md#thermal-layout-and-precision) · [Conversion and freshness policy](device-behavior.md)
+[Accuracy conditions](board-integration.md#guaranteed-accuracy) · [Thermal layout](board-integration.md#thermal-layout-and-precision)
+
+## How should the product obtain a fresh sample?
+
+Choose the required update interval and maximum observation age. Establish
+freshness with the driver's acquisition evidence. Two equal temperature
+values can be two separate results or one repeated observation. The read
+timestamp records when the controller observed the value.
+
+**Example.** A dashboard that needs regular fresh updates and a test that
+needs one identifiable conversion on demand can both display 25 °C. The
+dashboard can accept successive verified updates with the same value. The
+test needs a result attributable to its own trigger.
+
+| Option | Pros | Cons |
+| --- | --- | --- |
+| Use trusted continuous conversion and paced fresh reads for regular updates. | No per-sample trigger writes. A single bus owner can schedule readiness and reads with the other clients. | Multiple updates can coalesce behind one ready bit, and an overlapping TEMP update has unspecified byte coherence. Report missed readiness or deadline failures explicitly. |
+| Use an explicit, guarded one-shot from shutdown for on-demand acquisition. | A completed owned shot provides a stable shutdown result under exclusive ownership and gives the read a specific acquisition boundary. | Adds a guarded trigger and conversion wait per request. It can miss the product's latency or cadence target if triggered too often. |
+
+For a display that only needs the latest observation, the latest-read route
+uses one temperature transfer and reports freshness unproven.
+[Acquisition routes](api-contracts.md#operation-gates) · [Freshness evidence](device-behavior.md#temp-destructive-reads-and-sample-publication)
 
 ## Does the product need an ALERT signal at the MCU?
 
@@ -83,13 +93,16 @@ an excursion. A periodic dashboard can read the temperature on its normal
 schedule, while a wake-on-threshold application needs a qualified electrical
 signal and acknowledgement behavior.
 
-- **Poll using the existing owner.** No extra MCU pin or interrupt setup is
-  needed. Response time depends on the conversion and polling schedules, and
-  reads can consume ready or alert flags.
-- **Route ALERT for a named purpose.** Use the interrupt as a wake or service
-  hint. The owner still reads and attributes the event. This adds wiring and
-  fixture work for polarity, the selected mode and re-arm. Choose a threshold
-  route for an excursion or a data-ready route for sample scheduling.
+| Option | Pros | Cons |
+| --- | --- | --- |
+| Poll the status through the existing owner if it meets the latency budget. | Uses the existing bus without an MCU pin or interrupt configuration. | Detection depends on the conversion and poll intervals. The owner must account for read-to-clear flags. |
+| Wire ALERT as a threshold signal if the product must wake on an excursion. | A threshold event can request service without a polling round trip. | Takes an MCU input and electrical and re-arm qualification. Conversion timing still limits when the excursion is detected. |
+| Wire ALERT as a data-ready signal if the main need is scheduling samples. | The owner can service acquisitions on a cue and reduce empty polls. | The pin then carries readiness instead of the threshold signal. An edge alone cannot establish fresh-conversion provenance. |
+
+Use the same owner to read and attribute events on either wired route.
+If the product needs both threshold wake and fresh samples, reserve the pin
+for threshold wake and have that owner service conversion readiness over I²C
+at the required cadence.
 
 [Board wiring](board-integration.md#pins-and-add0-straps) · [Alert behavior](device-behavior.md) · [Physical alert evidence](prompts/41_hil-volatile-soak.md)
 
@@ -105,15 +118,14 @@ from the displayed measurement, the sensor's own threshold comparison may still
 use its uncorrected reading. Applying a hardware offset and subtracting the same
 correction again in the application would double it.
 
-- **Preserve the device setup and keep any required correction in the
-  application.** This leaves existing calibration alone and can work across
-  models. The application owns units, correction provenance and threshold
-  expectations when display and hardware thresholds differ.
-- **Opt in to managed volatile offset on an eligible model when the product
-  needs it.** Retain the preimage and verify offset, measurement, threshold
-  behavior and recovery. The correction lives with the sensor configuration,
-  with extra ownership and restoration work. Offset-versus-comparator ordering
-  needs evidence before relying on it.
+| Option | Pros | Cons |
+| --- | --- | --- |
+| Preserve the device setup and apply the correction in the application. | Leaves existing calibration intact and works across the supported models. | The application owns correction provenance and threshold units. Corrected display values can diverge from the sensor's hardware threshold behavior. |
+| Opt in to a managed volatile offset on an eligible model. | The correction follows the verified sensor profile. Consumers of fresh TEMP values can share the correction without applying it again. | Needs offset preimage and restore, clean recovery, and evidence before any threshold logic relies on how the comparator uses the offset. |
+
+If an application-side correction is paired with a hardware threshold,
+translate the required trip point into the sensor's uncorrected units and
+verify the actual trip point against the reference.
 
 [Offset and reset scope](eeprom-and-reset-policy.md#model-gates) · [Remaining silicon unknowns](device-behavior.md#partial-writes-and-remaining-unknowns)
 
