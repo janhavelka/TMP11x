@@ -50,6 +50,7 @@ binding, desired profile and slot intact.
 
 | Method | FREE | ACTIVE | RESULT_PENDING |
 | --- | --- | --- | --- |
+| `getOperationSnapshot() const` | Report FREE. | Report ACTIVE with token and request kind, including read kind for READ. | Report RESULT_PENDING with the same identity and saved terminal status. |
 | `poll(uint32_t nowMs, uint8_t maxTransfers)` | `RESULT_NOT_AVAILABLE` | `IN_PROGRESS` while waiting or more work remains. On completion, retain and return the terminal job status. | Return the saved job status, zero transfers. |
 | `cancel()` | `RESULT_NOT_AVAILABLE` | Retain and return `CANCELLED`, zero transfers. | `BUSY`, preserve the result. |
 | `takeResult(token, out)` | `RESULT_NOT_AVAILABLE` | `RESULT_NOT_AVAILABLE` | Wrong token gives `TOKEN_MISMATCH`. On a match, copy the result, free the slot and return `OK`. |
@@ -65,6 +66,11 @@ status. Taking a failed job still returns `OK`. The result's read effects
 come from this job's callbacks. Taking alert events from the instance while
 the job is active or pending preserves that job's evidence. Taking the
 result also leaves the instance's events available to their own consumer.
+
+The snapshot copies stored state without sampling the clock or servicing the
+job. If the deadline has elapsed since the last service, inspection still
+reports ACTIVE. A subsequent cancel returns `CANCELLED`. A subsequent poll
+instead observes expiry and retains `OPERATION_TIMEOUT`, even at budget zero.
 
 An `OperationToken` identifies the issuing live instance and a nonzero
 32-bit admission serial. Compare both for a retained result. Two sensors
@@ -91,7 +97,7 @@ recover explicitly under restored power and exclusive ownership.
 
 | API | Clock requirement | Maximum sensor callbacks or scheduling rule |
 | --- | --- | --- |
-| Bind, end, unbind, invalidate, capability/codec/timing queries, settings/health/online/last-sample and alert getters, take alert events, cancel, take result | None | Zero. GPIO level needs its own hook and uses zero I²C. |
+| Bind, end, unbind, invalidate, capability/codec/timing queries, settings/health/online/last-sample and alert getters, operation snapshot, take alert events, cancel, take result | None | Zero. GPIO level needs its own hook and uses zero I²C. |
 | `getLastSampleAgeMs` | Same authoritative epoch and valid TEMP completion timestamp | Zero. Missing sample or unknown age returns `MEASUREMENT_NOT_READY`; missing hook with a cached sample returns `CLOCK_REQUIRED`. Preserve the output on failure. |
 | Probe, identity, read one mapped register or one EEPROM shadow | Optional for observation time | One neutral combined read. |
 | Register snapshot, EEPROM snapshot | Optional | ID first. At most 10 reads for a full dump, 6 or 5 for lock plus four or three shadows including ID. Stop at first failure. |
@@ -333,6 +339,7 @@ initialized, verified sensor and a timely clock.
 
 | Case | Stimulus | Expected result |
 | --- | --- | --- |
+| Passive inspection at expiry | Admit LATEST and let its deadline elapse before its first poll. Inspect twice, cancel, inspect the pending result, take it and inspect again. Separately repeat through the two inspections and poll with budget zero. | Both active snapshots carry the accepted token and READ/LATEST. Cancel retains `CANCELLED` for a matching take. The free snapshot has no job identity. In the second run only the poll retains `OPERATION_TIMEOUT`. Both runs use zero sensor callbacks. All inspections use zero clock calls. |
 | Admission and teardown | Change each configure binding field in turn with a saved token in the output. Separately start a valid job and try bind/end/unbind/invalidate, ID/EEPROM reads and another start before and after cancel. | Mismatch gives `INVALID_CONFIG`, preserves the saved issuer and serial, and uses zero callbacks. Valid start gives a new token and zero callbacks. All competing calls give `BUSY` until take. |
 | Retained identity | Sensors A and B each issue serial 1. Cancel A, poll A again, cancel again, try B's token on A, then take A's token twice. After end/rebind, cancel A's next accepted job and try the old A token before taking the new one. | The first sequence returns `CANCELLED`, `CANCELLED`, `BUSY`, `TOKEN_MISMATCH`, `OK` with cancelled record, then `RESULT_NOT_AVAILABLE`. The stale token also gives `TOKEN_MISMATCH` with output and pending result intact. Zero callbacks throughout. The last allocatable serial works once. Even after end/rebind the next valid start gives `WORK_LIMIT` with its output intact. |
 | Wrap and equality | At hook `0xFFFFFFF8`, q=1, start LATEST with 12 ms, passing caller time 100000. At hook 1, poll with caller time 0, callback cap 50. Return OK at hook 4. Repeat with `poll(any,0)` at 4 before any transfer. | First run grants 3 ms, counts one success, records TEMP and its read effect, and retains timeout without sample/cache replacement. Second run times out with zero callbacks and no valid last physical status. |

@@ -100,6 +100,7 @@ zero physical outcomes.
 | `AlertStatus` | Pending alert-mode HIGH/LOW events, separately observed therm HIGH level and validity, source of CONFIG read, generation/mode, observation time/validity and possible history loss. A mixed/unknown marker bounds the record when events span profiles, modes or uncertain observations. |
 | `RegisterObservation`, `RegisterSnapshot`, `EepromSnapshot` | Selected model, identity evidence, ordered pointers and complete raw words, time validity, read effects and uncertainty per observation. Preserve completed prefix and first unsuccessful pointer in a failed composite. Report only available fields. EEPROM snapshot records lock/busy and one-based indexed shadows. |
 | `OperationResult` | Token, kind, terminal operation status, last physical status/validity, callback count, observed read effects and possible writes, optional timely sample. Result copies expose alert evidence without draining it. |
+| `OperationSnapshot` (stage 28) | Slot state (`FREE`, `ACTIVE`, `RESULT_PENDING`). An occupied slot supplies its token and operation kind, plus the read kind for READ. Only a pending result supplies a terminal status. A free snapshot carries no previous operation. |
 
 `isOnline()` is a bus-silent `initialized && (state == READY || state ==
 DEGRADED)`. Tracked callbacks drive health even before initialization. A
@@ -155,6 +156,7 @@ words always use individual checked transfers.
 | `reset()` | Initialized, free, supported model, verified stable CONFIG, valid startup proof, clock and guard. | One addressed command plus bounded observations described below. No replay on return. Later explicit recover can reapply the retained target. |
 | `getSettingsSnapshot()`, `healthSnapshot()`, `isOnline()`, `getLastSample(Sample&)`, `getAlertStatus()`, `takeAlertEvents(AlertStatus&)` | Memory-only, available even while a job/result owns the slot. Missing sample yields not-ready. | Zero sensor callbacks. Only take drains the captured alert events/loss indication. It leaves therm observation and hardware alone. A sample-age query needs a valid timestamp and the same clock epoch. |
 | `readAlertPinLevel(bool& high)` | Bound with GPIO hook. Owner-serialized. | One optional GPIO observation, zero I2C. Exposes the physical level, independent of pending events and fresh evidence. |
+| `OperationSnapshot getOperationSnapshot() const` | Any slot state, including unbound. Owner-serialized. | Return the stored slot metadata by value. Inspection reads no clock, performs no I2C and preserves the job and its result. |
 | `startInitialize`, `startConfigure`, `startRecover`, `startRead` | Free, bound, clock and the corresponding synchronous gates. INITIALIZE reuses binding. Configure validates binding equality and a copied candidate. | Admission has zero I2C. Only a subsequent poll executes the shared engine. |
 | `poll(nowMs, maxTransfers)`, `cancel()`, `takeResult(token, out)` | Active job for work/cancel, matching terminal token for take. | Poll spends at most the caller's callback budget. Cancel and take use zero. Terminal ownership persists until matching take, even on timeout or cancellation. |
 

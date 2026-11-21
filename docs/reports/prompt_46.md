@@ -84,3 +84,88 @@ for the new report, working diff and empty index.
 There is no phase-b input blocker. Native driver tests, MCU links, remote
 CI and physical qualification were NOT RUN. The two source inventories
 leave the phase-c independent review outstanding.
+
+## Phase b — engineering evidence, 2026-11-21
+
+The audit found one missing public operation. The shared CLI needs to
+inspect the current job without advancing it. A zero-transfer poll can
+expire an active job, changing both the reported state and what a later
+cancel returns. The corrected contracts give the owner a passive
+`getOperationSnapshot() const` query on the existing slot.
+
+Phase b began on clean `main` at
+`73097aa6cac42388a0c1f2e1e862df089c2a6623`. Its parent, subject and
+sole path matched the phase-a commit request. The wrapper recorded upstream
+equality at 21:15:36 Prague time. Local divergence at entry was 0/0.
+The source comparisons use the stage 8 and 9 revision ranges above. Two
+read-only contributors checked the model mappings and the scheduling traces
+in parallel. The phase-c independent review remains due.
+
+### Public surface and model gates
+
+| Requirement and source | Trace outcome and disposition |
+| --- | --- |
+| R01–R18 against the three pinned register maps and field pages listed above | All 18 rows have an owner. R01–R04 cover TEMP, flags and BUSY. R05–R12 cover CONFIG, the command bit and both limits. R13–R18 cover the guard, shadows, offset, identity and pointer validation. TMP116/N accepts the full ID `1116`, reads four shadows at `05/06/07/08` and rejects typed offset (including zero) and addressed reset before any callback. TMP117/M/N and TMP119 accept low twelve bits `117`, retain revision and read shadows at `05/06/08`. At `07`, unmanaged replay observes and preserves a value such as `0040` (+0.5 °C). Explicitly managed zero writes and verifies `0000`. Only the supported parts admit guarded CONFIG bit 1. The model gates agree. |
+| F01–F20 and X01–X08 against the [architecture](../architecture.md), [feature matrix](../feature-coverage.md) and [coverage inventory](../prompts/FULL_COVERAGE.md) | All three documents contain the same 46 distinct IDs. Each included row reaches a typed call, job or named integration owner. F14 needed the passive query described below. The eight exclusions cover persistence and shadow writes, broadcast, ARA, raw access, board ownership, provenance claims, foreign families and undocumented features. |
+| Bind-only observation and coexistence, stage 8 diff and TMP1x2 `afd5088` public headers | Bind costs zero callbacks. On a selected TMP117, a dump returning `1116` at `0F` stops after one neutral callback. The partial snapshot includes the raw incompatible ID, live trust is invalidated, and the dump never reaches TEMP or CONFIG. A complete full dump costs ten reads. An EEPROM dump costs six on TMP116/N and five on the other models. The two bring-up sketches share one application bus at addresses `48` and `49` hex and return each package's own status. The observation-only path ends bring-up at bind. The portable headers, framework adapters and vendor documents have distinct package roles. |
+
+### Replay and acquisition
+
+Hex words below come from the [behavior vectors](../registers/behavior-vectors.json),
+[guard and recovery transcripts](../eeprom-and-reset-policy.md#transcript-vectors-for-implementation)
+and the [stage 9 acceptance traces](../owner-operations.md#acceptance-traces).
+The CONFIG flag tables are on SBOS740A p.26, SNOSD82D p.27 and SNIS236 p.34.
+
+| Requirement | Outcome against the public and owner contracts |
+| --- | --- |
+| Startup and operation-local guard | A compatible ID completing at 50.9 ms on a 1 ms floor clock permits the first guard at tick 54. Prior bind time and a cancelled operation's unfinished origin earn no wait credit. Independently verified `0x04` mask `C000` accepts `0000/3FFF`. `4000` permits a paced reread only on a timed path. `8000/C000` stops guarded work immediately. A failed guard ends the attempt. A later CONFIG.BUSY requires a renewed guard for timed work. The TMP116 power-up prose on p.17 conflicts with pp.26/29, so BUSY clear alone cannot establish startup. |
+| Binding, limits and first-write boundary | A changed route context or timeout in configure rejects before token assignment and I2C. With an accepted candidate, cancellation before the SD callback preserves the old target. From the first attempted SD write, even a data NACK retains the candidate, dirty state and physical status. For therm limits [0,10] → [15,20] °C, THIGH `0A00` first gives [0,20]. An ambiguous TLOW `0780` ends apply there. The reverse transition writes TLOW first. Recovery verifies both signed words (the recovery transcript uses `FB00` = −10 °C and `1280` = +37 °C), owned offset where applicable, and final stable CONFIG before committing a generation. |
+| Latest and continuous fresh | Latest uses one tracked TEMP and consumes readiness. An initialized dirty instance can return a latest value with dirty trust. Its timestamp records observation and its freshness is false. The final apply CONFIG consumes its ready bit as the generation baseline. A later eligible diagnostic CONFIG can retain HIGH and same-generation readiness. A safe guard plus one TEMP then uses that readiness once. A later fresh conversion can return the identical `0C80`. Failed TEMP discards ambiguous readiness and preserves HIGH and cache. Failed CONFIG can also lose alert history. A matching BUSY/ready CONFIG (`B220` for desired `0220`) ends an untimed try with no TEMP. AVG drift (`A240`) additionally latches dirty. |
+| Owned one-shot, drift and lateness | At desired SD `0620`, guard then CONFIG `0640` or unowned `0E20` ends preflight with zero writes. On the accepted route, guard, preflight and explicit SD precede the SD baseline and one `0E20` trigger. A timely poll `AE20` captures HIGH and new ready, then TEMP `0C80` publishes 25 °C. Substitute `AE40` and the changed AVG stops callback six with dirty trust, HIGH retained, zero TEMP reads and the prior cache. A late physical trigger success retains owned MOD provenance and returns timeout. An ambiguous trigger leaves dirty uncertainty. A late TEMP consumes readiness and preserves the prior sample's generation, trust, offset and timestamp. |
+
+### Scheduling and result ownership
+
+| Requirement | Evidence and disposition |
+| --- | --- |
+| Bus and work budgets | Five budget-one turns on route A reach its one-shot trigger. B can read TEMP on another route between turns. A wait turn spends zero callbacks, then two further A reads complete the seven-callback trace. Each callback owns route selection through the sensor transfer and releases the bus. Mux writes are charged separately. A turn permits 32 dispatches and a timed operation 256. Step 256 can succeed. If more work remains it returns `WORK_LIMIT` before step 257. A frozen positive-budget wait fails on its 1,000,001st unsuccessful same-tick check. |
+| Coarse tick across wrap | At q=10, admit at `FFFFFFF0` and complete FIRST_ACK at `FFFFFFFA`. The next two floor readings are 4 and 14. Tick 14 is the first eligible guard. A 39 ms request rounds down to 30 ms and expires at 14, so zero guard callbacks. A 49 ms request rounds to 40 ms. At 14 the guard gets 10 ms of a 50 ms callback cap. Physical OK at tick 24 counts one success for that read. The job retains `OPERATION_TIMEOUT` and sends no further transfer. FieldCore-node `c40ea83`, `CoilHeadModule::remaining` and its transfer path supply the clipping precedent. The authoritative post-callback clock remains necessary. |
+| Result lifetime | With A:1 pending, B:1 fails the issuer check. After rebind, A:1 fails against A:2. Both preserve the caller's output and pending record. Repeated poll returns the saved status. Repeat cancel, unrelated I2C and teardown leave the record intact. One matching take returns `OK` with the job's failure, then a second take returns `RESULT_NOT_AVAILABLE`. After issuing `UINT32_MAX`, the next otherwise valid start returns `WORK_LIMIT` without spending a callback or changing its output token. |
+
+**F14 correction.** At the baseline, the slot table offered only poll,
+cancel and take. Inspect a LATEST request after its deadline but before
+its first owner poll. A `jobs` query implemented with `poll(now, 0)`
+would retain `OPERATION_TIMEOUT` and make cancel return `BUSY`. Inspection
+must preserve the owner's ability to cancel. TMP1x2 at `afd5088` provides
+a passive getter in `src/TMP1x2Operations.cpp` with an admission/result
+test in `test/jobs/test_jobs.cpp`. The TMP11x query copies only slot
+state, occupied identity/kind, READ selector and any terminal status.
+It takes zero clock readings and zero transfers. The new trace compares
+two inspections followed by cancel with the same inspections followed by
+a zero-budget poll. The first retains `CANCELLED`, the second timeout.
+Stage 28 owns the slot and its test. Stage 37 already consumes
+`job-lifecycle` and owns the passive command and fixture transcript.
+[Public API](../api-contracts.md#operation-gates),
+[slot contract](../owner-operations.md#slot-and-result-lifetime),
+[CLI contract](../prompts/CLI_CONTRACT.md),
+[stage 28](../prompts/28_cooperative-admission.md),
+[stage 37](../prompts/37_cli-baseline.md).
+
+### Phase-b checks
+
+- Python 3.12.10 passed `python -B scripts/check_promptset.py` (55 stages),
+  `python -B scripts/check_references.py` (14 pinned PDFs),
+  `python -B tools/check_register_ledger.py` (six models), and
+  `python -B tools/test_check_register_ledger.py` (31 regressions).
+- Inline `python -B -` compared all 46 rows across the three maps, the
+  existing 28→37 artifact edge, the new snapshot rows and acceptance cases,
+  five guard words, signed limit ordering, seven shot callbacks, two drift
+  outcomes and the retained diagnostic readiness vector.
+- GCC 15.1.0 passed the read-only timing check with seven published and
+  296 generated C++17 assertions across seven resolutions. The lead
+  compiled the published example again with four assertions for the
+  coarse-clock trace above, using
+  `g++ -std=c++17 -Wall -Wextra -Werror -pedantic -fsyntax-only -x c++ -`.
+- Git 2.52.0.windows.1 passed working and empty-index whitespace checks.
+  Native driver tests, MCU links, remote CI and physical qualification
+  were NOT RUN. Production code starts at stage 10. The silicon evidence
+  gates recorded in phase a remain open.

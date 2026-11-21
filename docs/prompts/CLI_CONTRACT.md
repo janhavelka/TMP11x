@@ -31,6 +31,12 @@ freezes arguments and output fields; do not create competing `average`,
 | `stop` | Bus-silent stop/cancel of watch or campaign scheduling; record partial hardware effects. Any restoration uses a separately declared guarded operation, never hidden inside stop. |
 | `xfer` | Bus-silent adapter attempt counters since boot: pointer-write, sensor data-write, read and authorized mux-route attempts, session ID and overflow/saturation. Includes health-neutral traffic; never reset invisibly. |
 
+`jobs` renders the driver's passive operation snapshot. Repeated queries
+show the stored slot state and identity even when an active deadline has
+elapsed between owner turns. Only an explicit or automatic owner poll
+services the deadline. A pending terminal status remains available for
+`job result`.
+
 Register-read-only means no data-register writes, not no side effects: pointer
 writes select the register and CONFIG/TEMP reads can consume flags. Bind a
 read-only session without `begin`/recovery/configuration writes, including at
