@@ -165,17 +165,60 @@ class RegisterLedgerTests(unittest.TestCase):
         self.field("CONFIG", "MOD")["nvm_mask"] = 0x0C00
         self.rejected("incorrect mask, access or NVM domain")
 
+    def test_operation_guard_requires_lock_busy_and_independent_startup(self):
+        guard = self.ledger["operation_guard"]
+        for key, wrong in (
+            ("register", 0x01), ("unlock_mask", 0), ("busy_mask", 0x1000),
+            ("expected_masked_value", 0x8000), ("startup_wait_ms", 0),
+        ):
+            with self.subTest(key=key):
+                original = guard[key]
+                guard[key] = wrong
+                self.rejected(f"operation_guard: incorrect {key}")
+                guard[key] = original
+
+    def test_typical_por_interval_does_not_supply_a_maximum(self):
+        self.profile("TMP116")["startup"]["reset_max_ms"] = 1.5
+        self.rejected("TMP116.startup: expected typical 1.5 ms with no specified maximum")
+
+    def test_addressed_reset_is_model_gated(self):
+        reset = self.profile()["addressed_reset"]
+        self.profile("TMP116")["addressed_reset"] = reset
+        self.rejected("TMP116.addressed_reset: unsupported on TMP116/N")
+        self.profile("TMP116")["addressed_reset"] = None
+        self.profile("TMP119")["addressed_reset"] = None
+        self.rejected("TMP119.addressed_reset: missing addressed reset command record")
+
+    def test_reset_preserves_only_stable_fields_and_requires_postwrite_wait(self):
+        reset = self.profile()["addressed_reset"]
+        for key, wrong in (
+            ("register", 0x04), ("command_mask", 0x0001), ("stable_mask", 0xFFFC),
+            ("readback", 2), ("postwrite_wait_ms", 0),
+        ):
+            with self.subTest(key=key):
+                original = reset[key]
+                reset[key] = wrong
+                self.rejected(f"TMP117.addressed_reset: incorrect {key}")
+                reset[key] = original
+        reset["allowed_mode_codes"].append(3)
+        self.rejected("expected canonical continuous and shutdown modes")
+
+    def test_reset_records_keep_relock_and_reload_outcomes_unknown(self):
+        self.profile("TMP119")["addressed_reset"]["unknown_effects"].remove("eun")
+        self.rejected("TMP119.addressed_reset: incomplete or incorrect unknown effects")
+
     def test_identity_uses_the_correct_family_literal(self):
         self.field("DEVICE_ID", "DID", "TMP116")["factory"] = "0x117"
         self.rejected("expected compatibility ID 0x1116")
 
     def test_release_denies_writable_shadows_and_unlock(self):
-        for name in ("EEPROM_UL", "EEPROM1", "EEPROM2", "EEPROM3", "EEPROM4"):
-            with self.subTest(name=name):
-                register = self.register(name, "TMP116")
-                register["policy"] = "guarded"
-                self.rejected("release policy deny-write")
-                register["policy"] = "deny-write"
+        for profile in ("TMP116", "TMP117", "TMP119"):
+            for register in self.profile(profile)["registers"]:
+                if register["name"].startswith("EEPROM"):
+                    with self.subTest(profile=profile, register=register["name"]):
+                        register["policy"] = "guarded"
+                        self.rejected("release policy deny-write")
+                        register["policy"] = "deny-write"
 
     def test_status_access_and_mode_encodings(self):
         ready = self.field("CONFIG", "DATA_READY")

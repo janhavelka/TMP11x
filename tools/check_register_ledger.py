@@ -178,6 +178,34 @@ def check_profile(name, profile, document, stages):
             raise ValueError(f"{name}: missing {topic} source record")
         pages(section, document, f"{name}.{topic}")
         text_fields(section, required, f"{name}.{topic}")
+    startup = profile["startup"]
+    if (startup.get("reset_typ_ms") != 1.5 or "reset_max_ms" not in startup
+            or startup["reset_max_ms"] is not None):
+        raise ValueError(f"{name}.startup: expected typical 1.5 ms with no specified maximum")
+
+    reset = profile.get("addressed_reset")
+    where = f"{name}.addressed_reset"
+    if name == "TMP116":
+        if "addressed_reset" not in profile or reset is not None:
+            raise ValueError(f"{where}: unsupported on TMP116/N")
+    else:
+        if not isinstance(reset, dict):
+            raise ValueError(f"{where}: missing addressed reset command record")
+        pages(reset, document, where)
+        for key, expected in (
+            ("register", 0x01), ("command_mask", 0x0002), ("stable_mask", 0x0FFC),
+            ("readback", 0), ("postwrite_wait_ms", 2),
+        ):
+            if type(reset.get(key)) is not int or reset[key] != expected:
+                raise ValueError(f"{where}: incorrect {key}")
+        modes = reset.get("allowed_mode_codes")
+        if modes != [0, 1] or any(type(code) is not int for code in modes):
+            raise ValueError(f"{where}: expected canonical continuous and shutdown modes")
+        unknowns = items(reset, "unknown_effects", where)
+        if not all(isinstance(effect, str) for effect in unknowns) or sorted(unknowns) != [
+            "bus-availability", "companion-bits", "eeprom-reload", "eun",
+        ]:
+            raise ValueError(f"{where}: incomplete or incorrect unknown effects")
     protocol = profile["protocol"]
     check_owners(protocol, stages, f"{name}.protocol")
     for key, expected_values in (
@@ -243,6 +271,15 @@ def check_file(path):
     profiles = ledger.get("profiles")
     if not isinstance(profiles, dict) or profiles.keys() != PROFILES:
         raise ValueError("expected TMP116, TMP117 and TMP119 profiles")
+    guard = ledger.get("operation_guard")
+    if not isinstance(guard, dict):
+        raise ValueError("ledger: missing operation_guard record")
+    for key, expected in (
+        ("register", 0x04), ("unlock_mask", 0x8000), ("busy_mask", 0x4000),
+        ("expected_masked_value", 0), ("startup_wait_ms", 3),
+    ):
+        if type(guard.get(key)) is not int or guard[key] != expected:
+            raise ValueError(f"operation_guard: incorrect {key}")
     manifest = json.loads((ROOT / "docs/reference/manifest.json").read_text(encoding="utf-8"))
     documents = {doc["id"].upper(): doc for doc in manifest["documents"] if doc["id"].upper() in PROFILES}
     sequence = json.loads((ROOT / "docs/prompts/SEQUENCE.json").read_text(encoding="utf-8"))
@@ -281,7 +318,7 @@ def main(argv=None):
     except (ValueError, OSError, KeyError) as exc:
         print(f"FAIL: {args.ledger}: {exc}", file=sys.stderr)
         return 1
-    print("PASS: six BOM models, register maps, field layouts, release gates and conflict citations")
+    print("PASS: six BOM models, register maps, field layouts, guard/reset policy and conflict citations")
     return 0
 
 

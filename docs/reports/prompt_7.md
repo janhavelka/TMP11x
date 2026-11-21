@@ -105,7 +105,7 @@ future integration and executable callback evidence.
   diagnostic, recovery, job and CLI routes. Enumerate X01–X08 from
   [FULL_COVERAGE](../prompts/FULL_COVERAGE.md#excluded-or-application-owned-hardware-functions).
   Include zero traffic to general-call address `0x00` with `0x06`, which
-  is distinct from the valid TEMP pointer `0x00) at the selected sensor
+  is distinct from the valid TEMP pointer `0x00` at the selected sensor
   address. Include no ARA at `0x0C`, acknowledging the lowest-address winner's
   documented threshold ALERT effect, and no broadcast synchronized-conversion
   procedure. Cover forbidden raw writes and EEPROM programming on any fixture.
@@ -126,3 +126,53 @@ Python 3.12.10 on Windows.
 No owned software prerequisite is blocked. The POR and addressed-reset
 evidence limits remain open. Native driver tests, MCU links, remote CI
 and physical qualification were NOT RUN.
+
+## Phase b delivery and checks
+
+**2026-11-21.** Entered on clean `main` at
+`c6dbeff7795475cb49b3ce25d958e6e23a1d2aa9`, equal to the local
+`origin/main`. Git history has the phase-a report as the sole changed path.
+The wrapper's `runs.log` verifies that SHA upstream at 17:15:27 Prague time.
+This phase delivered the research artifacts and left the fresh review and
+acceptance checkpoints open.
+
+- The [safety policy](../eeprom-and-reset-policy.md) specifies model-indexed
+  shadow reads, protected register data writes, FIRST_ACK timing, the
+  operation-local `0x04` guard, fail-closed EUN and explicit recovery. It
+  includes the addressed-reset encoding and invalidation boundary, known
+  outside interference and all X01–X08 dispositions.
+- The [transcript cases](../eeprom-and-reset-policy.md#transcript-vectors-for-implementation)
+  cover identity and shadow indices, startup, busy or guard failure, unlock,
+  protected writes, supported reset, recovery, outside interference and
+  shared-bus exclusions. The allowed and forbidden shapes are research
+  vectors. The implementation owners remain stages 18–26, 29–33 and 38.
+- The [register ledger](../registers/tmp11x.json) records the guard word and
+  startup wait, distinguishes supported reset from reserved bits, and
+  retains the reset outcomes as unknown. The [feature ledger](../feature-coverage.md)
+  aligns 17 affected rows without changing the 46-row inventory or moving
+  implementation and CLI ownership.
+- Rechecked the relevant local PDF pages with PyMuPDF. TMP117 p.30 and
+  TMP119 p.37 also repeat four EEPROM locations in the EUN field. Their
+  EEPROM3 prose points to EEPROM1 while the EEPROM3 field table names itself
+  (TMP117 p.32, TMP119 p.39). The mapped shadows determine the protected set.
+  SBAT024 pp.3–4 requires both the factory-encoded ID and the original
+  shipment lot code for tier 1B. The 24Cxx and TMP1x2 checkouts remain clean
+  at the phase-a pins, used for ownership precedent only.
+
+Python 3.12.10 on Windows. Results apply to the phase-b worktree based on the
+revision above.
+
+| Command or check | Result |
+| --- | --- |
+| `python -B scripts/check_references.py` | PASS, 14 pinned sizes and SHA-256 hashes. |
+| `python -B scripts/check_promptset.py` | PASS, 55 stages, dependency/coverage structure and PDF page links. |
+| `python -B scripts/test_check_promptset.py` | PASS, 36 regressions. |
+| `python -B tools/check_register_ledger.py` | PASS, six BOM models and guard/reset policy. |
+| `python -B tools/test_check_register_ledger.py` | PASS, 27 regressions. Added guard/startup and reset rejection cases, and exercised protected writes on all three distinct maps. |
+| Focused policy and feature-table check | PASS, 31 policy links and anchors, six model rows, eight exclusions, nine transcript cases and their literal arithmetic, and 46 coverage rows with stable implementation/CLI owners. |
+| `git diff --check`, `git diff --no-index --check -- NUL docs/eeprom-and-reset-policy.md` | No whitespace diagnostics. The no-index comparison reports the new file differs from the empty side. |
+
+The TMP116 POR busy contradiction remains open. Addressed reset's EEPROM
+reload, EUN, companion-bit application and ACK availability still need
+evidence. Native driver tests, MCU links, remote CI and physical qualification
+were NOT RUN. The wrapper owns staging, commit, push and upstream checks.
