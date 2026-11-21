@@ -1,5 +1,8 @@
 # Prompt 11 — portable Status, model and value types
 
+**COMPLETE.** The portable value types and pure validation passed final
+acceptance. [Phase d results](#phase-d-acceptance-2026-11-21).
+
 ## Phase a brief, 2026-11-21
 
 **PARTIAL.** The inputs and implementation boundaries are verified. Stage 11
@@ -186,3 +189,42 @@ matched the phase-a pin and the MIT license blob matched this repository.
 MCU links, deliberate remote CI and physical qualification were NOT RUN.
 Phase d owns final acceptance, the progress row, report index and completion
 marker. There is no outstanding phase-c finding.
+
+## Phase d acceptance, 2026-11-21
+
+Acceptance ran on clean `main` at
+`a1d2f4efb3549ae3c053c50c841695d2ae1316af`, with 0/0 divergence from the
+local `origin/main`. Its parent, subject and three changed paths match
+`commit_20261121-234203.json`. The wrapper logged the prior commit and
+verified upstream equality at 23:45:36 Prague time. The stage 8–10
+prerequisites and stage 4–5 model and register artifacts were present.
+
+The completed `value-types` artifact comprises
+[Status.h](../../include/TMP11x/Status.h), [Config.h](../../include/TMP11x/Config.h),
+[TMP11x.h](../../include/TMP11x/TMP11x.h), [Config.cpp](../../src/Config.cpp)
+and [ModelDescriptor.h](../../src/ModelDescriptor.h). The four named native
+cases above exercise all six BOM selections and every invalid byte encoding,
+the seven-bit address boundaries, selector bounds, settings defaults, symbolic
+status formatting and independent identity/sample evidence. The header
+translation units compile independently. The test's allocation trap and
+always-active checks run under `-DNDEBUG`.
+
+| Check | Phase-d result |
+| --- | --- |
+| `cmake -S . -B build-tests-prompt11-d -G Ninja -DTMP11X_BUILD_TESTS=ON -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXPORT_COMPILE_COMMANDS=ON`, `cmake --build build-tests-prompt11-d --config Release --parallel`, `ctest --test-dir build-tests-prompt11-d -C Release --output-on-failure` | PASS, 7/7 registrations including all 31 ledger regressions. CMake 4.0.1, Ninja 1.12.1, GNU C++ 15.1.0 and Python 3.12.10. Compile commands confirm strict C++17, warnings as errors and `-DNDEBUG` for the core and value tests. |
+| `nm -u build-tests-prompt11-d/CMakeFiles/TMP11x.dir/src/Config.cpp.obj` and `g++ -std=c++17 -Wall -Wextra -Wpedantic -Werror -fno-exceptions -fno-rtti -I include -fsyntax-only src/Config.cpp` | PASS. The capability object has no unresolved symbols and the source compiles with exceptions and RTTI disabled. |
+| `doxygen build-docs-prompt11-d/Doxyfile.values` | PASS with Doxygen 1.13.2 and warnings treated as errors. The XML includes the reviewed ID decoding and the hardware capability scope. |
+| `scripts/pio.cmd package pack --output build-package-prompt11-d/TMP11x.tar.gz` and `tar -tf` | PASS with managed Core 6.2.0 and the pinned offline SPDX response. All 15 regular files matched checkout bytes. Archive SHA-256 `a697d19c0b3ea533bb930441ffa12c1adf3bb57fe642c4d7465c7b3e694a550a`. |
+| Separate Release consumer under `build-package-prompt11-d/linked` | PASS. Built against the fresh export with tests off and linked and ran the TMP119 capability query. CTest listed zero registrations. CMake reported the Python and Git discovery-disable variables unused. |
+| `python -B scripts/check_promptset.py`, `python -B scripts/check_references.py` and Git whitespace checks | PASS for 55 stages, 14 pinned PDF hashes, the stage implementation range, the working diff and the empty index. |
+
+[Stage 12](../prompts/12_i2c-register-transport.md) consumes the value types
+for checked register transport and access policy. Stage 13 uses the same
+descriptor table to interpret and match ID words. Stages 14–18 and 23–24 own
+live binding, health, codecs, profile validation and offset/EEPROM
+operations. The pinned TMP119 ID discrepancy and silicon behavior
+uncertainties remain in the ledger for their operation owners.
+
+MCU links, deliberate remote CI and physical qualification were **NOT RUN**.
+Stages 34–36, 43 and 40–41 own those checks respectively. The wrapper owns
+the closure commit, staged diff check and upstream synchronization.
