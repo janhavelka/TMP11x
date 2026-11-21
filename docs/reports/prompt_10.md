@@ -208,3 +208,36 @@ both findings, preserve the dependency-free Python tooling and run through
 
 MCU links, extracted and relocated install qualification, remote CI and
 physical qualification remain **NOT RUN** under their named owners.
+
+## Phase d acceptance, 2026-11-21
+
+**COMPLETE.** Acceptance began on clean `main` at
+`a3994f417a0f61c1c5ce689c96767be31ff40df0`, with zero divergence from
+`origin/main`. The parent `7ac4ab14d91e455529d076c39c7765534d8928ce`,
+subject and all five paths match `commit_20261121-224203.json`. The wrapper
+verified upstream equality at 22:49:37 Prague time. The closure commit and
+push are pending wrapper processing. There were no unexpected worktree
+changes or existing workflows.
+
+The [CMake target](../../CMakeLists.txt) builds the version API for native
+consumers and provides the ESP-IDF component entry point. The public
+[Version.h](../../include/TMP11x/Version.h) documents the numeric constants,
+header string and linked function. The [version tools](../../scripts/generate_version.py)
+derive both mirrors from [library.json](../../library.json), and the
+[host entrypoint](../testing.md) registers the six cases from phase c.
+The 18 selected peer blobs still match their pins and both peer licenses
+match the retained [MIT notice](../../LICENSE). [Source adoption](../source-adoption.md#library-foundation).
+
+| Check | Phase-d result |
+| --- | --- |
+| `cmake -S . -B build-tests-phase-d -G "MinGW Makefiles" -DTMP11X_BUILD_TESTS=ON -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_STANDARD=11 -DCMAKE_CXX_EXTENSIONS=OFF -DCMAKE_EXPORT_COMPILE_COMMANDS=ON`, `cmake --build build-tests-phase-d --parallel`, `ctest --test-dir build-tests-phase-d --output-on-failure` | PASS. CMake/CTest 4.0.1, GCC 15.1.0, GNU Make 4.4.1 and Python 3.12.10. All six tests passed, including three generator and 31 register-ledger regressions. Both C++ compile commands used `-DNDEBUG -std=c++17`. |
+| Release `add_subdirectory` consumer from separate copies under `build-consumer-phase-d`, with both discovery flags disabled | PASS. MinGW built the tests-off consumer against the renamed library source and it printed `0.1.0`. CTest listed zero registrations. A translation unit including only `<TMP11x/Version.h>` passed `g++ -std=c++17 -pedantic-errors -Wall -Wextra -Werror -fsyntax-only`. `nm -C` found the external `TMP11x::version()` symbol. |
+| `python -B scripts/generate_version.py check`, `python -B tools/check_version_sync.py`, `python -B build-version-phase-b/verify_generator.py` | PASS. The scratch harness reproduced the checked-in header bytes, proved clean sync was a no-op, checked drift failures without writes, and verified repair of each mirror and a valid authority bump. |
+| `scripts/pio.cmd package pack --output build-package-phase-d/TMP11x.tar.gz`, `tar -tf build-package-phase-d/TMP11x.tar.gz`, and byte comparison | PASS with managed PlatformIO Core 6.2.0 and the pinned offline SPDX response recorded in phase b. All ten regular files matched the checkout, including both manifests, MIT license and the native consumer. ESP-IDF 5.5.5's Component Manager 2.5.2 loaded `0.1.0` in component upload mode and selected the same ten regular files. Archive SHA-256 `e3a4ac73f1289bf1c441d4d7656634ad3e5d6856072b3dbfd1802ea0c2f017fd`. |
+| Promptset, references and local documentation | PASS. `scripts/check_promptset.py` verified 55 stages and its regression suite passed 36 cases. `scripts/check_references.py` verified 14 PDFs and its regression suite passed nine cases. Local links in the affected guides and closure files passed. Git whitespace checks passed for the implementation range, working diff and empty index. |
+
+The next stage is [11](../prompts/11_status-values.md), which consumes
+`build-foundation` and extends the host entrypoint with portable value-type
+tests. Stage 10 added only the version API. MCU links (34–36), extracted and
+relocated install qualification (42), remote CI (43) and physical
+qualification (40–41) were **NOT RUN**.

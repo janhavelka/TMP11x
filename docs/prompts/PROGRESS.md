@@ -1,12 +1,12 @@
 # TMP11x implementation progress
 
-**State:** Repository preparation complete; sensor implementation NOT_STARTED.
+**State:** Library foundation complete. Sensor implementation NOT_STARTED.
 **Target:** 55 stages in manifest order, including 11 new audit checkpoints. TMP117 is primary, with all six selected BOM-model capability gates covered by every relevant stage.
 **Repository:** `main`, tracking `origin/main` at `https://github.com/janhavelka/TMP11x.git`.
 **Preparation input HEAD:** `6c5e4496d5c896af689228d4bee4382a53c20626` (clean and synchronized at entry).
 **Hardware:** Physical TMP11x board and test wiring NOT CONFIRMED.
-**Last completed stage:** 46 (public API and cooperative owner contract audit).
-**Last update:** 2026-11-21. Next eligible stage is 10.
+**Last completed stage:** 10 (independent library foundation).
+**Last update:** 2026-11-21. Next eligible stage is 11.
 
 Preparation evidence includes the [6b173cc second follow-up](../reports/audit-followup-6b173cc.md),
 the [cb73740 follow-up](../reports/audit-followup-cb73740.md#response--2026-11-17),
@@ -29,7 +29,8 @@ every planned deliverable a producer and checks consumer dependencies.
 | [8](8_api-architecture.md) | Public API and variant architecture | COMPLETE — [report](../reports/prompt_8.md), [API contract](../api-contracts.md), [architecture](../architecture.md) |
 | [9](9_owner-deadline-contract.md) | Cooperative ownership, timing and result contract | COMPLETE — [report](../reports/prompt_9.md), [owner contract](../owner-operations.md) and eleven acceptance traces |
 | [46](46_audit-8-9.md) | Audit prompts 8–9 before production code starts | COMPLETE — [report](../reports/prompt_46.md), independent reviews, contract corrections and repeat acceptance checks |
-| 10–17 | Package foundation, transport, identity, health and codecs | NOT_STARTED |
+| [10](10_package-foundation.md) | Independent C++17 library foundation | COMPLETE — [report](../reports/prompt_10.md), [host test entrypoint](../testing.md), version tools and verified source exports |
+| 11–17 | Portable value types, transport, identity, health and codecs | NOT_STARTED |
 | [47](47_audit-10-17.md) | Audit prompts 10–17 before initialization writes | NOT_STARTED |
 | 18–19 | Safe initialization and configuration trust | NOT_STARTED |
 | [48](48_audit-18-19.md) | Audit prompts 18–19 before adding settings and acquisition | NOT_STARTED |
