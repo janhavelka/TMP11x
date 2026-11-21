@@ -19,7 +19,8 @@ enum class IdentityGroup : std::uint8_t {
   TMP117_LIKE,  ///< Base ID shared by TMP117, TMP117M, TMP117N and TMP119.
 };
 
-/// Hardware capabilities of a selected BOM model.
+/// Hardware capabilities of a selected BOM model, independent of the
+/// operations available in this library version.
 struct Capabilities {
   bool hasOffset = false;            ///< Model supports a hardware temperature offset.
   bool hasAddressedReset = false;    ///< Model supports an addressed CONFIG reset command.

@@ -141,3 +141,48 @@ Stages 34–36 own the first adapter links, 40–41 own fixture evidence, and
 43 owns the first deliberate remote checkpoint. Phase c reviews the source,
 tests and checked artifact revision. Phase d retains final acceptance and
 completion ownership.
+
+## Phase c artifact review, 2026-11-21
+
+Reviewed `686dc684065534feeb8ed450ef1f5b354afee407` on clean `main` with
+0/0 divergence from the local `origin/main`. The commit's parent, subject
+and 19 changed paths match `commit_20261121-232703.json`. `runs.log` records
+upstream equality at 23:37:22 Prague time. The stage 8–10 prerequisites and
+the model and register evidence are present. Stage 11 is the first unfinished
+manifest entry. There are no checked-in workflows at the reviewed revision.
+
+Two independent read-only reviewers covered the API, tests and build on one
+side and the silicon, model table and attribution on the other. Both finished.
+The public `IdentityInfo` comments now give the complete `0x1116` rule, the
+`0x117` and revision split including revision zero, and the distinction between
+the observed group and the BOM selection on mismatch. `Capabilities` now
+explicitly describes hardware support independently of the operations shipped
+in a given library version. The review found no runtime change required.
+[IdentityInfo](../../include/TMP11x/TMP11x.h),
+[Capabilities](../../include/TMP11x/Config.h).
+
+The reviewed model/address/selector predicates cover all byte encodings.
+Invalid model queries preserve all capability output fields. The defaults,
+signed count types, symbolic error names and independent sample evidence agree
+with the API and owner contracts. The lead and silicon reviewer rechecked the
+ADD0 mapping, temperature unit and startup word, stable CONFIG encodings,
+limit defaults, shadow pointers, offset/reset gates and ID bits using the
+pinned PDFs cited above. The TMP119 ID discrepancy and reset uncertainties
+remain recorded. `findModelDescriptor` and the capability query use the one
+table. Stage 12 owns register transport policy, stage 13 owns ID interpretation
+and matching, and stage 24 owns indexed shadow reads. The local TMP1x2 checkout
+was clean at `c91bac63313ea725ce174ab98abc50705c365639`. All five inspected blobs
+matched the phase-a pin and the MIT license blob matched this repository.
+
+| Check | Phase-c result |
+| --- | --- |
+| `cmake -S . -B build-tests-prompt11-c -G Ninja -DTMP11X_BUILD_TESTS=ON -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXPORT_COMPILE_COMMANDS=ON`, `cmake --build build-tests-prompt11-c --config Release --parallel`, `ctest --test-dir build-tests-prompt11-c -C Release --output-on-failure` | PASS, 7/7 including all 31 ledger regressions. CMake 4.0.1, Ninja 1.12.1, GNU C++ 15.1.0 and Python 3.12.10. The core and value tests used C++17, strict warnings as errors and `-DNDEBUG`. |
+| `nm -u build-tests-prompt11-c/CMakeFiles/TMP11x.dir/src/Config.cpp.obj` and `g++ -std=c++17 -Wall -Wextra -Wpedantic -Werror -fno-exceptions -fno-rtti -I include -fsyntax-only src/Config.cpp` | PASS. The capability object had no unresolved symbols and the source also compiled with exceptions and RTTI disabled. |
+| `doxygen build-docs-prompt11-c/Doxyfile.values` | PASS with Doxygen 1.13.2 and warnings treated as errors. The XML contains both updated comments. |
+| `scripts/pio.cmd package pack --output build-package-prompt11-c/TMP11x.tar.gz` and `tar -tf` | PASS with managed PlatformIO Core 6.2.0 and the blob-verified offline SPDX response recorded in stage 10. All 15 regular files matched the reviewed working tree byte for byte. SHA-256 `49c569658262a74a20e155796dd11e490bbc18d39346ff7b675786e8ca5180b3`. |
+| Separate Release consumer of the extracted package in `build-package-prompt11-c/linked` | PASS. It included `<TMP11x/TMP11x.h>`, linked and ran the TMP119 capability query. Tests were off with zero CTest registrations. CMake reported the Python and Git discovery-disable flags unused. |
+| `python -B scripts/check_promptset.py`, `python -B scripts/check_references.py` and Git whitespace checks | PASS for 55 stages, 14 pinned PDF hashes, the reviewed commit, the working diff and the empty index. The wrapper owns the staged diff check and commit synchronization. |
+
+MCU links, deliberate remote CI and physical qualification were NOT RUN.
+Phase d owns final acceptance, the progress row, report index and completion
+marker. There is no outstanding phase-c finding.

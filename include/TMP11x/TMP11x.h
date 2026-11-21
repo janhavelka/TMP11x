@@ -9,6 +9,11 @@
 namespace TMP11x {
 
 /// Selected target and complete ID evidence when available.
+/// TMP116/N requires the full word 0x1116 and has no decoded revision.
+/// TMP117/M/N and TMP119 require bits 11:0 to equal 0x117. Bits 15:12
+/// carry the revision, which is valid even when zero.
+/// The group describes the observed word even when it is incompatible with
+/// the selection. The exact model and grade come from the BOM.
 struct IdentityInfo {
   Model model = Model::UNSELECTED;               ///< Exact model selected from the BOM.
   std::uint8_t i2cAddress = 0;                   ///< Bound unshifted seven-bit address.
