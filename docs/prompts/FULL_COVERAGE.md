@@ -22,10 +22,12 @@ timing and safety decisions.
 
 ## Models and complete register coverage
 
-The BOM selects TMP116, TMP116N, TMP117, TMP117M, TMP117N or TMP119. Grades do
-not create additional runtime maps or prove accuracy over I2C. TMP119M remains
-an unresolved orderable question, not an added model. Every row requires
-per-model applicability, including explicit refusal of absent features.
+The BOM selects TMP116, TMP116N, TMP117, TMP117M, TMP117N or TMP119. Models
+share register capabilities where the exact-part maps agree. Identity
+compatibility and accuracy grade are separate observations. The six-model
+scope excludes TMP119M because the pinned addendum gives no TMP119M ordering
+code. Every row requires per-model applicability, including explicit refusal
+of absent features. See the [variant contract](../variants.md).
 
 | ID | Hardware function | Planned owners | Required closure evidence |
 |---|---|---|---|
@@ -78,6 +80,26 @@ device retains factory settings. Separate hardware access from release policy.
 | F18 | Health/deadlines/cancellation/ownership | 8–9, 14–15, 27–31, 33 | Passive OFFLINE, post-callback clock, finite work, exclusive sensor authority across dependent transfers, exactly-once results |
 | F19 | Variant and incompatible-neighbor tests | 13, 32–33 | All six selected models, named TMP114/TMP118 negative fixtures; ACK/unrelated pointer data never unique part proof |
 | F20 | Independent consumers and evidence layers | 10, 33–36, 40–44 | SDK-free C++17 core, linked S2/S3/P4, installed package, exact CI SHA, per-fixture HIL; missing evidence never PASS |
+
+### Prompt 4 source and documentation evidence
+
+The links cover the documented layer for the six selected BOM models.
+Implementation, adapter and physical evidence remain open under the owners
+listed above.
+
+- **F01** records the exact grade, packages, supply and orderable limits in
+  the [BOM matrix](../board-integration.md#orderable-packages-and-conditions).
+  The [identity decision](../variants.md#identity-decision) also supplies the
+  source rule and example words for R17.
+- **F02** records the [ADD0 straps and seven-bit addresses](../board-integration.md#pins-and-add0-straps).
+  The [neighbor inventory](../variants.md#excluded-and-shared-bus-devices)
+  supplies the shared-bus exclusions for X07.
+- **F13** records the per-model [EEPROM shadow map and provenance limits](../variants.md#eeprom-shadow-and-traceability).
+  The same evidence documents the factory-identity limit for X06.
+- **F16** records [serial inputs, pullups and decoupling](../board-integration.md#pullups-logic-levels-and-decoupling)
+  and [package-specific thermal layout](../board-integration.md#thermal-layout-and-precision).
+- **F17** records [guaranteed accuracy and its conditions](../board-integration.md#guaranteed-accuracy),
+  including averaging, cycle, assembly, code range and startup sentinel.
 
 ## Excluded or application-owned hardware functions
 

@@ -1,10 +1,17 @@
 # Prompt 4 — family identity and board integration
 
-**Status: PARTIAL.** Phase a source brief, 2026-11-21.
-Baseline `e4597abb69ae95b9a25ae4e31c22b473f8f48416` on clean `main`,
-equal to the local `origin/main` tracking ref at entry. The wrapper owns
-fetch, staging, commit and push. The execution manifest places prompt 4
-after completed [prompt 3](prompt_3.md) and before prompt 5.
+**Status: PARTIAL.** Phase b deliverables checked on 2026-11-21. Phase c
+artifact review is next. The execution manifest places prompt 4 after
+completed [prompt 3](prompt_3.md) and before prompt 5.
+
+Phase a started on clean `main` at
+`e4597abb69ae95b9a25ae4e31c22b473f8f48416`. The wrapper recorded the
+linked source brief at `0432fe1ce6af4f5e98aa32d3e7e52f96603ed6b0`.
+The verified history rewrite maps that commit to
+`9bc78688bfff8782fbb0c7f20270482c26ea0324`. Phase b started on clean
+`main` at `a28ecc60f3bfe73d0a7b4fc4f1f0c92c80a694d1`, equal to the
+local `origin/main` tracking ref at entry. The wrapper owns fetch,
+staging, commit and push.
 
 ## Inputs and deliverables
 
@@ -150,8 +157,46 @@ the board guide, and prompt 42 finalizes user-facing integration guidance.
 - The exact pinned Linux file was unavailable through the browser lookup.
   The checked catalog and an accessible independent Linux revision provided
   secondary corroboration. This does not gate TI-source documentation.
-- Phase b writes the two guides and connects F01/F02/F13/F16/F17 to their
-  source evidence. Phase c reviews the actual deliverables against every
-  prompt obligation, and phase d owns closure and the progress/index update.
-  Native implementation, MCU links and physical fixture checks were NOT RUN.
-  Remote CI belongs to prompt 43. No workflow is tracked at this baseline.
+
+## Phase b deliverables and checks
+
+- [Variant contract](../variants.md) names all six BOM models, their two
+  register maps, capability gates, EEPROM shadows, observed ID and revision
+  rules, and incompatible neighbors. Named decision cases include invalid
+  selection, incomplete transport, undocumented TMP116 IDs, shared
+  TMP117/TMP119 revision examples, and complete `0x0000` or `0xFFFF`
+  mismatches. TI governs the rule. The clean local TMP1x2
+  `include/TMP1x2/Config.h` at
+  `c91bac63313ea725ce174ab98abc50705c365639` was checked for the explicit
+  model/address convention. No peer or Linux code was copied.
+- [Board guide](../board-integration.md) records six orderable model rows,
+  both pinouts, the ADD0 table, all supported accuracy rows, and their supply,
+  temperature and assembly conditions. It preserves the TMP116 orderable
+  versus recommended temperature conflict, the TMP116 ALERT conflict and
+  the TMP117M orderable limits. Ordering examples come from pinned addenda.
+  Current availability and physical fixture details remain unverified.
+- [Coverage evidence](../prompts/FULL_COVERAGE.md#prompt-4-source-and-documentation-evidence)
+  connects F01, F02, F13, F16 and F17 to the documented layer, with source
+  evidence for the identity and exclusion rows R17, X06 and X07. Later
+  ledger, API, adapter and physical owners retain their remaining checks.
+- PASS — inspected exact TI PDFs with PyMuPDF 1.27.2.2. Rendered SBOS740A
+  pp.5, 32, 36, SNOSD82D p.6 and SNIS236 p.7 to verify merged accuracy
+  conditions, note markers and the two TMP116 figures. Checked the
+  TMP112 SBOS473L and TMP1075 SBOS854F vendor documents for neighbor
+  addresses and protocol differences. The stage 3 Linux revision remained
+  inaccessible during this pass. The catalog and accessible revision
+  `1f7267d8043e394933b0ed06070bfa7921d7c830` supply comparison evidence.
+- PASS — Python 3.12.10: `python -B scripts/check_references.py` verified
+  14 pinned PDFs, and `python -B scripts/test_check_references.py` passed
+  9 tests. `python -B scripts/check_promptset.py` verified all 55 stages,
+  coverage ownership, local links and PDF anchors.
+  `python -B scripts/test_check_promptset.py` passed 36 tests.
+  Focused checks resolved 121 local links including heading and PDF
+  page anchors, matched all nine orderable examples to their package
+  and temperature ranges, and counted 24 supported accuracy rows.
+  `git diff --check` and whitespace checks on the new guides passed
+  with Git 2.52.0.windows.1.
+- NOT RUN — native implementation tests, MCU links, remote CI and physical
+  fixture qualification. No workflow is tracked at the phase b baseline.
+  Remote CI is deferred to stage 43. Phase c reviews the guides and source
+  evidence. Phase d owns acceptance, report index and progress updates.
