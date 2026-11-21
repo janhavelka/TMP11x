@@ -176,8 +176,12 @@ def check_semantics(profile, register, fields, where):
             "1": "unlocked (writes can program EEPROM)",
         }:
             raise ValueError(f"{where}.EUN: expected locked=0 and unlocked=1")
-    if "SOFT_RESET" in fields and fields["SOFT_RESET"]["factory"] != "0":
-        raise ValueError(f"{where}.SOFT_RESET: expected zero readback")
+    if "SOFT_RESET" in fields:
+        command = fields["SOFT_RESET"]
+        if command["factory"] != "0":
+            raise ValueError(f"{where}.SOFT_RESET: expected zero readback")
+        if command.get("encodings") != {"0": "no reset command", "1": "request addressed reset"}:
+            raise ValueError(f"{where}.SOFT_RESET: expected write-one reset command")
     if name == "DEVICE_ID":
         did = 0x1116 if profile == "TMP116" else 0x117
         try:

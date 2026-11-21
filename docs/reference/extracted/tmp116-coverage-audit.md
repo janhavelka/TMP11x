@@ -31,12 +31,12 @@ qualified. Existing exclusions remain in force.
 | CONFIG 4 T/nA | 0 alert / 1 therm; EEPROM-stored, factory 0. pp.15-16, 26 | Supported. 17, 22 |
 | CONFIG 3 POL | 0 active-low / 1 active-high. Pin remains open-drain. EEPROM-stored, factory 0. pp.3, 26 | Supported routing semantics; GPIO electrical handling application-owned. 17, 22, 34-35 |
 | CONFIG 2 DR/Alert | 0 pin reflects alert flags / 1 pin reflects DATA_READY. EEPROM-stored, factory 0. p.26 | Supported; pin source distinct from comparator status. 17, 22 |
-| CONFIG 1:0 | Not used, read-zero. No individually addressed software-reset bit. p.26 | Writes zero; reset request rejected before I2C. 5, 17, 25-26 |
+| CONFIG 1:0 | Unused, R with reset value 0. No individually addressed software-reset bit. p.26 | Writes zero; reset request rejected before I2C. 5, 17, 25-26 |
 | THIGH 0x02, 15:0 | Signed same format as TEMP; EEPROM-backed writable shadow; factory 0x6000 =192 C. Reset reloads programmed value. p.28 | Guarded volatile read/write; full representation not restricted to rated measurement range. 16, 18-19, 22 |
 | TLOW 0x03, 15:0 | Signed same format; EEPROM-backed writable shadow; factory 0x8000 =-256 C. Reset reloads programmed value. p.28 | Same as THIGH. 16, 18-19, 22 |
 | EEPROM_UL 0x04, 15 EUN | R/W, reset0. 0 keeps relevant writes in volatile shadows; 1 enables programming corresponding cells. p.29 | Read only; *all* writes to 0x04 excluded by library policy, including attempts to lock it. 7, 18, 24, 26 |
 | EEPROM_UL 14 busy | R, reset0; mirrors CONFIG bit 12. Detailed table covers programming and reset load. p.29 | Supported read-only observation and write guard. 5-7, 18, 24 |
-| EEPROM_UL 13:0 | Unused, read-zero. p.29 | Ledger/reserved-bit protection. 5, 24, 26 |
+| EEPROM_UL 13:0 | Unused, R with reset value 0. p.29 | Ledger/reserved-bit protection. 5, 24, 26 |
 | EEPROM1 0x05, 15:0 | Full word, R/W shadow corresponding to NVM; detailed resetXXXX. pp.17, 29 | Read only in release, even while locked. 7, 24, 26 |
 | EEPROM2 0x06, 15:0 | Same behavior as EEPROM1; detailed resetXXXX. p.30 | Same. 7, 24, 26 |
 | EEPROM3 0x07, 15:0 | Same behavior as EEPROM1; detailed reset0000. **Not temperature offset.** p.30 | Same; offset requests rejected before I2C. 23-24, 26 |

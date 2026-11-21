@@ -29,9 +29,9 @@ the project deliberately permits fewer writes.
 | CONFIG[3] POL | p.34: 0 active-low, 1 active-high ALERT. | Typed pin polarity, 22; GPIO belongs to application. |
 | CONFIG[2] DR/Alert | p.34: 1 routes DATA_READY to ALERT, 0 comparator alert flags. | Typed output selection and distinct register/pin observations, 22. |
 | CONFIG[1] Soft_Reset | p.35 detailed table: addressed software-reset command, 2-ms reset, reads zero. p.34 figure incorrectly labels it read-only. | Explicit guarded command only, 7,25; never ordinary settings replay. |
-| CONFIG[0] unused | p.35: reads zero. | Zero in writes; no raw escape, 17,26. |
+| CONFIG[0] unused | p.35: R with reset value 0. | Zero in writes; no raw escape, 17,26. |
 | 0x02 THIGH, 0x03 TLOW [15:0] | p.36: signed 1/128°C limits; factory 0x6000/0x8000, EEPROM-loaded on reset. | Guarded volatile limits/readback, 18,22. Representable range is distinct from rated temperature. |
-| 0x04[15] EUN, [14] BUSY, [13:0] unused | p.37: EUN controls whether writes reach NVM; busy mirrors CONFIG; lower bits read zero. | Reads only, including lock/busy diagnostics; every write denied, 7,18,24,26. |
+| 0x04[15] EUN, [14] BUSY, [13:0] unused | p.37: EUN controls whether writes reach NVM; busy mirrors CONFIG; unused lower bits have reset value 0. | Reads only, including lock/busy diagnostics; every write denied, 7,18,24,26. |
 | 0x05 EEPROM1, 0x06 EEPROM2, 0x08 EEPROM3 [15:0] | pp.32,37–39: EEPROM-backed scratch/traceability shadows. Locked writes affect shadows; unlocked writes program NVM. | Checked three-word read-only map, 24. No shadow or NVM writes, no asserted immutable serial identity. |
 | 0x07 Temp_Offset[15:0] | pp.32,38: signed 1/128°C offset after linearization; result sum saturates at signed endpoints; reset value EEPROM-backed, factory zero. | Guarded typed volatile offset only, 23. Reject invalid requested offset; never apply it twice in software. |
 | 0x0F[15:12] Rev, [11:0] DID | p.39 Table 8-14: revision plus DID=0x117; detailed reset 0x2117 conflicts with map p.32 0x0117. | BOM model controls capabilities; compatible ID cannot prove TMP119 versus TMP117 or grade, 4,13,32. |

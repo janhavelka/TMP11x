@@ -248,6 +248,16 @@ class RegisterLedgerTests(unittest.TestCase):
                 self.rejected(f"{profile}.addressed_reset: cite both the CONFIG diagram and field table")
                 reset["pages"] = original
 
+    def test_addressed_reset_requires_write_one_encoding(self):
+        for profile in ("TMP117", "TMP119"):
+            with self.subTest(profile=profile):
+                field = self.field("CONFIG", "SOFT_RESET", profile)
+                codes = field.pop("encodings")
+                self.rejected(f"{profile}.CONFIG.SOFT_RESET: expected write-one reset command")
+                field["encodings"] = {"0": codes["1"], "1": codes["0"]}
+                self.rejected(f"{profile}.CONFIG.SOFT_RESET: expected write-one reset command")
+                field["encodings"] = codes
+
     def test_identity_uses_the_correct_family_literal(self):
         self.field("DEVICE_ID", "DID", "TMP116")["factory"] = "0x117"
         self.rejected("expected compatibility ID 0x1116")

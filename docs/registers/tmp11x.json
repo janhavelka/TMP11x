@@ -269,7 +269,7 @@
               "factory": "0",
               "nvm_mask": 0,
               "role": "reserved",
-              "read": "Unused bits read zero.",
+              "read": "TI lists unused bits with reset value zero. Ignore these bits when interpreting the word.",
               "write": "Write zero when constructing a CONFIG word."
             }
           ]
@@ -378,7 +378,7 @@
               "factory": "0",
               "nvm_mask": 0,
               "role": "reserved",
-              "read": "Unused bits read zero.",
+              "read": "TI lists unused bits with reset value zero. Ignore these bits when interpreting the word.",
               "write": "No writable field."
             }
           ]
@@ -795,7 +795,7 @@
               "factory": "0",
               "nvm_mask": 0,
               "role": "reserved",
-              "read": "Unused bits read zero.",
+              "read": "TI lists unused bits with reset value zero. Ignore these bits when interpreting the word.",
               "write": "Write zero when constructing a CONFIG word."
             }
           ]
@@ -904,7 +904,7 @@
               "factory": "0",
               "nvm_mask": 0,
               "role": "reserved",
-              "read": "Unused bits read zero.",
+              "read": "TI lists unused bits with reset value zero. Ignore these bits when interpreting the word.",
               "write": "No writable field."
             }
           ]
@@ -1331,7 +1331,7 @@
               "factory": "0",
               "nvm_mask": 0,
               "role": "reserved",
-              "read": "Unused bits read zero.",
+              "read": "TI lists unused bits with reset value zero. Ignore these bits when interpreting the word.",
               "write": "Write zero when constructing a CONFIG word."
             }
           ]
@@ -1440,7 +1440,7 @@
               "factory": "0",
               "nvm_mask": 0,
               "role": "reserved",
-              "read": "Unused bits read zero.",
+              "read": "TI lists unused bits with reset value zero. Ignore these bits when interpreting the word.",
               "write": "No writable field."
             }
           ]

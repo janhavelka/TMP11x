@@ -83,7 +83,7 @@ still requires its own fresh parallel review.
 
 | Stage | Source comparison and disposition |
 | --- | --- |
-| 1 | At TMP1x2 `afd5088`, `src/TMP1x2.cpp` counts tracked terminal transfers and permits reads while OFFLINE. The registered `helpers` case `trackedWordObservations` contrasts raw and tracked reads. The `variants` assertion covers a bound probe. Corrected the test attribution and the ADS1115 `e07622a` helper name to `_markHardwareConfigDirtyIfClean` in the [comparison](../library-comparison.md). That helper preserves an earlier dirty fault. OPT4001 `441ef57` supplies destructive-read bookkeeping, TCA9548A `4a244ad` supplies an example of recovery that disables mux routes, and MB85RC `3ace168` supplies retained results. The FieldCore caller on `rodtester` at `c40ea83` clips the callback budget. The checked TMP1x2 MIT notice matches the local license. |
+| 1 | At TMP1x2 `afd5088`, `src/TMP1x2.cpp` counts tracked successes and selected failure codes and permits reads while OFFLINE. The registered `helpers` case `trackedWordObservations` contrasts raw and tracked reads. The `variants` assertion covers a bound probe. Corrected the test attribution and the ADS1115 `e07622a` helper name to `_markHardwareConfigDirtyIfClean` in the [comparison](../library-comparison.md). That helper preserves an earlier dirty fault. OPT4001 `441ef57` supplies destructive-read bookkeeping, TCA9548A `4a244ad` supplies an example of recovery that disables mux routes, and MB85RC `3ace168` supplies retained results. The FieldCore caller on `rodtester` at `c40ea83` clips the callback budget. The checked TMP1x2 MIT notice matches the local license. |
 | 2 | TMP1x2 `afd5088` registers eight native C++ tests in `CMakeLists.txt`. Its CI pins Core 6.1.19 and IDF 5.3.2/5.5.1/6.0.1. Its generator embeds the project name. The 24Cxx `1bd9f96` CMake test runs a Python transcript against its CLI executable. The template at `b574041` has an unpinned PlatformIO install and no root CMake file. MotorControl-CAN `60bcefe` and DP8382x `87aafc0` support the sequence and evidence-layer conventions. The current TMP11x manifest keeps the original 44 stages and inserts 11 audits. The [toolchain plan](../toolchain-and-package-plan.md) distinguishes the installed Core 6.2.0 at `C:\pio` from the peer CI pin. SDK discovery confirmed S2/S3/P4 target metadata. The peer working-tree edits in MotorControl-CAN were excluded by reading commit objects. |
 | 3 | All 14 original PDFs matched the manifest hashes, cover revisions and page counts. The Linux and Adafruit source blobs match the GPL-2.0-only and BSD-3-Clause comparisons in the [catalog](../reference/public-code-catalog.md). Added TI's SAIL 1.50.00.00 TMP116 API documentation, which describes a blocking open and a close that disables conversions. Its linked license manifest was unavailable. Updated the [intake notes](../reference/extracted/intake-notes.md) to point from the original HTTP 403 to the subsequently reviewed TMP117 capture. Thread 1019457 reports a missed indication and gives conflicting DR/Alert settings. The linked TMP116 thread 822036 still returned HTTP 403. |
 
@@ -131,3 +131,38 @@ The startup BUSY contradiction, read-clear edge, TEMP byte latching,
 offset/comparator ordering and addressed-reset effects listed in phase a
 remain open. Native driver execution, MCU links, remote CI and physical
 qualification were NOT RUN.
+
+## Phase c — independent review, 2026-11-21
+
+The lead reread prompts 1–7 in full. The review started on clean `main`
+at `4ea6744fd78999658196d27af4bd37e5b06b3013`. Its eleven changed paths
+matched the phase-b commit request. The wrapper recorded upstream equality
+at 18:38:33 Prague time. Two read-only reviewers worked in parallel on that
+revision and returned their findings before the handoff.
+
+| Finding | Lead verification and correction |
+| --- | --- |
+| Rejected replacement binding | At TMP1x2 `afd5088:src/TMP1x2.cpp` lines 19–36, `bind` calls `unbind()` before validating the replacement. The comparison now identifies the ordering required by TMP11x stage 14 to preserve the prior binding and observations on rejection. [Lifecycle contract](../prompts/14_binding-lifecycle.md). |
+| Health during startup | In the same file, `healthFailure` selects the failure codes to count. Lines 120–136 gate the READY/DEGRADED/OFFLINE transitions on initialization. Stage 15 counts each tracked physical outcome and updates health during startup and apply. Corrected the peer attribution in the comparison and the phase-b summary. [Peer comparison](../library-comparison.md), [health contract](../prompts/15_passive-health.md). |
+| Unused bits on reads | SBOS740A pp.26,29, SNOSD82D pp.28,30 and SNIS236 pp.35,37 list R access and reset value 0 for the unused CONFIG and EEPROM_UL fields. Corrected the readback guarantee in all six ledger entries, the three source inventories and R13. CONFIG writes still encode zero in reserved positions. The guard masks with `0xC000`. Synthetic words `0x3FFF` and `0x0000` therefore give the same locked/idle decision. [Ledger](../registers/tmp11x.json), [safety transcripts](../eeprom-and-reset-policy.md#transcript-vectors-for-implementation). |
+| Addressed-reset encodings | SNOSD82D p.28 Table 7-6 and SNIS236 p.35 Table 8-5 define bit 1 as write-one to reset. Before the fix, deleting the encoding map or exchanging its zero/one meanings passed validation on both profiles. The validator now rejects all four mutations. The TMP116 profile continues to exclude the command. [Validator](../../tools/check_register_ledger.py), [regression cases](../../tools/test_check_register_ledger.py). |
+
+The stages 1–3 reviewer checked pinned peer code, registered callers, build
+rules, the managed PlatformIO 6.2.0 installation, PDF cover revisions and the
+Linux and Adafruit license records. The stages 4–7 reviewer matched 30 register
+map entries, 96 nominal cycle cells and all 32 TMP116 standby footnotes, and
+traced the EEPROM and reset exclusions. The lead also recalculated 36 active
+times, 11 signed words, 14 host quantization cases, three offset cases and
+eight pin routes. An exhaustive check of the guard masks covered all 65,536
+input words.
+
+Python 3.12.10 with `-B` passed `scripts/check_references.py` (14 PDFs),
+`tools/check_register_ledger.py` (six models) and `scripts/check_promptset.py`
+(55 stages). Their regression scripts passed 9, 31 and 36 tests respectively.
+`git diff --check` passed with Git 2.52.0.windows.1.
+
+Phase d owns final acceptance and the completion record. TMP116 startup BUSY,
+the CONFIG clear edge, TEMP byte latching, offset/comparator ordering and
+addressed-reset side effects retain their evidence gates. The optional TI
+license manifest and linked TMP116 discussion remain unavailable. Native
+driver execution, MCU links, remote CI and physical qualification were NOT RUN.

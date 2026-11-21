@@ -76,12 +76,12 @@ values is EEPROM-loaded, so manufacturing values do not prove current state.
 | `0x01` POL[3] | `0x0008`; factory 0; 0=active low,1=active high | S; 17,22; pin remains open-drain |
 | `0x01` DR/Alert[2] | `0x0004`; factory 0; 0 routes comparator flags,1 routes DATA_READY to ALERT | S; 17,22; flag observations separate from pin routing |
 | `0x01` Soft_Reset[1] | `0x0002`; read0 always; write1 commands addressed 2-ms reset | S explicit guarded reset only; 25; ordinary writes force0 |
-| `0x01` reserved[0] | `0x0001`; read0, ordinary write0 | X meaningful writes; 5,17,26 |
+| `0x01` reserved[0] | `0x0001`; unused, R with reset value 0, write 0 in CONFIG | X meaningful writes; 5,17,26 |
 | `0x02` THIGH[15:0] | `0xFFFF`; factory `0x6000` (+192°C); signed 1/128°C; EEPROM-loaded | S guarded volatile limits; 16,18,22 |
 | `0x03` TLOW[15:0] | `0xFFFF`; factory `0x8000` (−256°C); signed 1/128°C; EEPROM-loaded | S guarded volatile limits; 16,18,22 |
 | `0x04` EUN[15] | `0x8000`; reset0; 0=volatile writes,1=EEPROM programming enabled | R observation/X write; 7,18,24,26 |
 | `0x04` EEPROM_Busy[14] | `0x4000`; reset0; mirrors CONFIG[12]; programming or POR loading | R observation; 7,18,24 |
-| `0x04` reserved[13:0] | `0x3FFF`; read0 | R/X write; 5,24,26 |
+| `0x04` reserved[13:0] | `0x3FFF`; unused, R with reset value 0 | R/X write; 5,24,26 |
 | `0x05` EEPROM1[15:0] | `0xFFFF`; factory content not fixed; shadow of EEPROM; factory traceability content | R/X all writes including locked shadow writes; 7,24 |
 | `0x06` EEPROM2[15:0] | `0xFFFF`; unknown factory content, despite contradictory section heading | R/X all writes; 7,24 |
 | `0x07` OFFSET[15:0] | `0xFFFF`; factory 0, EEPROM-loaded; signed 1/128°C added after linearization; saturated result | S guarded volatile offset; 23; never a fourth EEPROM word |
