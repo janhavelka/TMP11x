@@ -23,22 +23,22 @@ reset boundaries and forbidden transaction cases used by the affected rows.
 
 ## Current evidence
 
-This status applies individually to every row below and each selected model.
 The documented column includes the limits of the available silicon evidence.
 For an exclusion, implementation and tests must eventually demonstrate refusal
-or absence of forbidden traffic. No sensor implementation path, registered
-driver test, linked firmware image, CI run or physical board/grade record
-exists for these rows at this checkpoint.
+or absence of forbidden traffic. The library foundation is the first part of
+F20 and applies to every selected model.
 
 | Applies to | documented | implemented | host-tested | MCU-linked | remote-CI | physically-qualified |
 | --- | --- | --- | --- | --- | --- | --- |
-| All 46 rows and all six models | Source pages and project dispositions below | Pending | Not run | Not run | Not run | Not run |
+| F20.foundation | Source pages and project dispositions below | SDK-free C++17 library and source consumer foundation | Version test and isolated native source link/run passed. Shared-bus and installed-package checks are pending. | Not run | Not run | Not run |
+| All other rows, all six models | Source pages and project dispositions below | Pending | Not run | Not run | Not run | Not run |
 
 When evidence differs by row or model, record its implementation path, test
 registration/result, linked target, exact CI revision and fixture identity in
-separate entries. Stage 10 registers the ledger checks. Stages 33 and 44
-reconcile the executing software evidence. Stages 40–41 record physical
-results only for the board, part, conditions and actions actually exercised.
+separate entries. The [stage 10 report](reports/prompt_10.md) records the F20
+checks and ledger test registration. Stages 33 and 44 reconcile the software
+evidence. Stages 40–41 record physical results only for the board, part,
+conditions and actions actually exercised.
 [Required coverage inventory](prompts/FULL_COVERAGE.md),
 [verification layers](prompts/VERIFICATION.md).
 

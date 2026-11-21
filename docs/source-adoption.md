@@ -35,6 +35,24 @@ and any separately licensed reference material retain their own notices;
 placing them in this repository does not relicense them under MIT. Their
 source URLs, revisions and hashes belong in `docs/reference/manifest.json`.
 
+## Library foundation
+
+Stage 10 adapted the following MIT files from TMP1x2 at
+[`afd50889312f6e218a6a34eca687e3e8547d8b40`](https://github.com/janhavelka/TMP1x2/tree/afd50889312f6e218a6a34eca687e3e8547d8b40).
+The existing THYMOS Solution s.r.o. and Jan Havelka notice is retained in the
+packaged [LICENSE](../LICENSE).
+
+| Original file | TMP11x adaptation and evidence |
+| --- | --- |
+| `CMakeLists.txt` | The [root build](../CMakeLists.txt) uses one portable source list for both native CMake and ESP-IDF. The native build carries the public C++17 requirement and gates test registration and Python discovery on `TMP11X_BUILD_TESTS`. |
+| `scripts/generate_version.py`, `include/TMP1x2/Version.h` | The [generator](../scripts/generate_version.py) and [header](../include/TMP11x/Version.h) retain the render, sync and check structure and fixed-width components. The generated version string has no build-time input. The linked version function and thin checker use the same generated metadata. |
+| `library.json`, `idf_component.yml` | [TMP11x metadata](../library.json) identifies its own project and maintains an explicit runtime export list. The [ESP-IDF manifest](../idf_component.yml) mirrors the version and carries project attribution. |
+| `tools/check_package.py`, `test/core_no_arduino/compile_main.cpp` | The tests-off source consumer and tests-on version test adapt the independent-consumer and framework-free test patterns. Both exercise the linked version API. |
+
+OPT4001 at [`441ef579d7fa3f7bca7665f52632fdaddd306300`](https://github.com/janhavelka/OPT4001/tree/441ef579d7fa3f7bca7665f52632fdaddd306300)
+provided a clean-package precedent through `tools/check_clean_consumer_package.py`.
+The template was a structural precedent. [Stage 10 checks](reports/prompt_10.md).
+
 ## Selected future reuse
 
 These are decisions for later stages, not claims that the corresponding
@@ -51,7 +69,7 @@ TMP11x files already exist.
 | ADS1115 owner example and dirty-state tests | Adapt concept | Application owns lock, repeated START, controller timeout and recovery attempts. Keep platform APIs out of portable core. |
 | TCA9548A ownership/route guidance | Adopt integration boundary | Application serializes route selection through STOP and sensor transfer. No mux dependency or bus recovery code inside TMP11x. |
 | MB85RC retained-result and ambiguous-write tests | Adapt concept | Preserve observable possible hardware effect and result consumption. Do not import memory chunks, caller-buffer lifetime model or writable storage API. |
-| Build/version/CLI/HIL tooling | Select individually in prompt 2/10 and later stages | Inspect current files, license and real registrations. Rename package identity, restrict exports and validate behavior; never copy a sibling's entire tool/reference tree. |
+| CLI/HIL tooling | Select in the firmware and runner stages | Inspect current files, license and real registrations. Preserve independent executable checks and use TMP11x-specific behavior. |
 
 ## Explicitly rejected imports
 

@@ -71,3 +71,98 @@ There is no phase-b input blocker. Native library builds, tests-OFF consumer,
 version checks, package listing, MCU links, remote CI and physical
 qualification were NOT RUN. The wrapper owns the phase-a commit and upstream
 verification.
+
+## Phase b implementation and focused checks, 2026-11-21
+
+**PARTIAL.** Implemented and checked the library foundation. Phase c owns the
+fresh review. Phase d owns acceptance, progress and report indexing.
+
+Phase-b entry was clean `main` at
+`43ffbbb0f5710614265395bd8328bb64066dc12b`, with 0/0 divergence from
+`origin/main`. The parent, subject and sole report path agree with
+`commit_20261121-221203.json`. The wrapper logged the commit and verified
+upstream equality at 22:15:09 Prague time. There were no unexpected worktree
+changes. No local CI workflow exists. Git metadata and sync are wrapper-owned.
+
+| Produced artifact | Implementation and handoff |
+| --- | --- |
+| `build-foundation` | [CMakeLists.txt](../../CMakeLists.txt) builds a static `TMP11x` target for native consumers and registers the same `src/Version.cpp` with ESP-IDF. Both expose the public include directory and C++17. [Version.h](../../include/TMP11x/Version.h) provides the header constants and the declaration of the out-of-line `TMP11x::version()`. The return value is the version compiled into the library. [Native consumer](../../examples/native_consumer/CMakeLists.txt) uses the library as a separate subdirectory with tests off. [PlatformIO](../../library.json) and [ESP-IDF](../../idf_component.yml) source exports carry the runtime and native example files, and the [changelog](../../CHANGELOG.md) identifies 0.1.0 as development. Stage 11 owns sensor value types. |
+| `version-tools` | [Generator](../../scripts/generate_version.py) provides explicit `sync` and read-only `check`. The [thin checker](../../tools/check_version_sync.py) delegates to the same check via the current Python interpreter. `library.json` is authoritative. It supplies the three numeric constants, header string and manifest mirror. The generated header contains no Git or clock data. CMake reads the checked-in header through the source and has no separate version field. |
+| `host-test-entrypoint` | `TMP11X_BUILD_TESTS` defaults OFF. When ON, CMake discovers Python 3.10+ and registers `version_cpp`, `version_generator_check`, `version_sync`, `register_ledger` and `register_ledger_regressions`. The [C++ test](../../test/test_version.cpp) checks the compiled-in and header values with explicit exit codes in Release. [Testing guide](../testing.md) documents both build paths and the version and archive checks. Stages 37–39 add CLI and runner cases to the same entrypoint. |
+
+The adopted TMP1x2 files at `afd50889312f6e218a6a34eca687e3e8547d8b40`
+are `CMakeLists.txt`, `library.json`, `idf_component.yml`,
+`scripts/generate_version.py` and `include/TMP1x2/Version.h`. The tests-off
+consumer follows the renamed source pattern in `tools/check_package.py`.
+`test/core_no_arduino/compile_main.cpp` supplies the framework-free test
+precedent. The local TMP1x2 and OPT4001 HEADs still matched the clean
+phase-a observations. Both pinned MIT notices matched the preserved root
+license. OPT4001's `tools/check_clean_consumer_package.py` at
+`441ef579d7fa3f7bca7665f52632fdaddd306300` was a packaging precedent.
+[Source adoption and exact pins](../source-adoption.md#library-foundation).
+
+### Phase-b checks
+
+- **PASS, native Release.** CMake and CTest 4.0.1, GCC 15.1.0, GNU Make
+  4.4.1 and Python 3.12.10. Configured
+  `cmake -S . -B build-tests-phase-b -G "MinGW Makefiles" -DTMP11X_BUILD_TESTS=ON -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_STANDARD=11 -DCMAKE_CXX_EXTENSIONS=OFF -DCMAKE_EXPORT_COMPILE_COMMANDS=ON`,
+  built with `cmake --build build-tests-phase-b --parallel`, and ran
+  `ctest --test-dir build-tests-phase-b --output-on-failure`. All five cases
+  passed, including validation of six BOM models and the 31 ledger
+  regressions. Compile commands showed `-DNDEBUG -std=c++17` for the library
+  and test. A scratch `g++ -std=c++17 -O3 -DNDEBUG -Wall -Wextra -Werror`
+  build of each negative case returned failure for a wrong linked version
+  and for a numeric constant inconsistent with the header string.
+- **PASS, isolated native source consumer and header.** Copied only the root
+  CMake file, `include/` and `src/` to
+  `build-consumer-phase-b/renamed library` and copied the two example files
+  to `build-consumer-phase-b/isolated application`. Configured that
+  application in `build-consumer-phase-b/linked` with MinGW Makefiles,
+  `TMP11X_SOURCE_DIR` pointing to the renamed copy, `TMP11X_BUILD_TESTS=OFF`,
+  `CMAKE_DISABLE_FIND_PACKAGE_Python3=TRUE` and
+  `CMAKE_DISABLE_FIND_PACKAGE_Git=TRUE`. Release build and execution passed
+  and printed `0.1.0`. CMake left the disable flags unused, CTest listed zero
+  tests and compile commands showed both copied sources using `-std=c++17`.
+  Piped a translation unit containing only `#include <TMP11x/Version.h>`
+  to `g++ -std=c++17 -pedantic-errors -Wall -Wextra -Werror -I <copied-include> -x c++ -fsyntax-only -`.
+- **PASS, version synchronization.** Ran the three commands from the testing
+  guide and `python -B build-version-phase-b/verify_generator.py` using the
+  ignored scratch harness. Missing-header sync reproduced the checked-in LF
+  bytes. Both check commands rejected independent header and IDF drift
+  without changing bytes, timestamps or inventory. Sync repaired both,
+  preserved the IDF comment and CRLF in the scratch file, and skipped writes
+  when current. Changing the sole authority to `2.65535.3` updated both
+  mirrors. Six invalid authority values and missing, duplicate or malformed
+  IDF version fields failed without writes.
+- **PASS with offline SPDX data, PlatformIO archive.** The direct command
+  `scripts/pio.cmd package pack . --output build-package-phase-b` selected
+  Core 6.2.0 at `C:\pio\penv\Scripts\pio.exe`. Its stock HTTPS fetch of
+  SPDX v3.28.0 failed with socket WinError 10013. The same launcher and pack
+  command passed using a process-scoped `PYTHONPATH` pointing at the local
+  scratch `sitecustomize.py`. That hook supplied the official SPDX reply to
+  the one pinned URL and left Core's manifest and license validation active.
+  The payload from the official GitHub repository matched Git blob
+  `4b7c3d5537191f08dc9771cb0ec5f59fe9c3f9ff` and SHA-256
+  `f728c534d8bd1044fc515a2ddb2292be99559021d830bfa3281be0bcd36302ee`.
+  A deliberately invalid license failed under the same replay and produced
+  no archive. [Pinned SPDX payload](https://raw.githubusercontent.com/spdx/license-list-data/v3.28.0/json/licenses.json).
+- **PASS, archive listing and IDF metadata.** `tar -tf build-package-phase-b/TMP11x-0.1.0.tar.gz`
+  listed exactly ten regular files. These were the root CMake file, the two
+  manifests, LICENSE, README, CHANGELOG, the two native consumer files,
+  Version.h and Version.cpp. All entries matched the working-tree bytes.
+  The archive SHA-256 was
+  `f0b2a758c36d46fc6896a23bca1359bd59633494804b8e222db166eacaddd657`.
+  ESP-IDF 5.5.5's Component Manager 2.5.2 parsed the 0.1.0 manifest and
+  selected the same ten files. The archive, replay hook and native build
+  outputs are in ignored build folders.
+- **PASS, structural and source checks.** `python -B scripts/check_promptset.py`
+  passed all 55 stages after adjusting the evidence row to the checker’s
+  existing form. `python -B scripts/check_references.py` passed all 14 PDF
+  hashes. Working and staged Git whitespace checks and local links in the
+  edited guides and report passed. The staged diff was empty in-session.
+
+MCU links, the installed CMake package and physical fixture qualification
+were **NOT RUN**. Stages 34–36 own the link cases, stage 42 owns the installed
+and extracted package tests, and stages 40–41 own fixture evidence. Remote CI
+was **NOT RUN** per the stage 43 checkpoint policy. The phase-b result is
+pending the wrapper commit and upstream check.

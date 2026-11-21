@@ -3,10 +3,17 @@
 A new, framework-neutral C++17 driver project for TI TMP116 / TMP116N,
 TMP117 / TMP117M / TMP117N, and TMP119. TMP117 is the primary intended sensor.
 
-**The sensor driver is not implemented yet.** This
-repository contains the 55-stage implementation and audit plan, source audits, pinned
-TI reference documents, and local preparation tools. There are no completed
-sensor, MCU build, or physical qualification claims.
+The C++17 library foundation is available at development version `0.1.0`.
+Its public header is `<TMP11x/Version.h>`, and `TMP11x::version()` reports the
+version compiled into the linked library. Sensor implementation and
+qualification are still pending.
+
+## Build and test
+
+Use the `TMP11x` CMake target via `add_subdirectory`. The standalone
+[native consumer](examples/native_consumer/CMakeLists.txt) shows how to link
+and call the version API. See the [testing guide](docs/testing.md) for host
+builds, CTest and version synchronization.
 
 ## Start here
 
@@ -46,8 +53,7 @@ git diff --check
 ```
 
 On Windows, `scripts\pio.cmd --version` uses the existing VS Code-managed
-PlatformIO installation. It does not install tools. C++/firmware commands will
-be added with the corresponding implementation stages.
+PlatformIO installation.
 
 ## Sources and licenses
 

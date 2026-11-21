@@ -14,16 +14,17 @@ conversion or startup interval runs. [Public API and operation gates](api-contra
 | `Config.h` | Value types, model and capability queries, callback types, binding and desired sensor settings. Stage 23 adds the configurable hardware offset. |
 | `CommandTable.h` | Checked map, access classes and field constants for the selected family. Stage 12 derives these from the reviewed ledger. A register identifier grants no write permission. |
 | `TMP11x.h` | Device class, typed observations, lifecycle, measurements, configuration, diagnostics and operation interface. Introduce each method with its feature stage. |
-| `Version.h` | Checked-in generated package version. Stage 10 makes `library.json` its source. |
+| `Version.h` | Checked-in generated package version from `library.json`. Its constants describe the header, and the out-of-line `version()` describes the linked library. |
 
 Implementation belongs in `src/`. Each public header must compile on its
 own as standard C++17. Installed consumers need only the public headers and
 library. Keep SDK handles, GPIO setup, FreeRTOS, heap allocation, logging,
 tasks, sleeps, retry loops and bus recovery outside the core. The Arduino
 and ESP-IDF examples have separate adapters and one CLI in `examples/common/`.
-Native IDF builds directly against the portable library. Keep examples,
-test doubles, host scripts and restricted vendor PDFs outside the exported
-runtime surface. [Toolchain and package plan](toolchain-and-package-plan.md).
+Native IDF builds directly against the portable library. Keep examples out of
+the library target. The source archive can carry standalone examples alongside
+the library. Test doubles, host scripts and vendor PDFs stay in the development
+checkout. [Native testing](testing.md), [toolchain and package plan](toolchain-and-package-plan.md).
 
 ## Which code decides each register action
 

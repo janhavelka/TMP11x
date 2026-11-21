@@ -56,6 +56,12 @@ declarations. Preparation does not create pretend source files or build passes.
 | Installed CMake package | Relocatable exported target and `find_package` consumer, with build/install include interfaces | Required TMP11x work: audited TMP1x2 CMake has no install/export implementation to copy |
 | CI | Native warnings/sanitizers, real documentation, package and linked SDK gates | Adapt commands to implemented targets; keep automatic triggers; stage 43 owns the first comprehensive remote checkpoint |
 
+Stage 10 implements the native CMake target, component metadata, tests-off
+source consumer, deterministic version tools and opt-in host suite. CMake
+uses the checked-in header without a separate project version field. Use the
+[testing guide](testing.md) for the current commands. Installed CMake package
+exports belong to stage 42.
+
 No sibling checkout, vendor PDF, reference-code archive, hardware transcript or
 toolchain installation may be needed by an extracted or installed consumer.
 Runtime exports must exclude `.git`, `.pio`, `build*`, managed components,

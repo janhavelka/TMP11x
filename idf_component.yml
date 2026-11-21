@@ -1,0 +1,21 @@
+version: "0.1.0"
+description: "Portable C++17 library foundation for TI TMP116, TMP117 and TMP119 temperature sensors."
+license: "MIT"
+url: "https://github.com/janhavelka/TMP11x"
+repository: "https://github.com/janhavelka/TMP11x.git"
+maintainers:
+  - "Jan Havelka (THYMOS Solution s.r.o.) <info@thymos.cz>"
+files:
+  exclude:
+    - "**/*"
+  include:
+    - "CMakeLists.txt"
+    - "library.json"
+    - "idf_component.yml"
+    - "LICENSE"
+    - "README.md"
+    - "CHANGELOG.md"
+    - "include/**/*"
+    - "src/**/*"
+    - "examples/native_consumer/CMakeLists.txt"
+    - "examples/native_consumer/main.cpp"
