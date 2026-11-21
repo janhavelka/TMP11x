@@ -1,0 +1,464 @@
+{
+  "purpose": "Literal research inputs for stages 16–23 and 32. Each trace is a separate initial state. Steps are ordered; flags are observations at that step. No driver or physical fixture was run.",
+  "conditions": "All six BOM selections unless scoped by case. Assume exclusive access to the selected sensor, stable power, timely complete MSB-first word transfers and no intervening conversion except where a step specifies otherwise. Software admission, retention and publication expectations follow docs/prompts/ENGINEERING.md.",
+  "sources": {
+    "documents": {"SBOS740A": ["TMP116", "TMP116N"], "SNOSD82D": ["TMP117", "TMP117M", "TMP117N"], "SNIS236": ["TMP119"]},
+    "page_numbering": "One-based pinned PDFs in docs/reference/manifest.json. A named page group applies to every row in the referencing case.",
+    "pages": {
+      "words": {"SBOS740A": [25,28], "SNOSD82D": [26,29], "SNIS236": [33,36]},
+      "blocks": {"SBOS740A": [11,12,13,14,26], "SNOSD82D": [12,14,15,27], "SNIS236": [14,16,17,34]},
+      "flags": {"SBOS740A": [14,15,16,26], "SNOSD82D": [15,16,17,27], "SNIS236": [17,18,19,34]},
+      "startup_and_guard": {"SBOS740A": [17,26,29], "SNOSD82D": [7,18,27,28,30], "SNIS236": [8,20,34,35,37]},
+      "eeprom": {"SBOS740A": [17,24,29,30,31], "SNOSD82D": [18,25,30,31,32], "SNIS236": [20,32,37,38,39]},
+      "offset": {"SNOSD82D": [31], "SNIS236": [38]}
+    },
+    "tmp117_race": "https://e2e.ti.com/support/sensors-group/sensors/f/sensors-forum/1019457/tmp117-data_ready-flag-cleared-incorrectly-if-data-becomes-ready-during-read-of-configuration-register"
+  },
+  "timing": {
+    "units": "Milliseconds. PDF pages are one-based. CC denotes continuous conversion.",
+    "conv_row_bits": ["000", "001", "010", "011", "100", "101", "110", "111"],
+    "avg_column_bits": ["00", "01", "10", "11"],
+    "avg_counts": [1, 8, 32, 64],
+    "interpretation": "Each matrix cell is the published nominal total CC period, including active time. A block that fills or exceeds the selected period has zero standby. The active-time tuples are separate count multiplications of the single-conversion row. Their typical values (15.5, 124, 496, 992) preserve unrounded arithmetic. The averaged bounds assume successive equal-condition conversions with no extra block overhead. TI gives no CC maximum period.",
+    "profiles": {
+      "TMP116": {
+        "models": ["TMP116", "TMP116N"],
+        "sources": ["SBOS740A p.5 electrical characteristics", "pp.11-14 conversion modes and averaging", "p.27 table 7 and notes 1-5"],
+        "electrical_condition": "One active conversion. Limits at 1.9 to 5.5 V and -55 to +125 C; typical at 3.3 V and +25 C.",
+        "single_conversion_min_typ_max_ms": [13.5, 15.5, 17],
+        "nominal_cc_cycle_ms": [
+          [15.5, 125, 500, 1000],
+          [125, 125, 500, 1000],
+          [250, 250, 500, 1000],
+          [500, 500, 500, 1000],
+          [1000, 1000, 1000, 1000],
+          [4000, 4000, 4000, 4000],
+          [8000, 8000, 8000, 8000],
+          [16000, 16000, 16000, 16000]
+        ],
+        "table7_standby_footnote": [
+          [1, 1, 1, 1],
+          [2, 1, 1, 1],
+          [2, 3, 1, 1],
+          [2, 3, 1, 1],
+          [2, 3, 4, 1],
+          [2, 3, 4, 5],
+          [2, 3, 4, 5],
+          [2, 3, 4, 5]
+        ],
+        "standby_footnote_key": {
+          "1": "Zero standby.",
+          "2": "Cycle less 15.5 ms.",
+          "3": "Cycle less 125 ms.",
+          "4": "Cycle less 500 ms.",
+          "5": "Cycle less 1000 ms."
+        },
+        "derived_active_min_typ_max_ms": [
+          [13.5, 15.5, 17],
+          [108, 124, 136],
+          [432, 496, 544],
+          [864, 992, 1088]
+        ]
+      },
+      "TMP117": {
+        "models": ["TMP117", "TMP117M", "TMP117N"],
+        "sources": ["SNOSD82D p.6 electrical characteristics", "pp.12-15 conversion modes and averaging", "p.28 table 7-7 and following note"],
+        "electrical_condition": "One-shot mode. Applying the electrical row to a continuous block is an estimate. Table conditions: 1.7 to 5.5 V at -55 to +70 C, or 1.8 to 5.5 V at -55 to +150 C; typical at 3.3 V and +25 C. The selected grade retains its own specified operating range.",
+        "single_conversion_min_typ_max_ms": [13, 15.5, 17.5],
+        "nominal_cc_cycle_ms": [
+          [15.5, 125, 500, 1000],
+          [125, 125, 500, 1000],
+          [250, 250, 500, 1000],
+          [500, 500, 500, 1000],
+          [1000, 1000, 1000, 1000],
+          [4000, 4000, 4000, 4000],
+          [8000, 8000, 8000, 8000],
+          [16000, 16000, 16000, 16000]
+        ],
+        "derived_active_min_typ_max_ms": [
+          [13, 15.5, 17.5],
+          [104, 124, 140],
+          [416, 496, 560],
+          [832, 992, 1120]
+        ]
+      },
+      "TMP119": {
+        "models": ["TMP119"],
+        "sources": ["SNIS236 p.7 electrical characteristics", "pp.14-17 conversion modes and averaging", "p.23 active-conversion I2C recommendation", "p.35 table 8-6 and following note"],
+        "electrical_condition": "Single conversion without internal averaging. Table conditions: 1.7 to 5.5 V at -55 to +70 C, or 1.8 to 5.5 V at -55 to +150 C; typical at 3.3 V and +25 C. The selected grade retains its own specified operating range.",
+        "single_conversion_min_typ_max_ms": [13, 15.5, 17.5],
+        "nominal_cc_cycle_ms": [
+          [15.5, 125, 500, 1000],
+          [125, 125, 500, 1000],
+          [250, 250, 500, 1000],
+          [500, 500, 500, 1000],
+          [1000, 1000, 1000, 1000],
+          [4000, 4000, 4000, 4000],
+          [8000, 8000, 8000, 8000],
+          [16000, 16000, 16000, 16000]
+        ],
+        "derived_active_min_typ_max_ms": [
+          [13, 15.5, 17.5],
+          [104, 124, 140],
+          [416, 496, 560],
+          [832, 992, 1120]
+        ]
+      }
+    },
+    "policy": {
+      "source": "Library choices for the polling and timing-origin contracts in docs/prompts/6_timing-status.md and ENGINEERING.md. Stage 9 owns the full deadline contract.",
+      "continuous_margin_percent": 25,
+      "conversion_window_slack_ms": 10,
+      "one_shot_repeat_interval_ms": 5,
+      "startup_wait_from_first_ack_ms": 3,
+      "clock": "Use the authoritative monotonic clock at transfer completion. For a clock with step q, round a scheduled wait d upward to ceil(d/q)*q. Example timestamps are clock ticks expressed in milliseconds. A fixed operation deadline covers preflight, waits, callbacks and result acquisition. Never extend it at a trigger, baseline or poll.",
+      "continuous": "The nominal conversion-window budget is max(1.25 * cycle, active upper estimate) + 10 ms. Default readiness checks are separated by one nominal cycle from the verified generation baseline or last completed poll. An overdue poll can run once if budget permits; never replay missed polls. An untimed attempt has caller-owned pacing.",
+      "one_shot": "Use active upper estimate + 10 ms for a default conversion-window budget, independent of CONV. First poll follows successful trigger completion by the rounded-up active upper estimate. If ready is clear, pace subsequent polls from the completed poll. No retrigger. The 10 ms slack is finite and cannot guarantee that a late owner or a slow bus can finish.",
+      "deadline": "conversion_window_budget_ms is the unrounded default duration used to size the conversion portion of a whole-operation budget. Round that duration up to clock resolution when deriving a default cap. The schedule cases state any caller-selected whole-operation cap explicitly. An operation must separately admit all required preflight and terminal transfers under its absolute cap. A due time past the deadline expires without a transfer. Clip every callback to the remaining budget and resample after it. A late physical success supplies only observed evidence and its physical transport outcome.",
+      "precision": "An explicit earlier latency poll can overlap active conversion. A CC cycle can have zero standby. No policy controls traffic from other bus users or proves precision or completion. See SNIS236 p.23."
+    },
+    "schedule_cases": [
+      {
+        "id": "os1-trigger-completion",
+        "sources": ["SNOSD82D p.6 and p.15", "library policy above"],
+        "conditions": "TMP117 in verified shutdown, AVG=00, CONV=111. Operation-local guard and SD baseline succeeded. Owner admits a 35 ms whole-operation budget.",
+        "clock_step_ms": 1,
+        "admission_ms": 100,
+        "absolute_deadline_ms": 135,
+        "trigger_start_ms": 102,
+        "trigger_done_ms": 104,
+        "typical_active_ms": 15.5,
+        "conversion_window_budget_ms": 27.5,
+        "first_ready_poll_due_ms": 122,
+        "first_poll_done_ms": 123,
+        "first_ready_bit": 0,
+        "next_ready_poll_due_ms": 128,
+        "expect": "No poll before 122 and no fresh sample at 122 solely from time. A ready observation on the next poll permits one TEMP read if budget remains. CONV=000 gives the same waits."
+      },
+      {
+        "id": "os64-short-remaining-budget",
+        "sources": ["SNIS236 p.7, p.17, p.23", "library policy above"],
+        "conditions": "TMP119 AVG=11, CONV=000. The guarded SD baseline and trigger succeeded within the original deadline; the caller chose a shorter whole-operation cap.",
+        "clock_step_ms": 4,
+        "admission_ms": 0,
+        "absolute_deadline_ms": 1120,
+        "trigger_done_ms": 12,
+        "typical_active_ms": 992,
+        "conversion_window_budget_ms": 1130,
+        "first_ready_poll_due_ms": 1132,
+        "expect": "Due exceeds the cap; zero readiness or TEMP reads, no sample and no second trigger. Elapsed time or the 1000 ms nominal CC cell cannot prove completion."
+      },
+      {
+        "id": "cc-quantization-and-no-catch-up",
+        "sources": ["SBOS740A p.27 table 7 row 000 note 1", "library policy above"],
+        "conditions": "TMP116 AVG=00, CONV=000. The verified baseline is retained from a prior apply at t=100. The guarded read operation starts then, with a caller-supplied 50 ms cap. The owner services the first poll late.",
+        "clock_step_ms": 2,
+        "admission_ms": 100,
+        "absolute_deadline_ms": 150,
+        "baseline_done_ms": 100,
+        "cycle_ms": 15.5,
+        "conversion_window_budget_ms": 29.375,
+        "first_ready_poll_due_ms": 116,
+        "actual_poll_start_ms": 120,
+        "first_poll_done_ms": 122,
+        "first_ready_bit": 0,
+        "next_ready_poll_due_ms": 138,
+        "next_poll_done_ms": 140,
+        "next_ready_bit": 0,
+        "following_due_ms": 156,
+        "expect": "No readiness poll before t=116. Pace from actual poll completion after each zero. t=156 is outside the cap; zero further reads and no sample."
+      },
+      {
+        "id": "cc-active-limited",
+        "sources": ["SNOSD82D p.6, pp.12-14, p.28 table 7-7 row 000", "library policy above"],
+        "conditions": "TMP117 AVG=11, CONV=000. The continuous active upper value extrapolates the one-shot row. Baseline at t=0, one-ms clock. The full operation has an explicit 1260 ms cap.",
+        "clock_step_ms": 1,
+        "admission_ms": 0,
+        "absolute_deadline_ms": 1260,
+        "baseline_done_ms": 0,
+        "cycle_ms": 1000,
+        "typical_active_ms": 992,
+        "derived_active_upper_ms": 1120,
+        "conversion_window_budget_ms": 1260,
+        "first_ready_poll_due_ms": 1000,
+        "first_poll_done_ms": 1001,
+        "first_ready_bit": 0,
+        "next_ready_poll_due_ms": 2001,
+        "expect": "The first poll can overlap active conversion. Expire without the second poll. A zero cannot quantify missed completions."
+      },
+      {
+        "id": "late-physical-success",
+        "sources": ["SNOSD82D p.27 table 7-6", "library deadline and read-effect policy in ENGINEERING.md"],
+        "conditions": "TMP117. A guarded CONFIG readiness poll is due. The callback reports success after its clipped timeout. The configured callback budget was 8 ms.",
+        "clock_step_ms": 1,
+        "poll_start_ms": 198,
+        "absolute_deadline_ms": 200,
+        "callback_timeout_ms": 2,
+        "callback_done_ms": 201,
+        "config_word": "0xA220",
+        "expect": "Track one physically successful read, retain HIGH and ready observations with destructive-read provenance, and report logical timeout. Zero TEMP reads; preserve last-good sample."
+      }
+    ],
+    "reset_and_serial": {
+      "electrical_reset_typ_ms": 1.5,
+      "electrical_reset_max_ms": null,
+      "reset_sources": ["SBOS740A p.5 and p.17", "SNOSD82D p.7 and p.18", "SNIS236 p.8 and p.20"],
+      "por": "Each electrical reset row specifies a typical time. During the approximately 1.5 ms power-up load, reads can succeed; ignored-write wording covers all registers on TMP116 and CONFIG/limits on TMP117/TMP119. Offset behavior during load is unknown.",
+      "busy_conflict": "SBOS740A p.17 gives cleared busy during loading; CONFIG p.26 and unlock p.29 give asserted busy during power-up/loading. Neither a compatible ACK nor a clear busy bit independently proves load completion.",
+      "addressed_reset_ms": 2,
+      "addressed_models": ["TMP117", "TMP117M", "TMP117N", "TMP119"],
+      "addressed_reset_sources": ["SNOSD82D p.28 table 7-6", "SNIS236 p.35 table 8-5"],
+      "serial_min_typ_max_ms": [20, 35, 40],
+      "serial_sources": ["SBOS740A p.6 and p.21", "SNOSD82D p.7 and p.22", "SNIS236 p.9 and p.24"],
+      "serial_condition": "Electrical serial-timeout limits concern SDA release without clock. The 35 ms typical prose specifies controller-held SCL low or sensor-held SDA low between START and STOP. SNOSD82D labels the timing table fast-mode; SNIS236 prints the limits under fast-mode. Expiry resets the serial interface. Callback timeout and absolute operation deadline are independent."
+    },
+    "origin_cases": [
+      {
+        "id": "first-ack-stable-power",
+        "sources": ["SBOS740A pp.17,26,29", "library FIRST_ACK policy"],
+        "conditions": "TMP116 begin with no prior proof, assured stable power through use, clock step 1 ms. Compatible ID read launched at 10 and completed at 12.",
+        "first_ack_ms": 12,
+        "startup_guard_due_ms": 15,
+        "guard_read_word": "0x0000",
+        "expect": "No managed write before t=15. At or after t=15 require this operation's 0x04 locked/idle read, then verify affected stable fields after writes. A prior bind or caller timestamp cannot advance this boundary. Unknown power stability refuses mutation."
+      },
+      {
+        "id": "addressed-reset-new-origin",
+        "sources": ["SNOSD82D pp.7,18,28,30", "library FIRST_ACK policy"],
+        "conditions": "TMP117, clock step 1 ms. Guarded addressed reset succeeded. Discard old proof before the command. Recovery uses a new compatible ID read, then the startup guard.",
+        "reset_callback_done_ms": 50,
+        "earliest_post_reset_read_ms": 52,
+        "post_reset_first_ack_ms": 53,
+        "new_startup_guard_due_ms": 56,
+        "guard_read_word": "0x8000",
+        "expect": "Read 0x04 at or after t=56. EUN=1 refuses all subsequent writes. Neither the 2 ms reset interval nor the separate policy wait establishes relock or EEPROM reload. TMP116 has no corresponding command."
+      }
+    ]
+  },
+  "temperature_and_limits": {
+    "source": ["words"],
+    "condition": "Signed two's-complement counts, 1/128 degree Celsius per count. The encoding also applies to THIGH (0x02) and TLOW (0x03). Endpoints are arithmetic limits.",
+    "columns": ["wire_hex_msb_first", "counts", "degrees_C"],
+    "rows": [
+      ["80 00", -32768, -256], ["F3 80", -3200, -25], ["FA C0", -1344, -10.5],
+      ["FC C0", -832, -6.5], ["FF 80", -128, -1], ["FF FF", -1, -0.0078125],
+      ["00 00", 0, 0], ["00 01", 1, 0.0078125], ["0C 80", 3200, 25],
+      ["60 00", 24576, 192], ["7F FF", 32767, 255.9921875]
+    ]
+  },
+  "host_quantization": {
+    "source": ["words"],
+    "condition": "Example host policy for finite in-range requested limits and offsets: nearest count, ties away from zero. Rejection emits no register word. TI specifies the format; internal averaging rounding remains unknown.",
+    "columns": ["input_degrees_C", "expected_wire_hex_msb_first"],
+    "rows": [
+      [-0.00390624, "00 00"], [-0.00390625, "FF FF"], [-0.00390626, "FF FF"],
+      [0.00390624, "00 00"], [0.00390625, "00 01"], [0.00390626, "00 01"],
+      [-6.50390625, "FC BF"], [-256, "80 00"], [255.9921875, "7F FF"],
+      [-257, null], [256, null], ["NaN", null], ["+Infinity", null], ["-Infinity", null]
+    ]
+  },
+  "offset_result": {
+    "source": ["offset", "words"],
+    "condition": "TMP117/M/N and TMP119 only. Each row follows observed completion with a known offset. Add signed counts after linearization and saturate the reported result. These rows have no expected comparator order.",
+    "columns": ["linearized_counts", "offset_word", "expected_TEMP_word"],
+    "rows": [[3200, "0xFF80", "0x0C00"], [3200, "0x7FFF", "0x7FFF"], [-3200, "0x8000", "0x8000"]],
+    "tmp116_gate": "A managed offset request on TMP116/N has zero transfers. Its 0x07 is EEPROM3 (SBOS740A pp.24,30)."
+  },
+  "pin_routes": {
+    "source": ["flags"],
+    "condition": "One device, working pullup, ordered limits, no outside ARA. For each row, complete an in-range conversion with HIGH=LOW=0 (A), acknowledge CONFIG, complete an above-THIGH conversion and read TEMP (B), then read CONFIG again (C). At A DATA_READY=1. At B and C DATA_READY=0. The addressed CONFIG read at C clears alert-mode HIGH; therm HIGH stays asserted. Physical H means released/pulled high and L means sinking. GPIO sampling is illustrative and supplies no freshness proof.",
+    "columns": ["T_nA", "POL", "DR_Alert", "pin_A", "pin_B", "pin_C", "HIGH_after_C"],
+    "rows": [
+      [0,0,0,"H","L","H",0], [0,0,1,"L","H","H",0],
+      [0,1,0,"L","H","L",0], [0,1,1,"H","L","L",0],
+      [1,0,0,"H","L","L",1], [1,0,1,"L","H","H",1],
+      [1,1,0,"L","H","H",1], [1,1,1,"H","L","L",1]
+    ]
+  },
+  "traces": [
+    {
+      "id": "reset-and-two-averaging-blocks",
+      "source": ["words", "blocks"],
+      "condition": "Start after POR in CC with AVG=01. Inputs are synthetic signed counts per conversion; each complete eight-count mean is exactly representable. Readiness is initially clear.",
+      "steps": [
+        {"event": "latest TEMP before any block", "word": "0x8000", "numeric_C": -256, "initial_sample_valid": false, "fresh": false},
+        {"input_counts": [0,2,4,6,8,10,12], "word_after_each": "0x8000", "ready_after_each": 0},
+        {"input_counts": [14], "completed_block": 1, "word": "0x0007", "ready": 1},
+        {"event": "read CONFIG", "returned_ready": 1, "ready_after": 0},
+        {"input_counts": [20,22,24,26,28,30,32], "word_after_each": "0x0007", "ready_after_each": 0},
+        {"input_counts": [34], "completed_block": 2, "word": "0x001B", "ready": 1},
+        {"event": "read TEMP twice with no intervening block", "returned_words": ["0x001B","0x001B"], "ready_after_each": 0, "additional_blocks": 0},
+        {"input_counts": [120,120,120], "word": "0x001B"},
+        {"event": "enter guarded SD during block 3", "completed_blocks_total": 2, "word": "0x001B", "partial_block_published": false}
+      ]
+    },
+    {
+      "id": "alert-window-ack-and-rearm",
+      "source": ["words", "flags"],
+      "condition": "Alert mode, AVG=00, initially clear. Verified THIGH=0xFCC0 (-6.5 C), TLOW=0xFAC0 (-10.5 C). HIGH/LOW in each comparison row are hardware flags after completion.",
+      "steps": [
+        {"complete_word": "0xFAC0", "HIGH": 0, "LOW": 0},
+        {"complete_word": "0xFCC0", "HIGH": 0, "LOW": 0},
+        {"complete_word": "0xFCC1", "HIGH": 1, "LOW": 0, "ready": 1},
+        {"event": "read TEMP", "HIGH": 1, "LOW": 0, "ready": 0},
+        {"complete_word": "0xFB00", "HIGH": 1, "LOW": 0},
+        {"event": "read CONFIG", "returned_HIGH_LOW_ready": [1,0,1], "after_HIGH_LOW_ready": [0,0,0]},
+        {"complete_word": "0xFABF", "HIGH": 0, "LOW": 1},
+        {"event": "read CONFIG", "returned_HIGH_LOW_ready": [0,1,1], "after_HIGH_LOW_ready": [0,0,0]},
+        {"complete_word": "0xFABF", "HIGH": 0, "LOW": 1}
+      ]
+    },
+    {
+      "id": "therm-hysteresis-and-shutdown",
+      "source": ["flags", "blocks"],
+      "condition": "Therm, AVG=01, initial HIGH=0, TLOW=0xFAC0, THIGH=0xFCC0, no reset. Comparisons use completed block results explicitly on TMP117/M/N and TMP119. Block-end comparison on TMP116/N is inferred from result update and comparator text.",
+      "steps": [
+        {"complete_word": "0xFCC0", "HIGH": 0, "LOW": 0},
+        {"complete_word": "0xFCC1", "HIGH": 1, "LOW": 0},
+        {"event": "read CONFIG", "after_HIGH_LOW_ready": [1,0,0]},
+        {"complete_word": "0xFB00", "HIGH": 1, "LOW": 0},
+        {"event": "enter guarded SD midway through next block with therm mode unchanged", "HIGH": 1, "LOW": 0, "pin_if_threshold_route_and_polarity_unchanged": "inferred asserted"},
+        {"event": "resume; change POL/DR route while retaining therm mode and no completed comparison", "HIGH": 1, "LOW": 0},
+        {"complete_word": "0xFAC0", "HIGH": 1, "LOW": 0},
+        {"complete_word": "0xFABF", "HIGH": 0, "LOW": 0}
+      ]
+    },
+    {
+      "id": "managed-one-shot-and-independent-alert",
+      "source": ["startup_and_guard", "blocks", "flags"],
+      "condition": "Verified desired SD stable bits 0x0620, AVG=8, alert mode, startup proof. All managed transfers occur under exclusive ownership. Example old and new results may be equal. Read only the listed fields of observed CONFIG.",
+      "steps": [
+        {"event": "read guard 0x04", "returned_word": "0x0000"},
+        {"event": "read CONFIG before any write", "stable_fields_match": true, "returned_ready": 1, "published": false},
+        {"event": "write CONFIG", "wire_word": "0x0620", "physical_mode": "SD"},
+        {"event": "read CONFIG in established SD", "old_ready_if_present": "consume", "baseline": true},
+        {"event": "write CONFIG", "wire_word": "0x0E20", "trigger_count": 1, "desired_mode": "SD"},
+        {"event": "complete one in-range block", "ready": 1, "HIGH": 0, "LOW": 0, "physical_mode": "SD"},
+        {"event": "poll CONFIG when due", "returned_ready": 1, "MOD_readback_required_for_completion": false},
+        {"event": "read stable TEMP", "returned_word": "0x0C80", "new_result": true, "fresh": true},
+        {"event": "read cached result", "word": "0x0C80", "additional_acquisitions": 0, "bus_transfers": 0}
+      ],
+      "alternate": "For an above-high completed block, the readiness poll captures HIGH before acknowledging it. If subsequent TEMP fails, suppress the result, retain HIGH for exactly one explicit alert consumption and flag possible lost readiness. An in-range block does not assert a threshold event just because the one-shot prose mentions ALERT (SNOSD82D p.15, SNIS236 p.17)."
+    },
+    {
+      "id": "one-shot-refusals-and-provenance",
+      "source": ["flags", "blocks", "startup_and_guard"],
+      "condition": "Each row is independent. Unless specified otherwise, desired SD and the remaining stable fields match. Documented SD abortion does not require any particular MOD readback during or after an owned shot.",
+      "cases": [
+        {"given": "desired CC, dirty profile, or absent startup proof", "outcome": "local refusal", "transfers": 0},
+        {"given": "guard reads 0x8000 (unlocked)", "outcome": "refuse immediately", "config_writes": 0},
+        {"given": "guard reads 0x4000 repeatedly until deadline", "outcome": "paced guard reads only; timeout", "config_writes": 0},
+        {"given": "guard reads 0x4000 then 0x0000 before deadline", "outcome": "preflight CONFIG only after safe guard"},
+        {"given": "guard read fails", "outcome": "stop without retry", "config_writes": 0},
+        {"given": "desired 0x0620, preflight stable fields 0x0640", "outcome": "AVG drift; latch dirty", "config_writes": 0},
+        {"given": "preflight MOD=11 without retained owned trigger", "outcome": "latch dirty", "config_writes": 0},
+        {"given": "earlier terminally successful trigger; completion, cancellation or timeout retained provenance", "preflight_MOD_permitted": ["01","11"], "outcome": "compare other stable fields, explicitly enter SD, baseline, then trigger once on this new request"},
+        {"given": "ambiguous SD or trigger write", "outcome": "stop dirty; trigger ownership and verified shutdown unavailable", "automatic_retries": 0},
+        {"given": "physically successful trigger returned after deadline", "outcome": "timeout, retain trigger provenance", "new_sample": false, "automatic_retries": 0},
+        {"given": "cancel after timely trigger", "outcome": "bus-silent cancellation; keep provenance until successful explicit SD or invalidation", "automatic_retries": 0}
+      ]
+    },
+    {
+      "id": "continuous-generation-change",
+      "source": ["blocks", "flags", "startup_and_guard", "words"],
+      "condition": "Repeat separately for a limit-only change, a routing/polarity-only change and AVG/CONV changes. Old generation G is verified in CC. A conversion can complete as soon as CC restarts.",
+      "steps": [
+        {"event": "admit, validate requested profile, read operation-local 0x04", "guard_word": "0x0000"},
+        {"event": "enter SD explicitly", "new_generation_trusted": false},
+        {"event": "apply and verify owned fields in SD (limits, managed offset if supported, stable CONFIG)", "new_generation_trusted": false},
+        {"event": "read CONFIG in SD, consume any stale readiness, retain alert evidence", "fresh": false},
+        {"event": "write desired CC", "new_generation_trusted": false},
+        {"event": "final CONFIG readback", "stable_fields_match": true, "returned_HIGH_LOW_ready": [1,0,1], "retained_alert": "HIGH", "baseline_generation": "G+1", "fresh": false},
+        {"event": "later guarded acquisition observes new ready, reads TEMP once successfully", "sample_generation": "G+1", "fresh": true}
+      ],
+      "alternate": "A failed or mismatched final readback leaves the profile dirty and supplies no new trusted baseline. A single discarded block after a live settings rewrite has unknown provenance."
+    },
+    {
+      "id": "continuous-try-fresh-and-diagnostics",
+      "source": ["flags", "blocks", "startup_and_guard"],
+      "condition": "Trusted verified CC, alert mode, no current-generation baseline. Each try-fresh call begins with its own safe 0x04 read; all steps have zero register-data writes.",
+      "steps": [
+        {"event": "try-fresh, guard safe, initial CONFIG read", "returned_ready": 1, "baseline": true, "fresh": false},
+        {"event": "try-fresh, guard safe, poll before next completion", "returned_ready": 0, "TEMP_reads": 0, "fresh": false},
+        {"event": "one block completes; diagnostic CONFIG read", "returned_HIGH_LOW_ready": [1,0,1], "retained": ["HIGH","same-generation readiness"]},
+        {"event": "try-fresh, guard safe, consume retained evidence and read TEMP once", "word": "0x0C80", "fresh": true},
+        {"event": "try-fresh, guard safe, poll again without completion", "returned_ready": 0, "fresh": false},
+        {"event": "new block completes with same result; try-fresh, guard safe, observe ready then read TEMP", "word": "0x0C80", "fresh": true},
+        {"event": "read-only alert consumer twice without another HIGH event", "HIGH_deliveries": [1,0], "bus_transfers": 0}
+      ],
+      "alternates": [
+        {"given": "try-fresh guard returns busy with EUN=0", "guard_reads": 1, "CONFIG_reads": 0, "fresh": false},
+        {"given": "retained readiness followed by diagnostic TEMP", "outcome": "consume/invalidate outstanding result evidence; a later try cannot reuse it"},
+        {"given": "failed CONFIG may have consumed flags", "outcome": "mark possible alert and readiness loss; keep existing sticky events and invalidate ambiguous ready evidence"},
+        {"given": "failed TEMP may have consumed readiness", "outcome": "invalidate ambiguous ready evidence; keep comparator observations; do not dirty settings solely for a failed read"},
+        {"given": "late successful CONFIG, then a zero CONFIG", "outcome": "retain the late read's threshold events with provenance even though the operation timed out"},
+        {"given": "late successful TEMP", "outcome": "record actual consumption; suppress output and preserve previous last-sample cache"},
+        {"given": "bound-only diagnostic dump, ready initially 1, no intervening conversion", "CONFIG_ready_if_TEMP_first": 0, "CONFIG_ready_if_CONFIG_first": 1, "managed_fresh": false},
+        {"given": "captured alert HIGH in G, then change T/nA to therm in G+1", "outcome": "keep the earlier event in G; a new therm HIGH is a level. No predicted hardware flag value at the mode transition."},
+        {"given": "unconsumed alert events span generations", "outcome": "retain events with mixed provenance until explicit consumption"}
+      ]
+    },
+    {
+      "id": "ready-during-config-read",
+      "source": ["flags", "tmp117_race"],
+      "condition": "Reported TMP117 continuous-mode interleaving with DR/Alert routing. Applicability to other models and the exact internal clear edge remain unknown.",
+      "steps": [
+        {"event": "begin CONFIG read while ready is clear"},
+        {"event": "conversion overlaps transaction; ready indication pulses on ALERT", "returned_ready": 0},
+        {"event": "next poll before another completion", "returned_ready": 0, "fresh": false}
+      ],
+      "policy": "No catch-up count or time-only publication. Loss of an owned one-shot indication can end in timeout without retrigger. A combined two-byte TEMP read is required; the source gives no byte-latching rule for an overlapping continuous update."
+    },
+    {
+      "id": "non-atomic-therm-limits",
+      "source": ["flags", "words", "startup_and_guard"],
+      "condition": "CC in therm mode. Verified old [TLOW,THIGH]=[0,10] C, target [15,20] C. Example ambiguous second write; hardware effects of a partially transmitted word remain unknown.",
+      "steps": [
+        {"event": "verify guard safe; enter SD"},
+        {"event": "write THIGH first", "wire_word": "0x0A00", "intermediate_pair_C": [0,20]},
+        {"event": "write TLOW", "wire_word": "0x0780", "callback": "failure after possible commit", "pair_known": false, "dirty": true},
+        {"event": "stop apply", "CC_restart": false, "automatic_rollback": false, "fresh": false},
+        {"event": "explicit recovery under a new guard", "required_before_trust": "reapply and verify all owned fields and final CC baseline"}
+      ],
+      "alternates": [
+        {"old_pair_C": [15,20], "target_pair_C": [0,10], "write_first": "TLOW", "intermediate_pair_C": [0,20]},
+        {"target_pair_C": [20,10], "expected_therm_admission": "reject locally", "transfers": 0, "hardware_comparison": "unknown"}
+      ]
+    },
+    {
+      "id": "startup-anchor-and-reset",
+      "source": ["startup_and_guard", "blocks"],
+      "condition": "Internal FIRST_ACK begins at terminal success of a compatible read in this begin/recover operation while proof is absent. The owner guarantees continuously stable power through dependent operations.",
+      "steps": [
+        {"event": "bind or receive caller timestamp", "startup_proof": false, "origin_set": false},
+        {"event": "compatible read succeeds during possible POR load", "origin_set": true, "mutation_permitted": false},
+        {"event": "0x04 reads clear before startup policy wait has elapsed", "mutation_permitted": false},
+        {"event": "wait through policy interval; obtain operation-local safe 0x04; apply and verify owned settings", "trusted_after_success": true},
+        {"event": "later operation under continuous stable power", "reuse_valid_startup_proof": true, "new_operation_local_guard_required_for_fresh_or_mutating_work": true},
+        {"event": "report power loss/reset and invalidate", "origin_set": false, "old_profile_trust": false, "old_sample_current": false}
+      ],
+      "addressed_reset": "TMP116/N refuses before I/O. On TMP117/M/N and TMP119 invalidate old proof before the guarded reset command is attempted, honor the separate 2 ms reset interval and establish new post-reset FIRST_ACK and guard before dependent writes. Re-observe lock, fields and shadows; addressed reset load, lock, other written bits and bus availability lack explicit guarantees."
+    },
+    {
+      "id": "eeprom-shadow-provenance",
+      "source": ["eeprom", "startup_and_guard"],
+      "condition": "F13. An earlier owner may have customized EEPROM or its volatile shadows. Arbitrary example words at 0x05 and 0x06 apply to all selected BOM models.",
+      "steps": [
+        {"event": "read volatile shadows", "observed": {"0x05": "0x0000", "0x06": "0xBEEF"}, "factory_identity_proven": false},
+        {"event": "power cycle, reported to owner", "old_observations_current": false, "old_startup_proof": false},
+        {"event": "after fresh startup proof, observe reloaded shadows", "observed": {"0x05": "0x4321", "0x06": "0x0000"}, "NIST_certification_proven": false},
+        {"event": "repeat with identical pre/post words", "old_observations_current": false, "factory_identity_proven": false}
+      ],
+      "policy": "Either zero or nonzero words can be observed. Read-only observations cannot identify an immutable serial, establish NVM contents or authenticate calibration. Driver writes to EEPROM data words or their shadows: zero."
+    }
+  ],
+  "unknowns": [
+    {"source": ["blocks"], "question": "Does an unchanged CONFIG write restart active work? How do live AVG/CONV changes partition the current block?", "expectation": "No predicted restart, completion count or single-discard rule."},
+    {"source": ["blocks"], "question": "What MOD reads during and after OS, or what another MOD=11 write during an active shot does?", "expectation": "Use owned SD, baseline and single trigger. No active retrigger probe."},
+    {"source": ["blocks","flags"], "question": "Which DATA_READY or alert-mode flags survive entry into SD?", "expectation": "Consume and retain actual observations. Therm HIGH has its separate hysteresis trace."},
+    {"source": ["flags"], "question": "What does silicon compare when therm limits are inverted?", "expectation": "Reject managed inversion before I/O."},
+    {"source": ["blocks","flags","tmp117_race"], "question": "Which read edge clears flags, and is a TEMP word latched across an overlapping update?", "expectation": "Keep overlapping observations uncertain. No hidden rereads."},
+    {"source": ["flags","offset"], "question": "Does the TMP117/M/N or TMP119 limit comparison precede or follow offset addition/saturation?", "expectation": "Assert the reported TEMP saturation only."},
+    {"source": ["blocks"], "question": "How is a nonintegral internal block mean quantized?", "expectation": "Use exactly representable means for silicon expectations."}
+  ]
+}

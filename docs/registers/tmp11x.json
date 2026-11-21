@@ -2,6 +2,7 @@
   "schema_version": 1,
   "interpretation": {
     "scope": "Each profile applies independently to its listed BOM models. Source paths resolve at repository root against docs/reference/manifest.json. Page numbers are one-based in that PDF. Fields inherit the register's source, table, owners, reset context, prerequisites and release policy.",
+    "behavior": "docs/device-behavior.md defines timing and read-effect policy. docs/registers/behavior-vectors.json supplies independent numerical cases and event traces.",
     "numbers": "Addresses and positioned masks are unsigned JSON integers. Field factory and encoding values are unshifted. Whole-register factory values refer to TI's stated reset on factory settings. Limits, offset and EEPROM-eligible settings may already have been programmed. Uncertain or conflicting defaults are written out.",
     "nvm_mask": "Register-positioned bits eligible for EEPROM storage in the silicon. Zero means the field is outside that storage domain. All release operations leave NVM unprogrammed.",
     "policy": "observe permits a read of a hardware read-only register. deny-write permits observation and refuses all data writes even if hardware is R/W. guarded permits only the named typed volatile mutation after its prerequisites. mixed CONFIG separates status, stable settings and explicit commands. No public raw data writes.",
@@ -39,9 +40,11 @@
         "ownership": "Target never drives SCL. Application and adapter own clock, electrical timing, routing, serialization and bounded callback deadlines. The interface timeout is distinct from transfer and conversion budgets."
       },
       "startup": {
-        "pages": [17],
+        "pages": [5, 17, 26, 29],
+        "reset_typ_ms": 1.5,
+        "reset_max_ms": null,
         "writes": "All register writes ignored during the initial load. Reads are possible.",
-        "policy": "For managed operations, require the owner's power-stability contract, a valid internal FIRST_ACK origin and the startup guard before relying on readiness. The approximately 1.5 ms load interval has no specified maximum. Check lock and busy for each allowed mutation."
+        "policy": "When startup proof is absent, begin/recover timestamps completion of its first successful compatible read. Allow 3 ms from FIRST_ACK (library policy, rounded up), require continuous stable power and verify owned writes. Reuse proof until invalidated. Each managed mutation or fresh acquisition also checks 0x04 for locked and idle."
       },
       "registers": [
         {
@@ -54,7 +57,7 @@
           "pages": [13, 14, 24, 25, 26],
           "table": "5",
           "owners": [16, 21, 26, 30, 32],
-          "read": "Reads the latest completed conversion or block average and consumes DATA_READY. A TEMP read does not acknowledge HIGH or LOW.",
+          "read": "Returns the reset word until the first completed block, then the latest result. Consumes DATA_READY and leaves HIGH/LOW intact. An update during the two-byte read has unspecified latching. A failed read may already have consumed readiness.",
           "write": "No writable field.",
           "prerequisites": "Bound to a BOM-selected target on a known route. Use an explicit pointer and one complete word.",
           "policy": "observe",
@@ -81,7 +84,7 @@
           "pages": [13, 14, 15, 16, 17, 24, 26, 27],
           "table": "6",
           "owners": [17, 18, 19, 20, 21, 22, 25, 26, 32],
-          "read": "Consumes DATA_READY and acknowledges latched comparator flags in alert mode. Therm HIGH follows hysteresis and LOW stays zero. Retain observations even when subsequent steps fail.",
+          "read": "Consumes DATA_READY in both modes. In alert mode, retain returned HIGH/LOW on every successful CONFIG read, including diagnostics, verification and late reads, which acknowledge the hardware latches. In therm mode HIGH is a hysteresis level and LOW is zero. A failed read can leave flag history uncertain.",
           "write": "Apply only owned stable fields. Keep commands and reserved bits out of replay. MOD=11 belongs to an explicit one-shot. Addressed reset is unavailable.",
           "prerequisites": "Bound target for status observation. For mutation, establish startup readiness, serialize the target, and check EEPROM_UL in this operation for EUN=0 and BUSY=0. Preserve uncertainty after an ambiguous write.",
           "policy": "mixed",
@@ -121,7 +124,7 @@
               "factory": "0",
               "nvm_mask": 0,
               "role": "status",
-              "read": "Set on TEMP update after the complete conversion or average. Either CONFIG or TEMP read clears this single indication.",
+              "read": "Set on TEMP update at the end of a nonoverlapping block. CONFIG or TEMP read clears this one-bit indication. Updates can coalesce. The exact clear edge relative to a concurrent update is unspecified.",
               "write": "No writable field.",
               "encodings": {
                 "0": "no unconsumed indication",
@@ -187,11 +190,14 @@
                 [8000, 8000, 8000, 8000],
                 [16000, 16000, 16000, 16000]
               ],
-              "cycle_basis": "Nominal continuous cycle in milliseconds, indexed by CONV code (row) and AVG code (column). The table rounds active intervals. Stage 6 owns conditioned min/typ/max timing vectors."
+              "cycle_basis": "Nominal continuous period including active time, indexed by CONV code (row) and AVG code (column). The rounded 125/500/1000 ms cells do not specify maxima. Standby is zero where active time fills the period."
             },
             {
               "name": "AVG",
               "mask": 96,
+              "single_conversion_page": 5,
+              "single_conversion_ms": {"min": 13.5, "typ": 15.5, "max": 17},
+              "timing_condition": "One conversion. Multiply each value by the block count for a derived active interval.",
               "access": "R/W",
               "factory": "1",
               "nvm_mask": 96,
@@ -536,9 +542,11 @@
         "ownership": "Target never drives SCL. Application and adapter own clock, electrical timing, routing, serialization and bounded callback deadlines. The interface timeout is distinct from transfer and conversion budgets."
       },
       "startup": {
-        "pages": [18],
+        "pages": [7, 18],
+        "reset_typ_ms": 1.5,
+        "reset_max_ms": null,
         "writes": "CONFIG and limit writes ignored during the initial load. Reads are possible. Response to an OFFSET write in this interval is unknown.",
-        "policy": "For managed operations, require the owner's power-stability contract, a valid internal FIRST_ACK origin and the startup guard before relying on readiness. The approximately 1.5 ms load interval has no specified maximum. Check lock and busy for each allowed mutation."
+        "policy": "When startup proof is absent, begin/recover timestamps completion of its first successful compatible read. Allow 3 ms from FIRST_ACK (library policy, rounded up), require continuous stable power and verify owned writes. Reuse proof until invalidated. Each managed mutation or fresh acquisition also checks 0x04 for locked and idle."
       },
       "registers": [
         {
@@ -551,7 +559,7 @@
           "pages": [14, 15, 25, 26, 27],
           "table": "7-5",
           "owners": [16, 21, 26, 30, 32],
-          "read": "Reads the latest completed conversion or block average and consumes DATA_READY. A TEMP read does not acknowledge HIGH or LOW.",
+          "read": "Returns the reset word until the first completed block, then the latest result. Consumes DATA_READY and leaves HIGH/LOW intact. An update during the two-byte read has unspecified latching. A failed read may already have consumed readiness.",
           "write": "No writable field.",
           "prerequisites": "Bound to a BOM-selected target on a known route. Use an explicit pointer and one complete word.",
           "policy": "observe",
@@ -578,7 +586,7 @@
           "pages": [14, 15, 16, 17, 18, 25, 27, 28],
           "table": "7-6",
           "owners": [17, 18, 19, 20, 21, 22, 25, 26, 32],
-          "read": "Consumes DATA_READY and acknowledges latched comparator flags in alert mode. Therm HIGH follows hysteresis and LOW stays zero. Retain observations even when subsequent steps fail.",
+          "read": "Consumes DATA_READY in both modes. In alert mode, retain returned HIGH/LOW on every successful CONFIG read, including diagnostics, verification and late reads, which acknowledge the hardware latches. In therm mode HIGH is a hysteresis level and LOW is zero. A failed read can leave flag history uncertain.",
           "write": "Apply only owned stable fields. Keep commands and reserved bits out of replay. MOD=11 belongs to an explicit one-shot. Bit 1 belongs to explicit addressed reset.",
           "prerequisites": "Bound target for status observation. For mutation, establish startup readiness, serialize the target, and check EEPROM_UL in this operation for EUN=0 and BUSY=0. Preserve uncertainty after an ambiguous write.",
           "policy": "mixed",
@@ -618,7 +626,7 @@
               "factory": "0",
               "nvm_mask": 0,
               "role": "status",
-              "read": "Set on TEMP update after the complete conversion or average. Either CONFIG or TEMP read clears this single indication.",
+              "read": "Set on TEMP update at the end of a nonoverlapping block. CONFIG or TEMP read clears this one-bit indication. Updates can coalesce. The exact clear edge relative to a concurrent update is unspecified.",
               "write": "No writable field.",
               "encodings": {
                 "0": "no unconsumed indication",
@@ -684,11 +692,14 @@
                 [8000, 8000, 8000, 8000],
                 [16000, 16000, 16000, 16000]
               ],
-              "cycle_basis": "Nominal continuous cycle in milliseconds, indexed by CONV code (row) and AVG code (column). The table rounds active intervals. Stage 6 owns conditioned min/typ/max timing vectors."
+              "cycle_basis": "Nominal continuous period including active time, indexed by CONV code (row) and AVG code (column). The rounded 125/500/1000 ms cells do not specify maxima. Standby is zero where active time fills the period."
             },
             {
               "name": "AVG",
               "mask": 96,
+              "single_conversion_page": 6,
+              "single_conversion_ms": {"min": 13, "typ": 15.5, "max": 17.5},
+              "timing_condition": "One-shot mode. Scaling this row for continuous operation is a policy estimate. Multiply each value by the block count for a derived active interval.",
               "access": "R/W",
               "factory": "1",
               "nvm_mask": 96,
@@ -1057,9 +1068,11 @@
         "ownership": "Target never drives SCL. Application and adapter own clock, electrical timing, routing, serialization and bounded callback deadlines. The interface timeout is distinct from transfer and conversion budgets."
       },
       "startup": {
-        "pages": [20],
+        "pages": [8, 20],
+        "reset_typ_ms": 1.5,
+        "reset_max_ms": null,
         "writes": "CONFIG and limit writes ignored during the initial load. Reads are possible. Response to an OFFSET write in this interval is unknown.",
-        "policy": "For managed operations, require the owner's power-stability contract, a valid internal FIRST_ACK origin and the startup guard before relying on readiness. The approximately 1.5 ms load interval has no specified maximum. Check lock and busy for each allowed mutation."
+        "policy": "When startup proof is absent, begin/recover timestamps completion of its first successful compatible read. Allow 3 ms from FIRST_ACK (library policy, rounded up), require continuous stable power and verify owned writes. Reuse proof until invalidated. Each managed mutation or fresh acquisition also checks 0x04 for locked and idle."
       },
       "registers": [
         {
@@ -1072,7 +1085,7 @@
           "pages": [16, 17, 32, 33, 34],
           "table": "8-4",
           "owners": [16, 21, 26, 30, 32],
-          "read": "Reads the latest completed conversion or block average and consumes DATA_READY. A TEMP read does not acknowledge HIGH or LOW.",
+          "read": "Returns the reset word until the first completed block, then the latest result. Consumes DATA_READY and leaves HIGH/LOW intact. An update during the two-byte read has unspecified latching. A failed read may already have consumed readiness.",
           "write": "No writable field.",
           "prerequisites": "Bound to a BOM-selected target on a known route. Use an explicit pointer and one complete word.",
           "policy": "observe",
@@ -1099,7 +1112,7 @@
           "pages": [16, 17, 18, 19, 20, 32, 34, 35],
           "table": "8-5",
           "owners": [17, 18, 19, 20, 21, 22, 25, 26, 32],
-          "read": "Consumes DATA_READY and acknowledges latched comparator flags in alert mode. Therm HIGH follows hysteresis and LOW stays zero. Retain observations even when subsequent steps fail.",
+          "read": "Consumes DATA_READY in both modes. In alert mode, retain returned HIGH/LOW on every successful CONFIG read, including diagnostics, verification and late reads, which acknowledge the hardware latches. In therm mode HIGH is a hysteresis level and LOW is zero. A failed read can leave flag history uncertain.",
           "write": "Apply only owned stable fields. Keep commands and reserved bits out of replay. MOD=11 belongs to an explicit one-shot. Bit 1 belongs to explicit addressed reset.",
           "prerequisites": "Bound target for status observation. For mutation, establish startup readiness, serialize the target, and check EEPROM_UL in this operation for EUN=0 and BUSY=0. Preserve uncertainty after an ambiguous write.",
           "policy": "mixed",
@@ -1139,7 +1152,7 @@
               "factory": "0",
               "nvm_mask": 0,
               "role": "status",
-              "read": "Set on TEMP update after the complete conversion or average. Either CONFIG or TEMP read clears this single indication.",
+              "read": "Set on TEMP update at the end of a nonoverlapping block. CONFIG or TEMP read clears this one-bit indication. Updates can coalesce. The exact clear edge relative to a concurrent update is unspecified.",
               "write": "No writable field.",
               "encodings": {
                 "0": "no unconsumed indication",
@@ -1205,11 +1218,14 @@
                 [8000, 8000, 8000, 8000],
                 [16000, 16000, 16000, 16000]
               ],
-              "cycle_basis": "Nominal continuous cycle in milliseconds, indexed by CONV code (row) and AVG code (column). The table rounds active intervals. Stage 6 owns conditioned min/typ/max timing vectors."
+              "cycle_basis": "Nominal continuous period including active time, indexed by CONV code (row) and AVG code (column). The rounded 125/500/1000 ms cells do not specify maxima. Standby is zero where active time fills the period."
             },
             {
               "name": "AVG",
               "mask": 96,
+              "single_conversion_page": 7,
+              "single_conversion_ms": {"min": 13, "typ": 15.5, "max": 17.5},
+              "timing_condition": "No internal averaging. Multiply each value by the block count for a derived active interval.",
               "access": "R/W",
               "factory": "1",
               "nvm_mask": 96,

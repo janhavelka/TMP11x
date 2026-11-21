@@ -1,6 +1,6 @@
 # Prompt 6 — Conversion timing, freshness and alerts
 
-**PARTIAL. Phase a completed on 2026-11-21.** Prompt 6 is the first unfinished
+**PARTIAL. Phases a and b completed on 2026-11-21.** Prompt 6 is the first unfinished
 entry in the sequence. Its prerequisites are prompts 3 and 5. The clean entry
 revision was `4a8e4dcb2d4993b361b4d1f2e8081a6cdc1a37cf` on `main`,
 equal to the local `origin/main`. Prompt 5's acceptance request matches the
@@ -134,3 +134,57 @@ checks passed. Phase b owns the two research artifacts and ledger updates.
 Stage 7 consumes the behavior contract for safety policy, audit 45 reviews
 the evidence, and stages 16–23 and 32 execute the applicable vectors. Driver
 tests, MCU builds, remote CI and physical timing qualification were not run.
+
+## Phase b deliverables and verification
+
+Phase b began on clean `main` at `4481bb457472a0a6b002f9ea19234e93ab3c0462`,
+equal to local `origin/main`. The prior request's message and sole report
+path match that commit. The wrapper verified upstream at 16:18:08 Prague
+time. Local TMP1x2 and OPT4001 remained clean at the phase-a source revisions.
+
+The [device behavior contract](../device-behavior.md) supplies
+`behavior-contract`. The [literal vectors](../registers/behavior-vectors.json)
+supply `behavior-vectors`. The [register ledger](../registers/tmp11x.json) now
+records the conditioned electrical row beside each AVG field, the typical
+reset interval and missing maximum, the startup wait origin, and the
+effects of simultaneous or failed CONFIG/TEMP reads. The historical source
+conflicts remain open.
+
+| Case | Phase b evidence |
+|---|---|
+| Timing and standby | All 96 nominal cells agree with the three individual TI tables and the stage 5 ledger. All 32 TMP116 footnotes agree with p.27. Four count-scaled min/typ/max tuples per profile retain the conditions of the electrical row. TMP117's continuous upper estimate extrapolates its one-shot row. |
+| Clock and reset origin | Five scheduling cases cover a late trigger origin relative to admission, an insufficient remaining budget, a delayed CC poll, active-limited CC and a late destructive read. Two reset cases distinguish FIRST_ACK from bind/read start and from a completed addressed-reset command. |
+| Arithmetic and comparison | Eleven signed TEMP/limit words, 14 host-quantization cases and three supported offset results cover negative fractions, endpoints, half-count ties, rejection and saturation. The example host codec rounds ties away from zero. Eight pin routes and separate alert/therm traces cover equality, acknowledgement, re-arm and abort. |
+| Acquisition | Eleven event traces include two successive averaging blocks, residual work after OS, preflight drift, all-settings CC baseline, ordered diagnostic reads, the TMP117 race and a partial therm-limit write. Nonfactory EEPROM observations become historical across reset even when their bits repeat. |
+
+The default software choices are a 3 ms startup wait from FIRST_ACK,
+5 ms between subsequent OS polls and 10 ms conversion-window slack. CC
+adds a 25% nominal margin before comparing against the active estimate.
+The first OS poll uses the count-scaled upper estimate and CC polls use
+the nominal cycle. A fixed whole-operation deadline covers every transfer.
+These values give implementers bounded, testable defaults. TI gives no
+guaranteed maximum CC period or POR load time.
+
+We reread the TMP117 E2E capture and its TI response. A related TMP117
+one-shot user also reported occasional missed indications with early polling
+on one of two devices. TI proposed a delayed latest read and requested a
+timeout capture to diagnose the cause. The report does not establish that
+the continuous-read race caused those timeouts. The related TMP116 thread
+822036 returned HTTP 403 during this check. The exact clear edge and TEMP
+byte-latch behavior remain unresolved.
+[Continuous case](https://e2e.ti.com/support/sensors-group/sensors/f/sensors-forum/1019457/tmp117-data_ready-flag-cleared-incorrectly-if-data-becomes-ready-during-read-of-configuration-register),
+[one-shot case](https://e2e.ti.com/support/sensors-group/sensors/f/sensors-forum/909104/tmp117-polling-the-data-ready-flag-seems-to-clear-it-inadvertently-when-using-1-shot-mode).
+
+| Local check | Result on the phase b files |
+|---|---|
+| `python -B scripts/check_references.py` | PASS, all 14 pinned file sizes and SHA-256 digests. |
+| `python -B tools/check_register_ledger.py` and `python -B tools/test_check_register_ledger.py` | PASS, six selected models and 22 regressions. |
+| `python -B scripts/check_promptset.py` | PASS, 55 stages and the existing handoff, coverage and source-page checks. |
+| Focused Python and PyMuPDF checks | PASS, extracted cell and footnote literals, source groups, ledger agreement, scaled durations, clock examples, signed wire words, rounding, offset clamps, block means and eight pin routes. |
+| Markdown links, PDF anchors, UTF-8 and whitespace | PASS on both new artifacts and the changed report and ledger. |
+
+Independent timing and event-vector work was integrated and checked against
+the pinned documents with Python 3.12.10 and PyMuPDF 1.27.2.2. Git 2.52.0.windows.1
+reported a clean index. The wrapper owns staging, commit, push and upstream
+verification for this phase. Phase c owns the fresh-session review. Driver
+tests, MCU links, remote CI and physical qualification were not run.
