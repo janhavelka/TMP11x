@@ -6,6 +6,7 @@ build and test entrypoint. Sensor implementation is pending.
 - [Native builds, version tools and tests](testing.md)
 - [Execution guide](prompts/START_HERE.md), [55-stage index](prompts/README.md),
   and [current progress](prompts/PROGRESS.md)
+- [Open questions and decisions](open-questions.md)
 - [Preparation evidence](reports/preparation.md) and [report index](reports/index.md)
 - [Full promptset audit and remaining source conflicts](reports/promptset-audit.md)
 - [Datasheet/functionality gap audit](reports/feature-gap-audit.md) and
