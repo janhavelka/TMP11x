@@ -228,3 +228,46 @@ The TMP116 startup-busy contradiction and addressed-reset reload, EUN,
 companion-bit application and ACK availability remain open silicon evidence.
 Native driver tests, MCU links, remote CI and physical qualification were NOT
 RUN. Phase d owns acceptance, the report index and the progress update.
+
+## Phase d acceptance
+
+**2026-11-21.** Prompt 7 is COMPLETE at the research evidence level.
+Acceptance started on clean `main` at
+`91a7e99590e99a49c021e6861d8ba6daab4f9e9b`, equal to local `origin/main`.
+Its parent, commit message and four changed paths agree with the phase-c
+baseline and commit request. The wrapper recorded upstream verification at
+17:47:36 Prague time. The wrapper owns staging, commit, push and upstream
+verification for this acceptance update.
+
+The [safety policy](../eeprom-and-reset-policy.md) and its nine research
+transcripts cover compatible identity, model-indexed shadow reads, startup,
+lock/busy and transport failure, locked-only typed mutation, reset,
+explicit recovery, interference and shared-bus exclusions. The planned
+synchronous setters, initialization/recovery, fresh acquisitions, diagnostic
+reads, cooperative jobs and CLI routes were checked against the policy.
+The policy admits no write to EEPROM_UL or protected shadows and excludes
+general call and ARA across those routes. TMP116/N refuses offset and
+addressed reset before I²C. No production traffic assertions exist at this
+stage. The refined ledger records the operation guard, protected-address
+access and model-specific reset evidence.
+[Register ledger](../registers/tmp11x.json), [coverage](../feature-coverage.md).
+
+| Acceptance check | Result |
+| --- | --- |
+| `python -B scripts/check_references.py` and `python -B scripts/test_check_references.py` | PASS. 14 pinned PDF hashes and sizes, nine reference-tool regressions. |
+| `python -B tools/check_register_ledger.py` and `python -B tools/test_check_register_ledger.py` | PASS. Six BOM-model selections and 29 regressions, including EUN default/encodings, protected writes, reset readback and both CONFIG source citations. |
+| `python -B scripts/check_promptset.py` and `python -B scripts/test_check_promptset.py` | PASS. 55 stages and 36 regressions. |
+| Inline `python -B -` with PyMuPDF | PASS. Rechecked pinned EEPROM, CONFIG, ARA and traceability pages, 31 policy links and anchors, six model gates and X01–X08. The 46 coverage IDs retain their implementation and CLI owners. |
+| Inline `python -B -` transcript assertions | PASS. Nine research cases, clock rounding, reset command bytes, signed limits/offset and shared-bus exclusions. |
+| Git whitespace checks | PASS. `git diff --check HEAD~2 HEAD`, `git diff --check` and `git diff --cached --check`. The index was empty before wrapper staging. |
+
+Checks used Python 3.12.10, PyMuPDF 1.27.2.2 and Git 2.52.0.windows.1.
+The sibling checkouts remain clean at the phase-a pins and match their local
+upstream refs. Their source was inspected read-only. No sibling suites ran.
+
+Audit 45 next reviews prompts 1–7. Stages 18–26, 29–33 and 38 own the
+applicable runtime and callback evidence. TMP116 POR busy remains a source
+contradiction. Addressed-reset EEPROM reload, EUN, companion-bit application
+and ACK availability remain unknown. Native driver tests, MCU links, remote
+CI and physical qualification were NOT RUN. Stage 43 owns the first remote
+CI checkpoint. [Handoff inventory](../prompts/HANDOFFS.md).
