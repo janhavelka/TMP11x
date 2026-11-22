@@ -147,3 +147,46 @@ Phase c owns fresh review of the implementation and tests. Stages 15, 18
 and 28 retain the executable health, verified initialization/startup and
 occupied-slot checks respectively. MCU links, remote CI and physical
 qualification were not run in this phase.
+
+## Phase c review, 2026-11-22
+
+**PARTIAL.** Reviewed the 13-path phase-b change from `8c719a1` through
+`1c5a5b7302d2b56c72ea031d593bca1cc88c6622` on clean `main`. The parent,
+subject and paths matched the wrapper's commit request. The wrapper recorded
+upstream equality at 16:46:43 Prague time. Both read-only reviewers finished.
+One traced the public methods through the identity and transport engines.
+The other checked the public tests, CTest registration, README and guides.
+
+The implementation satisfies the eight cases in the phase-a brief. Bind
+validates before replacing the target. End keeps the target, unbind releases
+it, and both clear local observations without a callback. The two-route test
+checks the retained peer ID and exact frame counts at the same address.
+Each bound diagnostic reads only `0x0F`. The reviewed sibling lifecycle
+sources still match the clean revisions above. The pinned TI power-up pages
+allow reads during EEPROM load, so a compatible ID alone supplies no startup
+proof. [Startup policy](../eeprom-and-reset-policy.md#startup-and-operation-guard),
+[exact-part ID tables](../variants.md).
+
+| Confirmed finding | Correction and evidence |
+| --- | --- |
+| The guide described false initialization and unknown trust as the outcome of every ID read. | The [lifecycle guide](../api-contracts.md#available-lifecycle-and-identity-operations) now assigns those initial values to an accepted bind. A compatible word or failed transfer preserves live state. A complete mismatch invalidates it. The implementation already follows this rule. |
+| Public fault tests started with a cached mismatch. They could miss erroneous publication on the first failed read or loss of a compatible cached word on a later failure. | [`failedReadsPreserveEvidence`](../../test/test_binding.cpp) now starts with an address NACK and ends with a one-byte short read after observing compatible `0x2117`. It checks the entire cached identity, caller sentinel and one frame per call. |
+| Existing diagnostic tests could pass if the operation timeout were used as the remaining budget. | The same test sets a 3 ms apply budget and checks the full 17 ms callback cap on both public ID methods. |
+
+### Review checks
+
+Windows, GNU C++ 15.1.0, CMake/CTest 4.0.1 and Python 3.12.10.
+
+| Command or check | Result |
+| --- | --- |
+| `cmake -S . -B build-tests-prompt14-c -G "MinGW Makefiles" -DTMP11X_BUILD_TESTS=ON -DCMAKE_BUILD_TYPE=Release`, then `cmake --build build-tests-prompt14-c --config Release --parallel` | PASS, fresh Release build |
+| `ctest --test-dir build-tests-prompt14-c -C Release -R "^binding_cpp$" --output-on-failure`, then the same command without `-R "^binding_cpp$"` | PASS, 1/1 focused and 10/10 overall |
+| Link the binding suite with three individually altered copies of `TMP11x.cpp` in the ignored build directory | Each failed its expected assertion when given the apply timeout, when publishing output on a first-read NACK, or when clearing a compatible cache after a short read. |
+| Compile the README ID example with `g++ -std=c++17 -Wall -Wextra -Wpedantic -Werror -fsyntax-only -Iinclude -x c++ -` | PASS |
+| `python scripts/check_references.py`, `python scripts/check_promptset.py` and `git diff --check` | PASS, 14 pinned PDFs, 55 stages and clean whitespace |
+
+Phase d owns final acceptance and the completion ledger. Stage 15 owns
+diagnostic health-counter evidence. Stage 18 owns transitions from an
+initialized profile and timed startup proof. Stage 28 owns occupied-slot
+guards. Remote CI, MCU links and hardware qualification remain at their
+assigned stages.

@@ -19,18 +19,22 @@ route, starts a new observation history with unknown profile trust.
 Use `isBound()` to check whether a binding exists and `identityInfo()` to
 inspect the bound model, address and last complete ID locally. A new binding
 has `rawValid == false`. `readIdentity(out)` and `probe()` each perform one
-combined read and cache a complete ID even on `IDENTITY_MISMATCH`. Called
-before binding, both return `NOT_BOUND` locally. A transfer failure preserves
-the cached evidence and any caller output. These operations need no clock.
+combined read using `i2cTimeoutMs` and cache a complete ID even on
+`IDENTITY_MISMATCH`. Before binding, both return `NOT_BOUND` locally.
+A transfer failure preserves the cached evidence and any caller output.
+These operations need no clock.
 
 `desiredSettings()` and `configTrust()` return the local target and current
-trust. Binding and ID reads leave `isInitialized()` false and trust
-`UNKNOWN`. Stage 18 owns complete profile validation and verified
-initialization, including establishing startup timing from its own compatible
-ID read. `end()` clears observations while retaining the binding and desired
-settings. `unbind()` also drops the binding. Both operations succeed on an
-empty instance and invoke zero callbacks. Stage 28 adds the active-job and
-pending-result guards described in the operation table.
+trust. After an accepted bind, `isInitialized()` is false and trust is
+`UNKNOWN`. A compatible ID or a failed transfer preserves initialization,
+startup evidence and profile trust. A complete incompatible ID clears that
+evidence and retains the desired settings. Stage 18 owns complete profile
+validation and verified initialization, including establishing startup timing
+from its own compatible ID read. `end()` clears observations while retaining
+the binding and desired settings. `unbind()` also drops the binding.
+Both operations succeed on an empty instance and invoke zero callbacks.
+Stage 28 adds the active-job and pending-result guards described in the
+operation table.
 
 ## Binding and sensor settings
 

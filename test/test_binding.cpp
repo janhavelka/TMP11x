@@ -199,31 +199,48 @@ void rejectedRebindPreservesTarget() {
 }
 
 void failedReadsPreserveEvidence() {
-  Device sensor;
   FakeTmp11xBus route;
   FakeTmp11xDevice target{Model::TMP119};
   auto cfg = binding(route, Model::TMP119, 0x49);
+  // Untimed diagnostics get the callback cap even with a shorter apply budget.
+  cfg.operationTimeoutMs = 3;
+  Device sensor;
   CHECK(route.attach(0x49, target) && sensor.bind(cfg).ok());
+  const auto empty = sensor.identityInfo();
+  auto out = sentinel;
+  route.script.push_back({Status::Error(Err::I2C_NACK_ADDR, "NACK", -5)});
+  CHECK(sensor.readIdentity(out).is(Err::I2C_NACK_ADDR));
+  checkRead(route, 1, cfg, {});
+  checkIdentity(out, sentinel);
+  checkIdentity(sensor.identityInfo(), empty);
+
   target.words[0x0F] = 0x1116;
   CHECK(sensor.probe().is(Err::IDENTITY_MISMATCH));
+  checkRead(route, 2, cfg, {0x11, 0x16});
   const auto mismatch = sensor.identityInfo();
   CHECK(mismatch.raw == 0x1116 && mismatch.rawValid && !mismatch.compatible);
   target.words[0x0F] = 0x2117;
   route.script.push_back({Status::Error(Err::I2C_SHORT_TRANSFER, "short", 1), 1});
-  auto out = sentinel;
   const auto shortRead = sensor.readIdentity(out);
   CHECK(shortRead.is(Err::I2C_SHORT_TRANSFER) && shortRead.detail == 1);
-  checkRead(route, 2, cfg, {0x21});
+  checkRead(route, 3, cfg, {0x21});
   checkIdentity(out, sentinel);
   checkIdentity(sensor.identityInfo(), mismatch);
   route.script.push_back({Status::Error(Err::I2C_NACK_ADDR, "NACK", -5)});
   const auto nack = sensor.probe();
   CHECK(nack.is(Err::I2C_NACK_ADDR) && nack.detail == -5);
-  checkRead(route, 3, cfg, {});
+  checkRead(route, 4, cfg, {});
   checkIdentity(sensor.identityInfo(), mismatch);
   CHECK(sensor.probe().ok());
-  checkRead(route, 4, cfg, {0x21, 0x17});
-  CHECK(sensor.identityInfo().compatible && sensor.identityInfo().raw == 0x2117);
+  checkRead(route, 5, cfg, {0x21, 0x17});
+  const auto compatible = sensor.identityInfo();
+  CHECK(compatible.compatible && compatible.raw == 0x2117);
+  target.words[0x0F] = 0x1116;
+  route.script.push_back({Status::Error(Err::I2C_SHORT_TRANSFER, "short", 1), 1});
+  CHECK(sensor.readIdentity(out).is(Err::I2C_SHORT_TRANSFER));
+  checkRead(route, 6, cfg, {0x11});
+  checkIdentity(sensor.identityInfo(), compatible);
+  checkIdentity(out, sentinel);
   CHECK(!sensor.isInitialized() && sensor.configTrust() == ConfigTrust::UNKNOWN);
 }
 
