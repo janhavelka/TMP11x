@@ -118,6 +118,28 @@ compatible. [SBOS740A p.20, Table 2](reference/source/TMP116-Digital-Temperature
 [SNOSD82D p.21, Table 7-2](reference/source/TMP117-Digital-Temperature-Sensor-Datasheet-SNOSD82D.pdf#page=21),
 [SNIS236 p.23, Table 7-2](reference/source/TMP119-Digital-Temperature-Sensor-Datasheet-SNIS236.pdf#page=23).
 
+## Register transfers
+
+Each read sends the seven-bit target address with W and a register pointer,
+then a repeated START and the same address with R. The controller ACKs the
+MSB, NACKs the LSB and sends STOP. A write sends pointer, MSB and LSB after
+address+W. Supply the pointer on every transfer, including consecutive reads
+of EEPROM shadows. The device retains the register pointer across STOP.
+[TMP116 Fig. 27–28](reference/source/TMP116-Digital-Temperature-Sensor-Datasheet-SBOS740A.pdf#page=22),
+[TMP117 Fig. 7-9–7-10](reference/source/TMP117-Digital-Temperature-Sensor-Datasheet-SNOSD82D.pdf#page=22),
+[TMP119 Fig. 7-10–7-11](reference/source/TMP119-Digital-Temperature-Sensor-Datasheet-SNIS236.pdf#page=25).
+
+The sensor never drives SCL. All six models specify 1–400 kHz and a
+20–40 ms serial-interface timeout (35 ms typical) for a held line without
+clocks. TMP117 p. 20 and TMP119 p. 23 also document interface reset at STOP
+and ignoring traffic until START. TMP116 p. 21 documents timeout recovery.
+The adapter must enforce the software timeout grant across lock acquisition,
+route selection and controller work. Proving the wire sequence requires an
+adapter and a physical bus capture.
+[TMP116 timing](reference/source/TMP116-Digital-Temperature-Sensor-Datasheet-SBOS740A.pdf#page=6),
+[TMP117 interface](reference/source/TMP117-Digital-Temperature-Sensor-Datasheet-SNOSD82D.pdf#page=20),
+[TMP119 interface](reference/source/TMP119-Digital-Temperature-Sensor-Datasheet-SNIS236.pdf#page=23).
+
 ## Pullups, logic levels and decoupling
 
 Pull SDA up to a rail compatible with every participant. Provide a pullup for

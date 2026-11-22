@@ -1,7 +1,9 @@
 cmake_minimum_required(VERSION 3.16)
 
 set(TMP11X_SOURCES
+  src/CommandTable.cpp
   src/Config.cpp
+  src/RegisterTransport.cpp
   src/Version.cpp)
 
 if(COMMAND idf_component_register)
@@ -31,16 +33,25 @@ if(TMP11X_BUILD_TESTS)
     test/status_header.cpp)
   target_link_libraries(tmp11x_value_types_test PRIVATE TMP11x)
   target_include_directories(tmp11x_value_types_test PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src")
-  set_target_properties(TMP11x tmp11x_value_types_test PROPERTIES
-    CXX_STANDARD 17 CXX_STANDARD_REQUIRED YES CXX_EXTENSIONS NO)
-  if(MSVC)
-    target_compile_options(TMP11x PRIVATE /W4 /WX /permissive-)
-    target_compile_options(tmp11x_value_types_test PRIVATE /W4 /WX /permissive-)
-  elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
-    target_compile_options(TMP11x PRIVATE -Wall -Wextra -Wpedantic -Werror)
-    target_compile_options(tmp11x_value_types_test PRIVATE -Wall -Wextra -Wpedantic -Werror)
-  endif()
   add_test(NAME value_types_cpp COMMAND tmp11x_value_types_test)
+
+  add_executable(tmp11x_register_transport_test
+    test/test_command_table.cpp
+    test/test_register_transport.cpp
+    test/support/FakeTmp11xDevice.cpp)
+  target_link_libraries(tmp11x_register_transport_test PRIVATE TMP11x)
+  target_include_directories(tmp11x_register_transport_test PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src")
+  add_test(NAME register_transport_cpp COMMAND tmp11x_register_transport_test)
+
+  foreach(target TMP11x tmp11x_value_types_test tmp11x_register_transport_test)
+    set_target_properties(${target} PROPERTIES
+      CXX_STANDARD 17 CXX_STANDARD_REQUIRED YES CXX_EXTENSIONS NO)
+    if(MSVC)
+      target_compile_options(${target} PRIVATE /W4 /WX /permissive-)
+    elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+      target_compile_options(${target} PRIVATE -Wall -Wextra -Wpedantic -Werror)
+    endif()
+  endforeach()
 
   add_test(NAME version_generator_check
     COMMAND "${Python3_EXECUTABLE}" -B "${CMAKE_CURRENT_SOURCE_DIR}/scripts/generate_version.py" check)

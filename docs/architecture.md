@@ -12,7 +12,7 @@ conversion or startup interval runs. [Public API and operation gates](api-contra
 | --- | --- |
 | `Status.h` | SDK-independent errors, static messages, status predicates and passive transport states. |
 | `Config.h` | Value types, model and capability queries, callback types, binding and desired sensor settings. Stage 23 adds the configurable hardware offset. |
-| `CommandTable.h` | Checked map, access classes and field constants for the selected family. Stage 12 derives these from the reviewed ledger. A register identifier grants no write permission. |
+| `CommandTable.h` | Register pointers, positioned field masks and `command::accessFor(model, pointer)`. The lookup distinguishes a protected shadow from a managed offset at `0x07`. |
 | `TMP11x.h` | Sample and identity evidence types. Later stages add the device class with lifecycle, measurement, configuration, diagnostic and operation methods as each becomes available. |
 | `Version.h` | Checked-in generated package version from `library.json`. Its constants describe the header, and the out-of-line `version()` describes the linked library. |
 
@@ -32,6 +32,20 @@ The private `src/ModelDescriptor.h` holds the two model profiles and declares
 `findModelDescriptor` for transport, identity and shadow access. Use the table
 to recognize a complete ID word independently of the selected BOM model.
 `src/Config.cpp` implements the lookup and the public capability query.
+
+The private word helpers in `src/RegisterTransport.h` borrow the owner's
+`Config` for one call. The caller supplies the remaining budget and receives
+a status plus an `attempted` flag. A set flag counts one callback, including
+when the adapter reports failure. On a failed read the caller keeps the old
+word, but TEMP or CONFIG may have consumed flags. A failed write may have
+changed the device. The operation owner uses the pointer, direction and
+attempt evidence to update observation history and configuration trust.
+
+The write path checks the selected model, the typed purpose, and the
+operation owner's startup and locked-idle evidence before calling the adapter.
+Stable CONFIG accepts only bits in `0x07FC`, including canonical continuous
+and shutdown modes. Stage 18 establishes the guard on hardware. Offset
+management, one-shot and addressed reset have their own later feature owners.
 
 | Owner | Exclusive decision and callers |
 | --- | --- |

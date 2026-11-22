@@ -20,11 +20,18 @@ CTest registers these cases when `TMP11X_BUILD_TESTS=ON`.
 | --- | --- |
 | `version_cpp` | Rebuild the version string from its numeric constants and compare it with the header string and the linked library's version. The executable checks its results in Release builds. |
 | `value_types_cpp` | Compile the new public headers in separate translation units and exercise Status, all model and address values, ID and capability literals, selector bounds, settings defaults and observation evidence. Release checks stay active and guard against ordinary C++ heap allocation during the cases. |
+| `register_transport_cpp` | Check the command table against independent literals for each model, exercise all address and pointer byte values, inspect shared-bus frames and timeout grants, and script partial reads and ambiguous writes. |
 | `version_generator_check` | Compare `Version.h` and the ESP-IDF manifest's version with `library.json` using the generator's check command. |
 | `version_sync` | Run the delegated version check through the checker script. |
 | `version_generator_regressions` | Exercise IDF version drift and an unwritable mirror. |
 | `register_ledger` | Validate the six-model register ledger and its references. |
 | `register_ledger_regressions` | Exercise the ledger validator against valid and deliberately inconsistent inputs. |
+
+To run only the transport cases in a configured build, use
+`ctest -C Release -R "^register_transport_cpp$" --output-on-failure`
+from the build directory. The fake records each callback's bytes and result.
+Adapter timing, repeated START and ACK/NACK on the wires require separate
+adapter and fixture evidence. [Bus framing](board-integration.md#register-transfers).
 
 ## Source consumer
 
@@ -43,8 +50,8 @@ cmake --build build-consumer --config Release --parallel
 
 On Windows with MinGW, add `-G "MinGW Makefiles"` and use the executable's
 `.exe` suffix. With a multi-config generator, run the executable under
-`build-consumer/Release/`. It prints the linked version and exits successfully
-when it matches the version in the header.
+`build-consumer/Release/`. It checks the public register policy for TMP117
+offset and prints the linked version when it matches the version in the header.
 
 ## Version and package checks
 

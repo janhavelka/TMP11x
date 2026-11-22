@@ -67,6 +67,22 @@ and retains the original MIT notice in [LICENSE](../LICENSE).
 
 [Stage 11 sources and checks](reports/prompt_11.md).
 
+## Stage 12 transport
+
+The word helpers adapt the scratch-read, MSB-first write and callback-context
+patterns in TMP1x2 `src/TMP1x2.cpp`. Its `test/test_core.cpp` supplied the
+partial-transfer test precedent. ADS1115 `src/ADS1115.cpp` supplied the
+buffer and length guard pattern. Both sources carry the same THYMOS Solution
+s.r.o., Jan Havelka MIT notice retained in [LICENSE](../LICENSE).
+[TMP1x2 revision](https://github.com/janhavelka/TMP1x2/tree/afd50889312f6e218a6a34eca687e3e8547d8b40),
+[ADS1115 revision](https://github.com/janhavelka/ADS1115/tree/e07622a99fe9f13c5d6a5a2497a8112a14185b9d).
+
+[RegisterTransport.cpp](../src/RegisterTransport.cpp) enforces the TMP11x
+frame lengths, access policy and timeout grant. The native suite checks the
+actual callback count and allows alternate device states after a failed
+transfer. The command table and fake use TMP11x register facts.
+[Transport tests](../test/test_register_transport.cpp), [stage 12 evidence](reports/prompt_12.md).
+
 ## Selected future reuse
 
 These are decisions for later stages, not claims that the corresponding

@@ -91,12 +91,14 @@ struct SensorSettings {
 /// Complete one synchronous write to a seven-bit address within the supplied ms budget.
 /// Return terminal status. OK confirms all bytes transferred. Borrow the TX buffer only
 /// for the call. The budget includes lock acquisition and the adapter must report shorts.
+/// A register write supplies three bytes in order: pointer, MSB, LSB.
 using I2cWriteFn = Status (*)(std::uint8_t address, const std::uint8_t* tx, std::size_t txLen,
                               std::uint32_t timeoutMs, void* user);
 
 /// Complete one synchronous, combined write/read with a repeated START within the ms budget.
 /// OK confirms both lengths. Lend neither buffer beyond return and report a short transfer
 /// as an error. The same terminal status and lock budget rules as I2cWriteFn apply.
+/// A word read sends one pointer, reads the MSB with ACK, then the LSB with NACK and STOP.
 using I2cWriteReadFn = Status (*)(std::uint8_t address, const std::uint8_t* tx, std::size_t txLen,
                                   std::uint8_t* rx, std::size_t rxLen, std::uint32_t timeoutMs,
                                   void* user);

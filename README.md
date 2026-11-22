@@ -6,7 +6,10 @@ TMP117 / TMP117M / TMP117N, and TMP119. TMP117 is the primary intended sensor.
 Development version `0.1.0` provides portable C++17 status, binding, settings,
 model capability and observation types through `<TMP11x/TMP11x.h>`.
 `TMP11x::getCapabilities()` reports features of an explicit BOM selection
-without accessing hardware. Device communication and qualification are pending.
+without accessing hardware. `<TMP11x/CommandTable.h>` exposes the register
+pointers, field masks and per-model access classes. The private transport
+has native tests for one-word reads and guarded writes. Public device binding
+and physical qualification are pending.
 `<TMP11x/Version.h>` exposes `TMP11x::version()` for the linked library.
 [Value and binding contracts](docs/api-contracts.md).
 

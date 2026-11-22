@@ -101,3 +101,54 @@ owns final acceptance, progress and index updates.
 - NOT RUN — stage 12 transport cases and consumer acceptance await implementation.
   MCU links, deliberate remote CI and physical qualification have later owners.
   No blocker prevents phase b.
+
+## Phase b implementation and checks, 2026-11-22
+
+**PARTIAL.** Entry was clean `main` at
+`4b8cde9fb16a5411462499c594c648918501b15b`. Its one report path and
+subject match the phase-a request. The wrapper recorded equality with
+`origin/main` at 14:30:15 Prague time. The five input artifacts and cited
+TI and sibling revisions above still apply. The three output artifacts are
+implemented and host-tested. Fresh review and final acceptance remain open.
+
+| Artifact | Delivered behavior and integration owner |
+| --- | --- |
+| `command-table` | [CommandTable.h](../../include/TMP11x/CommandTable.h) publishes register addresses, field masks and release access classes. [CommandTable.cpp](../../src/CommandTable.cpp) uses the existing model descriptor's capabilities and sparse shadow map. Stage 17 consumes these literals for CONFIG codecs. |
+| `register-transport` | [Private interface](../../src/RegisterTransport.h) and [implementation](../../src/RegisterTransport.cpp) check the borrowed binding and frame before each callback. They distinguish a local refusal from an attempted transfer and publish a word only on adapter success. Typed writes require startup and locked-idle evidence. Stage 13 can read ID, stage 14 owns public binding, stage 15 consumes attempt evidence, and stage 18 establishes the operation-local guard. |
+| `register-fake` | [Fixture declaration](../../test/support/FakeTmp11xDevice.h) and [implementation](../../test/support/FakeTmp11xDevice.cpp) route transfers by address, copy callback traces and script errors, short reads, flag consumption and alternate post-write words. The tests seed register contents. Stage 32 extends this fixture. |
+
+The registered Release suite runs [metadata checks](../../test/test_command_table.cpp)
+and [transport cases](../../test/test_register_transport.cpp) against independent
+literal expectations. The public header compiles as the first include of its
+own test translation unit. The [native consumer](../../examples/native_consumer/main.cpp)
+links the public access lookup from a tests-off build.
+
+| Acceptance case | Observed result |
+| --- | --- |
+| Map and access | `testCommandTable` and `registerAccessByModel` check every pointer byte for each of six models, including writes with each purpose. TMP116/N refuse writes at `0x07`. The other models require the managed-offset purpose. CONFIG rejects status, reserved, reset, continuous-alias and one-shot encodings before I2C. |
+| Binding and budget | `bindingAndBudget` and `invalidFrames` exercise all address bytes, null context with stateless callbacks, missing callbacks, invalid models, buffer shapes and expired grants. Reads and writes both receive 3 ms when 3 ms remains under a 50 ms cap, and 50 ms when more time is available. |
+| Frame and ownership | `framesAndSharedAdapter` alternates targets at `0x48` and `0x4B`. A combined ID read sends `[0F]`, receives `[A1 17]` and publishes `0xA117`. THIGH transmits `[02 12 A5]` once. Consecutive shadow reads each send their own pointer. |
+| Failure and side effects | `terminalStatusesAndReadPublication` preserves generic and phase-specific NACKs, shorts, timeout and bus errors. Incoherent callback codes become `I2C_ERROR` with the original signed detail. A one-byte read preserves the old word. `ambiguousEffects` tests alternate flag-consumption outcomes and unchanged, partially changed and fully changed words after the same write error. |
+
+### Executed checks
+
+GCC 15.1.0, CMake 4.0.1, Ninja 1.12.1 and Python 3.12.10 on Windows.
+
+- PASS — `cmake -S . -B build-tests-prompt12-b -G Ninja -DTMP11X_BUILD_TESTS=ON -DCMAKE_BUILD_TYPE=Release`
+  and `cmake --build build-tests-prompt12-b --config Release --parallel`.
+  A strict build flagged a possibly uninitialized local word buffer. The
+  buffer now starts initialized and publication still depends on callback status.
+- PASS — `ctest --test-dir build-tests-prompt12-b -C Release -R "^register_transport_cpp$" --output-on-failure`
+  (1/1) and `ctest --test-dir build-tests-prompt12-b -C Release --output-on-failure`
+  (8/8). Both test executables that cover register metadata and value types
+  use active Release checks.
+- PASS — `cmake -S examples/native_consumer -B build-consumer-prompt12-b -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_DISABLE_FIND_PACKAGE_Python3=TRUE -DCMAKE_DISABLE_FIND_PACKAGE_Git=TRUE`,
+  `cmake --build build-consumer-prompt12-b --config Release --parallel` and
+  `./build-consumer-prompt12-b/tmp11x_native_consumer.exe` (printed `0.1.0`).
+- PASS — `python tools/check_register_ledger.py` (six models),
+  `python tools/test_check_register_ledger.py` (31 regressions),
+  `python scripts/check_references.py` (14 PDF hashes),
+  `python scripts/check_promptset.py` (55 stages) and `git diff --check`.
+- NOT RUN — MCU links, adapter lock/controller deadline enforcement, physical
+  framing and silicon qualification. Remote CI follows the stage 43 checkpoint.
+  No blocker for phase c.

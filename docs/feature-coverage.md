@@ -32,6 +32,7 @@ F20 and applies to every selected model.
 | --- | --- | --- | --- | --- | --- | --- |
 | F20.foundation | Source pages and project dispositions below | SDK-free C++17 library and source consumer foundation | Version test and isolated native source link/run passed. Shared-bus and installed-package checks are pending. | Not run | Not run | Not run |
 | Value types for all six models | F01, F02, R01, R05–R12 and R14–R17 below | Portable values, selector checks and two shared model profiles | Stage 11 acceptance passed `value_types_cpp` in Release for model gates, addresses, selectors, signed fields and evidence defaults. Transactions, decoding, timing and effects have later test owners. | Not run | Not run | Not run |
+| Register transport for all six models | F02–F04, R18 and the per-model write policies | Checked model map, one-word frames, clipped callback budget and explicit attempt evidence | Release `register_transport_cpp` passed address and pointer sweeps, shared-target traces, zero-callback refusals, short reads and ambiguous writes. [Stage 12 evidence](reports/prompt_12.md) | Not run | Not run | Not run |
 | Remaining software and qualification work | Source pages and project dispositions below | Pending | Not run | Not run | Not run | Not run |
 
 When evidence differs by row or model, record its implementation path, test

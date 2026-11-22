@@ -8,3 +8,5 @@
 - Added the host CTest entrypoint with version and register-ledger checks.
 - Added portable status, binding, stable settings, model capabilities, and
   identity and sample evidence types with native tests for all six BOM models.
+- Added model-specific register metadata and a private single-word I2C
+  transport with clipped timeouts, guarded writes and native failure tests.
