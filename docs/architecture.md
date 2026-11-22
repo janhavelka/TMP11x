@@ -13,7 +13,7 @@ conversion or startup interval runs. [Public API and operation gates](api-contra
 | `Status.h` | SDK-independent errors, static messages, status predicates and passive transport states. |
 | `Config.h` | Value types, model and capability queries, callback types, binding and desired sensor settings. Stage 23 adds the configurable hardware offset. |
 | `CommandTable.h` | Register pointers, positioned field masks and `command::accessFor(model, pointer)`. The lookup distinguishes a protected shadow from a managed offset at `0x07`. |
-| `TMP11x.h` | Sample and identity evidence types. Later stages add the device class with lifecycle, measurement, configuration, diagnostic and operation methods as each becomes available. |
+| `TMP11x.h` | Sample and identity evidence types and the `TMP11x::TMP11x` device class. The class owns one binding, its desired settings and observations, and exposes lifecycle methods and bound ID diagnostics. |
 | `Version.h` | Checked-in generated package version from `library.json`. Its constants describe the header, and the out-of-line `version()` describes the linked library. |
 
 Implementation belongs in `src/`. Each public header must compile on its
@@ -75,7 +75,8 @@ over the **same** `BoardBus` object. The example BOM places a TMP112 at
 `0x48` and a TMP117 at `0x49`. Both adapters borrow the bus through
 `i2cUser` and map controller outcomes to their package's own `Status`.
 `boardMillis` reads the board clock. Each sensor object and the bus outlive
-the calls. Bring-up here is an explicit request to initialize both devices.
+the calls. This bring-up example describes the planned initialized interface.
+The current TMP11x interface supports the bind and observation steps.
 
 ```cpp
 #include <TMP1x2/TMP1x2.h>

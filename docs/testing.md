@@ -22,6 +22,7 @@ CTest registers these cases when `TMP11X_BUILD_TESTS=ON`.
 | `value_types_cpp` | Compile the new public headers in separate translation units and exercise Status, all model and address values, ID and capability literals, selector bounds, settings defaults and observation evidence. Release checks stay active and guard against ordinary C++ heap allocation during the cases. |
 | `register_transport_cpp` | Check the command table against independent literals for each model, exercise all address and pointer byte values, inspect shared-bus frames and timeout grants, and script partial reads and ambiguous writes. |
 | `identity_cpp` | Validate all six model selections, observed groups and revision fields. Check shared-bus TMP114 and TMP118 responses, coincidental matches, transfer failures and local refusals against the callback trace and output evidence. |
+| `binding_cpp` | Exercise the public device lifecycle with the register fake. Check structural validation, rejected and accepted rebinds, callback-free teardown, retained ID evidence after errors, and two independent routes to address `0x48`. |
 | `version_generator_check` | Compare `Version.h` and the ESP-IDF manifest's version with `library.json` using the generator's check command. |
 | `version_sync` | Run the delegated version check through the checker script. |
 | `version_generator_regressions` | Exercise IDF version drift and an unwritable mirror. |
@@ -32,7 +33,8 @@ To run only the transport cases in a configured build, use
 `ctest -C Release -R "^register_transport_cpp$" --output-on-failure`
 from the build directory. The fake records each callback's bytes and result.
 Use `ctest -C Release -R "^identity_cpp$" --output-on-failure` there for
-the private identity cases.
+the private identity cases or `ctest -C Release -R "^binding_cpp$" --output-on-failure`
+for the public lifecycle cases.
 Adapter timing, repeated START and ACK/NACK on the wires require separate
 adapter and fixture evidence. [Bus framing](board-integration.md#register-transfers).
 

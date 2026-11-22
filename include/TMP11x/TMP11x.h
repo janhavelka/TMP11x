@@ -1,8 +1,9 @@
 /// @file TMP11x.h
-/// @brief Identity and measurement evidence for the portable TMP11x interface.
+/// @brief Device binding, identity diagnostics and measurement evidence.
 #pragma once
 
 #include <cstdint>
+#include <optional>
 
 #include "TMP11x/Config.h"
 
@@ -70,6 +71,69 @@ struct Sample {
   std::uint32_t profileGeneration = 0;             ///< Verified profile generation at observation, if known.
   ConfigTrust configTrust = ConfigTrust::UNKNOWN;  ///< Profile trust at observation.
   OffsetProvenance offset{};                       ///< Hardware-offset evidence at observation.
+};
+
+/// One application-owned sensor and its evidence. Serialize all access, including
+/// getters, outside the instance. Each callback must finish before returning.
+/// Keep the instance at a stable address and its borrowed resources alive while bound.
+class TMP11x {
+ public:
+  TMP11x() = default;  ///< Construct an unbound device without invoking any hooks.
+  TMP11x(const TMP11x&) = delete;
+  TMP11x& operator=(const TMP11x&) = delete;
+  TMP11x(TMP11x&&) = delete;
+  TMP11x& operator=(TMP11x&&) = delete;
+
+  /// Copy the selected target, hooks, transport policy and desired settings without I/O.
+  /// INVALID_CONFIG preserves the previous target and evidence. Acceptance discards
+  /// all previous observations, even on a same-target rebind after an external reset.
+  /// Only the binding structure is validated here. Sensor settings remain unverified.
+  Status bind(const Config& config) noexcept;
+
+  /// Clear local observations, initialization and startup proof, keeping the bound
+  /// target and desired settings. Safe to repeat. The physical power mode is untouched.
+  Status end() noexcept;
+
+  /// Clear local evidence and release the binding and its borrowed hooks without I/O.
+  /// Safe to repeat on an empty instance.
+  Status unbind() noexcept;
+
+  /// Read DEVICE_ID once using the bound callback cap. Works before initialization
+  /// and without a clock. A complete word updates @p out and the cached identity,
+  /// including on IDENTITY_MISMATCH. A mismatch also invalidates live profile and
+  /// startup evidence. NOT_BOUND and failed transfers preserve @p out and the cache.
+  Status readIdentity(IdentityInfo& out);
+
+  /// Perform the same health-neutral ID check as readIdentity and cache its evidence.
+  /// Neither diagnostic establishes initialization or a power-on time.
+  Status probe();
+
+  /// Whether this instance holds an accepted target. All inspectors are bus-silent.
+  bool isBound() const noexcept { return _config.model != Model::UNSELECTED; }
+  /// Whether managed initialization has verified the sensor profile.
+  bool isInitialized() const noexcept { return _live.initialized; }
+  /// Copy the selected target and most recent complete ID, including any mismatch.
+  IdentityInfo identityInfo() const noexcept { return _identity; }
+  /// Copy the software target. An unbound device returns the default settings.
+  SensorSettings desiredSettings() const noexcept { return _config.settings; }
+  /// Return the current trust in the sensor's live configuration.
+  ConfigTrust configTrust() const noexcept { return _live.trust; }
+
+ private:
+  // These facts expire together on teardown or incompatible identity. A timed
+  // initialization operation owns the first compatible ACK timestamp and proof.
+  struct LiveState {
+    std::optional<std::uint32_t> firstAckMs;
+    bool startupReady = false;
+    bool initialized = false;
+    ConfigTrust trust = ConfigTrust::UNKNOWN;
+  };
+
+  void clearObservations() noexcept;
+
+  Config _config{};
+  IdentityInfo _identity{};
+  LiveState _live{};
 };
 
 }  // namespace TMP11x

@@ -1,20 +1,25 @@
 #include "RegisterTransport.h"
 
 #include <algorithm>
-#include <limits>
 
 #include "TMP11x/CommandTable.h"
 
 namespace TMP11x::detail {
-namespace {
 
-Status validateBinding(const Config& binding, std::uint32_t remainingMs) {
+Status validateTransportBinding(const Config& binding) noexcept {
   if (!isValidModel(binding.model) || !isValidAddress(binding.i2cAddress) ||
       binding.i2cWrite == nullptr || binding.i2cWriteRead == nullptr ||
-      binding.i2cTimeoutMs == 0 ||
-      binding.i2cTimeoutMs > static_cast<std::uint32_t>(std::numeric_limits<std::int32_t>::max())) {
+      !isValidInterval(binding.i2cTimeoutMs)) {
     return Status::Error(Err::INVALID_CONFIG, "Invalid register transport binding");
   }
+  return Status::Ok();
+}
+
+namespace {
+
+Status admitTransfer(const Config& binding, std::uint32_t remainingMs) {
+  const auto status = validateTransportBinding(binding);
+  if (!status.ok()) return status;
   if (remainingMs == 0) return Status::Error(Err::OPERATION_TIMEOUT, "Transfer budget expired");
   return Status::Ok();
 }
@@ -70,7 +75,7 @@ Status checkWrite(command::Access policy, std::uint16_t value, WriteAccess acces
 
 TransferResult readFrame(const Config& binding, const std::uint8_t* tx, std::size_t txLen,
                          std::uint8_t* rx, std::size_t rxLen, std::uint32_t remainingMs) {
-  const auto admission = validateBinding(binding, remainingMs);
+  const auto admission = admitTransfer(binding, remainingMs);
   if (!admission.ok()) return {admission, false};
   if (tx == nullptr || txLen != 1 || rx == nullptr || rxLen != 2) {
     return {Status::Error(Err::INVALID_PARAM, "Expected one pointer and two receive bytes"), false};
@@ -92,7 +97,7 @@ TransferResult readFrame(const Config& binding, const std::uint8_t* tx, std::siz
 
 TransferResult writeFrame(const Config& binding, const std::uint8_t* tx, std::size_t txLen,
                           WriteAccess access, std::uint32_t remainingMs) {
-  const auto admission = validateBinding(binding, remainingMs);
+  const auto admission = admitTransfer(binding, remainingMs);
   if (!admission.ok()) return {admission, false};
   if (tx == nullptr || txLen != 3) {
     return {Status::Error(Err::INVALID_PARAM, "Expected a pointer and two data bytes"), false};

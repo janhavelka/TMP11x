@@ -1,8 +1,17 @@
 #pragma once
 
+#include <limits>
+
 #include "TMP11x/Config.h"
 
 namespace TMP11x::detail {
+
+// Positive intervals below the half-range of the wrapping millisecond clock.
+constexpr bool isValidInterval(std::uint32_t ms) noexcept {
+  return ms > 0 && ms <= static_cast<std::uint32_t>(std::numeric_limits<std::int32_t>::max());
+}
+
+Status validateTransportBinding(const Config& binding) noexcept;
 
 // A local refusal costs zero transfers. A callback, even an incoherent or failed
 // one, costs one and may already have affected the device.

@@ -7,6 +7,31 @@ explicitly initializes a profile and chooses how to acquire each sample.
 Feature stages introduce the declarations with their implementations.
 [Implementation owners and coverage](architecture.md).
 
+## Available lifecycle and identity operations
+
+Construct one `TMP11x::TMP11x` at a stable address per sensor. The owner
+serializes every call, including local inspection. `bind(const Config&)`
+validates the binding fields below and copies the accepted target and desired
+settings. An invalid candidate returns `INVALID_CONFIG` and preserves the
+previous binding and observations. Every accepted bind, even to the same
+route, starts a new observation history with unknown profile trust.
+
+Use `isBound()` to check whether a binding exists and `identityInfo()` to
+inspect the bound model, address and last complete ID locally. A new binding
+has `rawValid == false`. `readIdentity(out)` and `probe()` each perform one
+combined read and cache a complete ID even on `IDENTITY_MISMATCH`. Called
+before binding, both return `NOT_BOUND` locally. A transfer failure preserves
+the cached evidence and any caller output. These operations need no clock.
+
+`desiredSettings()` and `configTrust()` return the local target and current
+trust. Binding and ID reads leave `isInitialized()` false and trust
+`UNKNOWN`. Stage 18 owns complete profile validation and verified
+initialization, including establishing startup timing from its own compatible
+ID read. `end()` clears observations while retaining the binding and desired
+settings. `unbind()` also drops the binding. Both operations succeed on an
+empty instance and invoke zero callbacks. Stage 28 adds the active-job and
+pending-result guards described in the operation table.
+
 ## Binding and sensor settings
 
 `Config` is a value copied on acceptance. Its binding fields identify the

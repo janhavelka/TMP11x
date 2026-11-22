@@ -99,3 +99,51 @@ Windows, GNU C++ 15.1.0, GNU Make 4.4.1, CMake/CTest 4.0.1 and Python 3.12.10.
 The public lifecycle cases above remain open for phase b. MCU links and
 physical qualification retain their later gates. Stage 43 owns the first
 remote CI checkpoint.
+
+## Phase b implementation, 2026-11-22
+
+**PARTIAL.** Phase b implemented `binding-api` and `public-identity-api` on
+clean `main` at `8c719a190535b6ad88c6afe341621c8197db91a8`. Git history
+and the wrapper log confirm that the phase-a report was committed and
+synchronized at 16:30:33 Prague time. Both sibling source revisions listed
+above still matched clean checkouts. The three pinned power-up sections
+support keeping bind time and diagnostic ID reads separate from startup proof.
+
+The [public class](../../include/TMP11x/TMP11x.h) copies the owner's
+`Config` only after structural validation. Both bind and the register
+transport use [the same transport checks](../../src/RegisterTransport.cpp).
+The [lifecycle implementation](../../src/TMP11x.cpp) keeps the desired
+settings, last complete identity and live state per instance. End retains
+the target. Unbind releases the callback contexts. Both clear observations.
+The ID path uses the stage 13 family check directly. A complete mismatch
+replaces cached ID evidence and clears live state. A transfer error
+preserves the caller's output and the last complete ID.
+
+The [public lifecycle tests](../../test/test_binding.cpp) use the stage 12
+register fake. CTest runs them as `binding_cpp`.
+
+| Case | Observed result |
+| --- | --- |
+| `emptyAndStatelessBinding` | Unbound calls preserve output and return `NOT_BOUND`. Repeated teardown succeeds. Stateless callbacks accept null contexts and the minimum valid timeout. Clock and GPIO hooks are never invoked. |
+| `clocklessFamilyChecks` | Each public ID entry point issues one combined read at the callback cap. All six models and four addresses were exercised with `0x0117`, `0x2117`, `0x1116` and `0x0116`, including the maximum accepted intervals and threshold. |
+| `rejectedRebindPreservesTarget` | Varying one binding field at a time preserves the original identity, settings, route and timeout on rejection. A valid replacement selects its new model, address and route with empty evidence. |
+| `failedReadsPreserveEvidence` | A short read and an address NACK retain a previous incompatible ID. A later complete ID can establish compatibility. Initialization stays false and trust stays unknown. |
+| `independentRoutesAndTeardown` | Two routes to `0x48` return distinct words. Same-target rebind clears evidence. Replacing the caller's config after binding leaves the installed target intact. End permits another explicit probe. Repeated unbind clears the local target and leaves the peer's evidence intact. |
+
+### Local checks
+
+Windows, GNU C++ 15.1.0, GNU Make 4.4.1, CMake/CTest 4.0.1,
+Python 3.12.10 and Doxygen 1.13.2.
+
+| Command or check | Result |
+| --- | --- |
+| `cmake -S . -B build-tests-prompt14-b -G "MinGW Makefiles" -DTMP11X_BUILD_TESTS=ON -DCMAKE_BUILD_TYPE=Release`, then `cmake --build build-tests-prompt14-b --config Release --parallel` | PASS, strict C++17 Release build |
+| `ctest --test-dir build-tests-prompt14-b -C Release --output-on-failure` | PASS, 10/10 including the new public lifecycle suite |
+| `cmake -S examples/native_consumer -B build-consumer-prompt14-b -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release -DCMAKE_DISABLE_FIND_PACKAGE_Python3=TRUE -DCMAKE_DISABLE_FIND_PACKAGE_Git=TRUE`, then `cmake --build build-consumer-prompt14-b --config Release --parallel` and `build-consumer-prompt14-b/tmp11x_native_consumer.exe` | PASS, tests-off link and run printed `0.1.0` |
+| `doxygen -` over `include/TMP11x` with XML output and `WARN_AS_ERROR=YES`. Compile the README observation example with `g++ -std=c++17 -Wall -Wextra -Wpedantic -Werror -fsyntax-only -Iinclude -x c++ -` | PASS, public lifecycle methods present in the XML and example compiles |
+| `python scripts/check_references.py`, `python scripts/check_promptset.py` and `git diff --check` | PASS, 14 reference hashes, 55 stages and whitespace |
+
+Phase c owns fresh review of the implementation and tests. Stages 15, 18
+and 28 retain the executable health, verified initialization/startup and
+occupied-slot checks respectively. MCU links, remote CI and physical
+qualification were not run in this phase.

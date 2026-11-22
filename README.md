@@ -8,12 +8,42 @@ model capability and observation types through `<TMP11x/TMP11x.h>`.
 `TMP11x::getCapabilities()` reports features of an explicit BOM selection
 without accessing hardware. `<TMP11x/CommandTable.h>` exposes the register
 pointers, field masks and per-model access classes. The private transport
-has native tests for one-word reads and guarded writes. The private identity
-engine reads the device ID once and reports whether it matches the family
-of the selected BOM model. Public device binding and physical qualification
-are pending.
+has native tests for one-word reads and guarded writes. The public device
+class supports bus-silent binding, teardown and explicit family checks.
+Verified sensor initialization and physical qualification are pending.
 `<TMP11x/Version.h>` exposes `TMP11x::version()` for the linked library.
 [Value and binding contracts](docs/api-contracts.md).
+
+## Read the device ID
+
+Supply the board's synchronous write and combined write/read callbacks and
+the address for the selected route. This example assumes a TMP117 at `0x48`.
+
+```cpp
+#include <TMP11x/TMP11x.h>
+
+TMP11x::Status identifyTmp117(TMP11x::TMP11x& sensor, TMP11x::I2cWriteFn write,
+                              TMP11x::I2cWriteReadFn writeRead, void* route,
+                              TMP11x::IdentityInfo& id) {
+  TMP11x::Config cfg{};
+  cfg.model = TMP11x::Model::TMP117;
+  cfg.i2cAddress = 0x48;
+  cfg.i2cWrite = write;
+  cfg.i2cWriteRead = writeRead;
+  cfg.i2cUser = route;
+  const auto bound = sensor.bind(cfg);
+  if (!bound.ok()) return bound;
+  return sensor.readIdentity(id);
+}
+```
+
+`bind` copies the configuration locally. The owner keeps the borrowed route
+and bus alive and serializes access. `readIdentity` needs no clock and makes
+one combined read of register `0x0F`. On `IDENTITY_MISMATCH`, inspect
+`id.raw` for the complete word. A transfer error preserves the caller's
+previous output. Use `probe()` for the same family check when only the status
+is needed. `end()` clears observations and retains the binding for another
+read. `unbind()` also releases the binding. Both use zero bus callbacks.
 
 ## Build and test
 

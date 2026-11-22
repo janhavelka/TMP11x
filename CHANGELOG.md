@@ -12,3 +12,5 @@
   transport with clipped timeouts, guarded writes and native failure tests.
 - Added private family validation for all six BOM models. A complete ID
   mismatch reports the observed word, recognized group and available revision.
+- Added bus-silent bind, end and unbind on `TMP11x::TMP11x`. Bound callers
+  can read the device ID or probe family compatibility before initialization.
