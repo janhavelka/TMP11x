@@ -1,5 +1,9 @@
 # Prompt 15 — Passive transport health
 
+**COMPLETE.** Native acceptance verified one outcome per tracked I2C callback,
+recovery from OFFLINE on all six BOM selections, and health-neutral public
+identity diagnostics. [Final checks](#phase-d-acceptance-2026-11-22).
+
 ## Phase a brief, 2026-11-22
 
 **PARTIAL.** All four prerequisites are complete. Prompt 15 is the next
@@ -189,3 +193,37 @@ fault and its timestamp. [Health cases](../../test/test_health.cpp),
 Phase d owns final acceptance and the report index and progress entries.
 Managed-operation integration, MCU links, hardware and remote CI retain the
 owners recorded above.
+
+## Phase d acceptance, 2026-11-22
+
+Acceptance used clean `main` at `e50959c02d373398de30d5a6a6bf8acd48d02f42`.
+The parent was `5eb52c1`. The subject and both changed paths matched the
+phase-c request. The wrapper verified equality with `origin/main` at
+18:00:23 Prague time. The three sibling checkouts were clean, and their
+selected source and test files still matched the pins listed in phase a.
+
+Stage 16 can use `RegisterTransport::tracked(device)` for latest reads.
+Each tracked callback updates health once on return, including before initialization.
+An ordinary success clears the failure streak and preserves the latest fault
+and its time. Local refusals and public identity diagnostics preserve
+history. The six native cases cover both transfer directions, clock wrap,
+saturation, lifecycle resets and every combination of initialization and
+transport state in the online predicate. [Transport](../../src/RegisterTransport.cpp),
+[public inspectors](../../src/TMP11x.cpp), [health tests](../../test/test_health.cpp).
+
+Windows acceptance used GNU C++ 15.1.0, CMake/CTest 4.0.1, Python 3.12.10
+and Doxygen 1.13.2.
+
+| Check | Command or method | Result |
+| --- | --- | --- |
+| Strict C++17 Release build | `cmake -S . -B build-tests-prompt15-d -G "MinGW Makefiles" -DTMP11X_BUILD_TESTS=ON -DCMAKE_BUILD_TYPE=Release` then `cmake --build build-tests-prompt15-d --config Release --parallel 4` | PASS |
+| Native tests | `ctest --test-dir build-tests-prompt15-d -C Release -R "^health_cpp$" --output-on-failure` then repeat without the filter | PASS, 1/1 focused and 11/11 overall |
+| Tests-off source consumer | `cmake -S examples/native_consumer -B build-consumer-prompt15-d -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release -DCMAKE_DISABLE_FIND_PACKAGE_Python3=TRUE -DCMAKE_DISABLE_FIND_PACKAGE_Git=TRUE` then `cmake --build build-consumer-prompt15-d --config Release --parallel 2`, `ctest --test-dir build-consumer-prompt15-d -N` and `./build-consumer-prompt15-d/tmp11x_native_consumer.exe` | PASS, zero registered tests. The consumer verified a new device's snapshot and online state and printed `0.1.0`. |
+| Public headers and README examples | Compile each separately with `g++ -std=c++17 -Wall -Wextra -Wpedantic -Werror -Iinclude -fsyntax-only -x c++ -` | PASS, five headers and two examples |
+| Public Doxygen | `doxygen -` over `include/TMP11x/*.h` with XML output and `WARN_AS_ERROR=YES`. Inspect XML descriptions by compound and member name. | PASS, all ten snapshot fields and both getters documented |
+| Source pins and completion records | `python -B scripts/check_references.py`, `python -B scripts/check_promptset.py`, `git diff --check` and `git diff --cached --check` | PASS, 14 pinned PDFs, 55 stages and clean whitespace |
+
+Stages 18–19 own initialization and trust invalidation, stage 21 owns
+acquisition readiness, stage 26 owns further raw diagnostics, and stage 31
+owns late-callback tests. MCU links, physical qualification and the stage 43
+remote CI checkpoint are NOT RUN for this stage.
