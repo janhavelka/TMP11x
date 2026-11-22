@@ -25,6 +25,9 @@ struct TransferOutcome {
   std::size_t failedReadBytes = 0;           // Prefix delivered to the caller's scratch.
   bool consumeOnFailure = false;             // Device may acknowledge flags before failure.
   std::optional<std::uint16_t> failedWriteWord{};  // Explicit post-error word, or preserve old.
+  // Script HIGH/LOW (bits 15:14) on a successful change of comparator mode.
+  // TI leaves the transition unspecified. Therm mode only exposes HIGH.
+  std::uint16_t comparatorFlagsOnModeChange = 0;
 };
 
 struct TransferTrace {

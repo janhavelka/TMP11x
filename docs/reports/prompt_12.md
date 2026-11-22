@@ -152,3 +152,48 @@ GCC 15.1.0, CMake 4.0.1, Ninja 1.12.1 and Python 3.12.10 on Windows.
 - NOT RUN — MCU links, adapter lock/controller deadline enforcement, physical
   framing and silicon qualification. Remote CI follows the stage 43 checkpoint.
   No blocker for phase c.
+
+## Phase c review, 2026-11-22
+
+**PARTIAL.** Two parallel read-only reviewers examined the register policy
+and the transport/fixture respectively. Review began on clean `main` at
+`ff6e3fcf355390ee0f9a5a4eb1c2ad939d03f468`. The commit's parent, subject
+and 20 paths match the phase-b handoff and request. The wrapper verified
+this revision against upstream at 14:50:02 Prague time.
+
+| Area reviewed | Finding |
+| --- | --- |
+| Command table and access | All six BOM selections matched the ledger's field masks, ID widths and shadow maps. Both frame helpers check the full pointer. Every write passes the model, purpose and operation guard checks before the callback. The exhaustive pointer sweep includes reserved holes, upper-bit aliases and both meanings of `0x07`. |
+| Transfer and failures | The two callback sites use the bound address and the smaller of the remaining budget and callback cap. The Release tests check exact TX/RX bytes, one attempt per callback, zero attempts on refusal, signed detail and unchanged caller output on a short read. The fake's register literals are independent of the production table. An attempted write can leave the old, partially changed or fully changed word. |
+| Comparator flags in the fake | Both reviewers identified the same fixture defect. A successful alert-to-therm CONFIG write preserved a latched LOW flag. The TI tables specify LOW reads zero in therm mode and leave the transfer of earlier comparator flags between modes unspecified. [TMP116/N p. 26](../reference/source/TMP116-Digital-Temperature-Sensor-Datasheet-SBOS740A.pdf#page=26), [TMP117/M/N p. 27](../reference/source/TMP117-Digital-Temperature-Sensor-Datasheet-SNOSD82D.pdf#page=27), [TMP119 p. 34](../reference/source/TMP119-Digital-Temperature-Sensor-Datasheet-SNIS236.pdf#page=34), [comparator behavior](../device-behavior.md#comparator-and-pin-evidence). |
+
+With alert LOW and DATA_READY set (`0x6000`), the original fixture failed
+the new Release assertion expecting `0x2010` after a write of `0x0010`.
+The fake now accepts scripted comparator flags on a successful mode change
+and admits only HIGH when entering therm mode. The regression checks all six
+models, both HIGH levels, DATA_READY consumption and the alert latches on
+switching back. The public CONFIG comments now name the flags a read clears.
+[Fixture](../../test/support/FakeTmp11xDevice.cpp), [regression](../../test/test_register_transport.cpp),
+[command table](../../include/TMP11x/CommandTable.h).
+
+### Review checks
+
+Windows, GNU C++ 15.1.0, CMake 4.0.1, Ninja 1.12.1 and Python 3.12.10.
+
+- PASS — `cmake -S . -B build-tests-prompt12-c -G Ninja -DTMP11X_BUILD_TESTS=ON -DCMAKE_BUILD_TYPE=Release`
+  and `cmake --build build-tests-prompt12-c --config Release --parallel`.
+  The transport suite compiled with `-O3 -DNDEBUG` and assertions active via
+  its own check functions and macros.
+- PASS after the fixture fix — `ctest --test-dir build-tests-prompt12-c -C Release -R "^register_transport_cpp$" --output-on-failure`
+  (1/1) and `ctest --test-dir build-tests-prompt12-c -C Release --output-on-failure` (8/8).
+- PASS — `cmake -S examples/native_consumer -B build-consumer-prompt12-c -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_DISABLE_FIND_PACKAGE_Python3=TRUE -DCMAKE_DISABLE_FIND_PACKAGE_Git=TRUE`,
+  `cmake --build build-consumer-prompt12-c --config Release --parallel` and
+  `./build-consumer-prompt12-c/tmp11x_native_consumer.exe` (printed `0.1.0`).
+- PASS — `python tools/check_register_ledger.py` (six models),
+  `python tools/test_check_register_ledger.py` (31 regressions),
+  `python scripts/check_references.py` (14 PDF hashes),
+  `python scripts/check_promptset.py` (55 stages) and `git diff --check`.
+
+Phase d owns final acceptance and the report index and progress updates.
+Adapter deadlines, wire captures and TEMP word coherence during a concurrent
+conversion remain separate qualification gates. Remote CI belongs to stage 43.

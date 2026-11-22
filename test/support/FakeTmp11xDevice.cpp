@@ -54,7 +54,13 @@ Status writeWord(FakeTmp11xDevice& device, const std::uint8_t* tx,
   }
   if (outcome.status.ok()) {
     if (pointer == 0x01) {
-      device.words[pointer] = static_cast<std::uint16_t>((device.words[pointer] & 0xF000) | value);
+      const auto previous = device.words[pointer];
+      auto status = previous & 0xF000;
+      if (((previous ^ value) & 0x0010) != 0) {
+        const auto comparatorMask = (value & 0x0010) != 0 ? 0x8000 : 0xC000;
+        status = (status & 0x3000) | (outcome.comparatorFlagsOnModeChange & comparatorMask);
+      }
+      device.words[pointer] = static_cast<std::uint16_t>(status | value);
     } else {
       device.words[pointer] = value;
     }

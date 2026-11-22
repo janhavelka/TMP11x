@@ -291,6 +291,34 @@ void terminalStatusesAndReadPublication() {
   CHECK(rx[0] == 0x0D && rx[1] == 0x3B);
 }
 
+void comparatorModeChange() {
+  for (const auto model : {Model::TMP116, Model::TMP116N, Model::TMP117,
+                           Model::TMP117M, Model::TMP117N, Model::TMP119}) {
+    FakeTmp11xDevice device{model};
+    FakeTmp11xBus bus;
+    CHECK(bus.attach(0x48, device));
+    const Config config = configFor(bus, model);
+    for (const bool thermHigh : {false, true}) {
+      device.words[1] = 0x6000;  // Alert-mode LOW and DATA_READY.
+      TransferOutcome transition{};
+      transition.comparatorFlagsOnModeChange = thermHigh ? 0xC000 : 0x4000;
+      bus.script.push_back(transition);
+      CHECK(writeWord(config, 1, 0x0010, stable, 50).status.ok());
+      std::uint16_t word = 0;
+      CHECK(readWord(config, 1, word, 50).status.ok());
+      CHECK(word == (thermHigh ? 0xA010 : 0x2010));  // LOW is zero on the first read.
+      CHECK(readWord(config, 1, word, 50).status.ok());
+      CHECK(word == (thermHigh ? 0x8010 : 0x0010));  // Only DATA_READY was consumed.
+
+      bus.script.push_back(transition);
+      CHECK(writeWord(config, 1, 0, stable, 50).status.ok());
+      CHECK(readWord(config, 1, word, 50).status.ok());
+      CHECK(word == transition.comparatorFlagsOnModeChange);
+      CHECK(readWord(config, 1, word, 50).status.ok() && word == 0);
+    }
+  }
+}
+
 void ambiguousEffects() {
   FakeTmp11xDevice device{Model::TMP117};
   FakeTmp11xBus bus;
@@ -337,6 +365,7 @@ int main() {
   invalidFrames();
   framesAndSharedAdapter();
   terminalStatusesAndReadPublication();
+  comparatorModeChange();
   ambiguousEffects();
   return EXIT_SUCCESS;
 }

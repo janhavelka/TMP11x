@@ -7,7 +7,7 @@
 namespace TMP11x::command {
 
 inline constexpr std::uint8_t temperature = 0x00;  ///< TEMP read consumes DATA_READY.
-inline constexpr std::uint8_t config = 0x01;       ///< CONFIG read acknowledges status flags.
+inline constexpr std::uint8_t config = 0x01;       ///< Read clears DATA_READY and alert-mode HIGH/LOW.
 inline constexpr std::uint8_t highLimit = 0x02;    ///< Signed high limit.
 inline constexpr std::uint8_t lowLimit = 0x03;     ///< Signed low limit.
 inline constexpr std::uint8_t eepromUnlock = 0x04; ///< EEPROM lock and busy observation.
@@ -23,7 +23,7 @@ inline constexpr std::uint16_t baseIdMask = 0x0FFF;    ///< TMP117-like device I
 inline constexpr std::uint16_t revisionMask = 0xF000;  ///< TMP117-like revision field.
 
 inline constexpr std::uint16_t highFlag = 0x8000;      ///< High alert latch or therm level.
-inline constexpr std::uint16_t lowFlag = 0x4000;       ///< Low alert latch in alert mode.
+inline constexpr std::uint16_t lowFlag = 0x4000;       ///< Latched LOW in alert mode. Reads zero in therm mode.
 inline constexpr std::uint16_t dataReady = 0x2000;     ///< Conversion result updated.
 inline constexpr std::uint16_t configBusy = 0x1000;    ///< EEPROM busy indication in CONFIG.
 inline constexpr std::uint16_t modeMask = 0x0C00;      ///< MOD including alias and one-shot encodings.
