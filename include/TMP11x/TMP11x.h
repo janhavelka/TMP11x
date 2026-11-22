@@ -11,6 +11,7 @@ namespace TMP11x {
 
 namespace detail {
 struct RegisterTransport;
+struct LatestRead;
 }
 
 /// Per-instance evidence since the last accepted bind, end or unbind.
@@ -127,6 +128,18 @@ class TMP11x {
   /// Neither diagnostic establishes initialization or a power-on time.
   Status probe();
 
+  /// Read the stored TEMP word once in either desired mode, including with dirty settings.
+  /// Requires binding and managed initialization. A complete TEMP read acknowledges
+  /// DATA_READY. It proves no new conversion, including when the word is 0x8000.
+  /// On success, copy the sample to @p out and the cache with current profile evidence
+  /// and an optional callback-completion timestamp. A failure preserves both copies.
+  Status readLatest(Sample& out);
+
+  /// Read once through readLatest and return its Celsius value in @p out on success.
+  /// Use readLatest to inspect freshness, timestamp validity and profile provenance.
+  /// A failed read can consume DATA_READY and leaves @p out untouched.
+  Status readTemperature(double& out);
+
   /// Whether this instance holds an accepted target. All inspectors are bus-silent.
   bool isBound() const noexcept { return _config.model != Model::UNSELECTED; }
   /// Whether managed initialization has verified the sensor profile.
@@ -145,6 +158,7 @@ class TMP11x {
 
  private:
   friend struct detail::RegisterTransport;
+  friend struct detail::LatestRead;
 
   // These facts expire together on teardown or incompatible identity. A timed
   // initialization operation owns the first compatible ACK timestamp and proof.
@@ -153,6 +167,7 @@ class TMP11x {
     bool startupReady = false;
     bool initialized = false;
     ConfigTrust trust = ConfigTrust::UNKNOWN;
+    std::uint32_t profileGeneration = 0;
   };
 
   void clearObservations() noexcept;
@@ -161,6 +176,7 @@ class TMP11x {
   IdentityInfo _identity{};
   LiveState _live{};
   HealthSnapshot _health{};
+  std::optional<Sample> _lastSample;
 };
 
 }  // namespace TMP11x

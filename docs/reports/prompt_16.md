@@ -52,3 +52,32 @@ Windows, GNU C++ 15.1.0, CMake/CTest 4.0.1, Python 3.12.10 and Git 2.52.0.window
 | `python -B scripts/check_references.py`, `python -B scripts/check_promptset.py` | PASS, 14 pinned PDFs and 55 stages. |
 
 Phase b can start on the verified inputs. The codec and latest-read acceptance tests are pending implementation. MCU links, physical evidence and the stage 43 remote CI checkpoint retain their later owners.
+
+## Phase b implementation, 2026-11-22
+
+**PARTIAL.** The signed codec and latest-read engine are implemented. The clean baseline was `ef11a6cc96526bac06295f9fd59020cea791ade1` on `main`, equal to local `origin/main` and the wrapper's logged starting revision. Its parent `74fe24b` matched the phase-a request's subject and sole path. The wrapper verified that commit upstream at 19:15:11 Prague time.
+
+The phase-a TI pages were rechecked against the pinned PDFs for signed units, the startup word, TEMP read effects and the THIGH/TLOW format. The two sibling checkouts were clean. TMP1x2 advanced to `0791429`, with the cited sample header and measurement source unchanged from `afd5088`. The ADS1115 signed-test source at `1aab07b` still matched `e07622a`.
+
+| Produced artifact | Implementation and next consumer |
+| --- | --- |
+| `temperature-codec` | `decodeCounts` uses a signed 32-bit intermediate. `toCelsius` applies the 1/128 °C scale. `encodeCelsius` checks the input and the rounded count before narrowing. Stage 17 can use the codec for profile validation. [Public header](../../include/TMP11x/Temperature.h), [encoder](../../src/Temperature.cpp). |
+| `latest-read-engine` | Both public entry points check the real lifecycle through `readLatest`. The private engine issues one tracked TEMP read, uses its completion tick for expiry and timestamp validity, and publishes only a timely complete sample. Its TEMP-specific result retains the physical outcome and any complete word. Stage 18 supplies verified initialization. Stages 19 and 21 consume the read effects and extend acquisition. Stage 27 owns cache inspection and age. [Public API](../../include/TMP11x/TMP11x.h), [lifecycle](../../src/TMP11x.cpp), [engine](../../src/LatestRead.cpp), [transport](../../src/RegisterTransport.cpp). |
+
+| Native cases | Evidence |
+| --- | --- |
+| `signedRegisterVectors`, `nearestCountTiesAwayFromZero`, `rejectBeforeRounding`, `everyWordRoundTrips` | All 11 literal signed words and all 65,536 round trips passed. Inverse cases included half-count ties of both signs, negative fractions, NaN, infinities and the nearest doubles outside the endpoints. [Codec tests](../../test/test_temperature.cpp). |
+| `publicGuards`, `clocklessLatest` | Public calls preserved sample/scalar outputs before binding and before initialization, including after a compatible probe. The private engine read one TEMP in either desired mode for all six models. Repeated `0x8000` retained its numeric value, unknown offset and unproven freshness. Clockless timed admission preserved the cache. [Latest tests](../../test/test_latest.cpp). |
+| `failedReadsAndLifecycle` | NACK and one-byte failures preserved output and cache. The fixture exercised both possible readiness outcomes of a failed TEMP read. Rejected bind and complete ID mismatch retained the historical sample. Accepted bind, end and unbind cleared it. |
+| `wrappedDeadline` | A 12 ms budget from `0xFFFFFFF8` granted 3 ms at tick 1. Completion at tick 4 or later returned `OPERATION_TIMEOUT` and preserved output and cache. Late success retained the word and physical success tick, and late short retained the fault without a complete word. Pre-call expiry spent zero callbacks. A timely completion at tick zero produced a valid timestamp. |
+
+Windows verification used GNU C++ 15.1.0, CMake/CTest 4.0.1, Python 3.12.10 and Git 2.52.0.windows.1.
+
+| Local check | Result |
+| --- | --- |
+| `cmake -S . -B build/host -G "MinGW Makefiles" -DTMP11X_BUILD_TESTS=ON -DCMAKE_BUILD_TYPE=Release`, then `cmake --build build/host --config Release --parallel 4` | PASS, strict C++17 build. |
+| `ctest --test-dir build/host -C Release -R "^(latest\|temperature)_cpp$" --output-on-failure`, then repeat without the filter | PASS, 2/2 focused and 13/13 overall, including the register ledger and regressions. |
+| `cmake -S examples/native_consumer -B build/consumer -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release -DCMAKE_DISABLE_FIND_PACKAGE_Python3=TRUE -DCMAKE_DISABLE_FIND_PACKAGE_Git=TRUE`, then `cmake --build build/consumer --config Release --parallel 2` and `./build/consumer/tmp11x_native_consumer.exe` | PASS, tests-off consumer linked and printed `0.1.0`. |
+| `python -B scripts/check_references.py`, `python -B scripts/check_promptset.py` | PASS, 14 PDF pins and 55 stages. |
+
+Successful managed acquisition and scalar transport failures through the public API require stage 18 initialization. Phase c reviews these artifacts against the private-engine and public-admission boundaries. MCU links, remote CI and physical qualification retain their scheduled owners.

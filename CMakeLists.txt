@@ -4,8 +4,10 @@ set(TMP11X_SOURCES
   src/CommandTable.cpp
   src/Config.cpp
   src/Identity.cpp
+  src/LatestRead.cpp
   src/RegisterTransport.cpp
   src/TMP11x.cpp
+  src/Temperature.cpp
   src/Version.cpp)
 
 if(COMMAND idf_component_register)
@@ -65,8 +67,19 @@ if(TMP11X_BUILD_TESTS)
   target_include_directories(tmp11x_health_test PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src")
   add_test(NAME health_cpp COMMAND tmp11x_health_test)
 
+  add_executable(tmp11x_temperature_test test/test_temperature.cpp)
+  target_link_libraries(tmp11x_temperature_test PRIVATE TMP11x)
+  add_test(NAME temperature_cpp COMMAND tmp11x_temperature_test)
+
+  add_executable(tmp11x_latest_test
+    test/test_latest.cpp
+    test/support/FakeTmp11xDevice.cpp)
+  target_link_libraries(tmp11x_latest_test PRIVATE TMP11x)
+  target_include_directories(tmp11x_latest_test PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src")
+  add_test(NAME latest_cpp COMMAND tmp11x_latest_test)
+
   foreach(target TMP11x tmp11x_value_types_test tmp11x_register_transport_test tmp11x_identity_test
-                 tmp11x_binding_test tmp11x_health_test)
+                 tmp11x_binding_test tmp11x_health_test tmp11x_temperature_test tmp11x_latest_test)
     set_target_properties(${target} PROPERTIES
       CXX_STANDARD 17 CXX_STANDARD_REQUIRED YES CXX_EXTENSIONS NO)
     if(MSVC)

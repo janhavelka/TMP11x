@@ -24,6 +24,8 @@ CTest registers these cases when `TMP11X_BUILD_TESTS=ON`.
 | `identity_cpp` | Validate all six model selections, observed groups and revision fields. Check shared-bus TMP114 and TMP118 responses, coincidental matches, transfer failures and local refusals against the callback trace and output evidence. |
 | `binding_cpp` | Exercise the public device lifecycle with the register fake. Check structural validation, rejected and accepted rebinds, callback-free teardown, retained ID evidence after errors, and two independent routes to address `0x48`. |
 | `health_cpp` | Compare tracked outcomes with the callback trace, including mixed reads and writes, local refusals and an ordinary success from OFFLINE. Check neutral identity diagnostics, lifecycle resets, saturating counters, optional and wrapping timestamps, and the online predicate. |
+| `temperature_cpp` | Check independent signed TEMP and threshold vectors, half-count ties, invalid inputs and round trips for all 65,536 register words. |
+| `latest_cpp` | Exercise public admission and the one-read engine with the register fake. Check all six model selections, both desired modes, optional timing, caller and cache preservation, and physical read effects at the deadline. |
 | `version_generator_check` | Compare `Version.h` and the ESP-IDF manifest's version with `library.json` using the generator's check command. |
 | `version_sync` | Run the delegated version check through the checker script. |
 | `version_generator_regressions` | Exercise IDF version drift and an unwritable mirror. |

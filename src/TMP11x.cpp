@@ -1,6 +1,7 @@
 #include "TMP11x/TMP11x.h"
 
 #include "Identity.h"
+#include "LatestRead.h"
 
 namespace TMP11x {
 
@@ -19,6 +20,7 @@ Status TMP11x::bind(const Config& config) noexcept {
 
 void TMP11x::clearObservations() noexcept {
   _live = {};
+  _lastSample.reset();
   _health = {};
   _identity = {};
   _identity.model = _config.model;
@@ -56,6 +58,19 @@ Status TMP11x::probe() {
 Status TMP11x::readIdentity(IdentityInfo& out) {
   const auto status = probe();
   if (status.ok() || status.is(Err::IDENTITY_MISMATCH)) out = _identity;
+  return status;
+}
+
+Status TMP11x::readLatest(Sample& out) {
+  if (!isBound()) return Status::Error(Err::NOT_BOUND, "No sensor binding");
+  if (!isInitialized()) return Status::Error(Err::NOT_INITIALIZED, "Managed initialization required");
+  return detail::LatestRead{*this}.read(out).status;
+}
+
+Status TMP11x::readTemperature(double& out) {
+  Sample sample{};
+  const auto status = readLatest(sample);
+  if (status.ok()) out = sample.celsius;
   return status;
 }
 

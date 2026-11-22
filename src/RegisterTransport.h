@@ -1,6 +1,7 @@
 #pragma once
 
 #include <limits>
+#include <optional>
 
 #include "TMP11x/TMP11x.h"
 
@@ -36,6 +37,7 @@ constexpr bool isOnline(bool initialized, DriverState state) noexcept {
 struct TransferResult {
   Status status;
   bool attempted;
+  std::optional<std::uint32_t> completedMs{};  // The same tick recorded by tracked health.
 };
 
 enum class WritePurpose { STABLE_CONFIG, LIMIT, MANAGED_OFFSET };

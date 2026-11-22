@@ -13,7 +13,8 @@ conversion or startup interval runs. [Public API and operation gates](api-contra
 | `Status.h` | SDK-independent errors, static messages, status predicates and passive transport states. |
 | `Config.h` | Value types, model and capability queries, callback types, binding and desired sensor settings. Stage 23 adds the configurable hardware offset. |
 | `CommandTable.h` | Register pointers, positioned field masks and `command::accessFor(model, pointer)`. The lookup distinguishes a protected shadow from a managed offset at `0x07`. |
-| `TMP11x.h` | Sample, identity and health snapshots and the `TMP11x::TMP11x` device class. The class owns one binding, its desired settings and observations, and exposes lifecycle methods, bound ID diagnostics and passive health inspectors. |
+| `Temperature.h` | Pure signed count, Celsius and register-word conversions for TEMP and thresholds. |
+| `TMP11x.h` | Sample, identity and health snapshots and the `TMP11x::TMP11x` device class. It owns the binding, desired settings, observations and latest sample. It exposes lifecycle methods, bound ID diagnostics, passive health inspectors and managed latest reads. |
 | `Version.h` | Checked-in generated package version from `library.json`. Its constants describe the header, and the out-of-line `version()` describes the linked library. |
 
 Implementation belongs in `src/`. Each public header must compile on its
@@ -46,6 +47,12 @@ word or identity helper. The frame helper records the normalized outcome
 on callback return, before any register comparison. Callers use the
 `attempted` flag for their work budget. Public identity diagnostics pass
 the binding alone, which leaves counters, fault history and clock untouched.
+
+`detail::LatestRead` reuses the transport's completion tick for both the
+sample timestamp and the timed owner's expiry check. Its result retains a
+complete TEMP word even at expiry. A short read retains the physical fault
+and possible loss of readiness. Only a timely success replaces the caller's
+sample and the instance cache. [Latest-read engine](../src/LatestRead.cpp).
 
 The write path checks the selected model, the typed purpose, and the
 operation owner's startup and locked-idle evidence before calling the adapter.

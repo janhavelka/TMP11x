@@ -17,3 +17,6 @@
 - Added `healthSnapshot()` and `isOnline()` for passive transport inspection.
   Each tracked I2C callback updates saturating counters and records its
   completion time when a clock is available.
+- Added signed TEMP and limit conversions and the managed `readLatest` and
+  `readTemperature` entry points. A timely complete read updates the sample
+  cache. The public calls require the verified initialization planned for stage 18.

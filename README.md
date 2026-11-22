@@ -10,10 +10,15 @@ without accessing hardware. `<TMP11x/CommandTable.h>` exposes the register
 pointers, field masks and per-model access classes. The private transport
 has native tests for one-word reads and guarded writes. The public device
 class supports bus-silent binding, teardown, explicit family checks and
-passive transport health.
-Verified sensor initialization and physical qualification are pending.
+passive transport health. The managed latest-read API requires verified
+initialization, which arrives in stage 18. Physical qualification is pending.
 `<TMP11x/Version.h>` exposes `TMP11x::version()` for the linked library.
 [Value and binding contracts](docs/api-contracts.md).
+
+Use `<TMP11x/Temperature.h>` to convert a TEMP or limit word without a
+device. For example, `temperature::decodeCounts(0xFFFF)` in namespace
+`TMP11x` returns −1 count, or −0.0078125 °C. A stored TEMP value alone
+cannot establish when the sensor completed a conversion.
 
 ## Read the device ID
 

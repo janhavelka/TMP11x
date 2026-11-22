@@ -51,24 +51,24 @@ TransferResult callbackResult(RegisterTransport transport, Status rawStatus) {
 
   auto& health = *transport.health;
   const auto& binding = transport.binding;
-  const bool timed = binding.nowMs != nullptr;
-  const auto completedMs = timed ? binding.nowMs(binding.timeUser) : 0u;
+  std::optional<std::uint32_t> completedMs;
+  if (binding.nowMs != nullptr) completedMs = binding.nowMs(binding.timeUser);
   if (status.ok()) {
     incrementSaturating(health.totalSuccess);
     health.consecutiveFailures = 0;
     health.state = DriverState::READY;
-    health.lastSuccessMs = completedMs;
-    health.lastSuccessMsValid = timed;
+    health.lastSuccessMs = completedMs.value_or(0);
+    health.lastSuccessMsValid = completedMs.has_value();
   } else {
     incrementSaturating(health.totalFailures);
     incrementSaturating(health.consecutiveFailures);
     health.state = health.consecutiveFailures >= binding.offlineThreshold
                        ? DriverState::OFFLINE : DriverState::DEGRADED;
     health.lastError = status;
-    health.lastErrorMs = completedMs;
-    health.lastErrorMsValid = timed;
+    health.lastErrorMs = completedMs.value_or(0);
+    health.lastErrorMsValid = completedMs.has_value();
   }
-  return {status, true};
+  return {status, true, completedMs};
 }
 
 std::uint16_t decodeWord(const std::uint8_t* bytes) {

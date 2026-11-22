@@ -107,6 +107,12 @@ away from zero, and check the rounded range before narrowing. For decoding
 use representable signed arithmetic. These bounds describe register values.
 The exact-part operating and accuracy limits are given in the [board guide](board-integration.md).
 
+`<TMP11x/Temperature.h>` exposes these bus-silent functions in
+`TMP11x::temperature`. Pass the register word to `decodeCounts(raw)`
+and its signed result to `toCelsius(counts)`. For a TEMP or limit word
+in the opposite direction, `encodeCelsius(celsius, raw)` returns a
+`Status`. On `INVALID_PARAM`, the caller keeps the original word.
+
 ## Status and retained evidence
 
 `Status{Err code, int32_t detail, const char* msg}` has static-lifetime
@@ -192,7 +198,7 @@ words always use individual checked transfers.
 | `readRegisterSnapshot(RegisterSnapshot&)`, `readEepromSnapshot(EepromSnapshot&)` | Bound and free. | Neutral bounded dump. Read ID first, stop on error/mismatch. Full dump then reads permitted pointers `0x00` through `0x08` in ascending order, for ten callbacks including ID. EEPROM snapshot then reads `0x04` and exactly four or three mapped shadows, for six or five callbacks. No data writes. |
 | `readConfiguration(ConfigurationObservation&)`, `readLimits(Limits&)`, `readTemperatureOffset(int16_t&)`, `verifyConfiguration()` | Initialized, bound, free. Offset requires capability. | Tracked reads. CONFIG alone consumes flags. Read both limits, or one offset, as requested. Verify reads CONFIG and both limits, adding supported offset from stage 23. Compare owned fields and record actual unmanaged calibration. Partial reads update observed validity. Verification reports drift and can confirm an already clean profile. Repair of dirty or invalidated state requires full verified replay. |
 | `configure(const Config&)`, `setMode(Mode)`, `setCycle(Cycle)`, `setAveraging(Averaging)`, `setLimits(Limits)`, `setAlert(AlertMode, Polarity, PinFunction)`, `setTemperatureOffset(double celsius)` | Initialized, verified, free, stable power, clock, valid candidate and capability. Configure compares every binding field, including callback/context identities and transport policy. `setMode(SHUTDOWN)` is the explicit shutdown operation. | Tracked guarded apply, including for limit-only or pin-only changes. The offset setter validates/quantizes the Celsius request and opts into management. Use configure with disengaged offset to release it. On known drift use recover. |
-| `readLatest(Sample&)` | Initialized and free, including dirty. Either desired mode. | One tracked TEMP, no guard. Freshness false. With no clock the timestamp is invalid. |
+| `readLatest(Sample&)`, `readTemperature(double& celsius)` | Initialized and free, including dirty. Either desired mode. | One tracked TEMP. Both forms cache the complete sample with freshness false and an optional completion timestamp. The scalar form copies Celsius on success. Stage 18 supplies verified initialization. |
 | `tryReadFresh(Sample&)` | Initialized, verified clean, retained startup proof, desired continuous and free. | Untimed, at most three tracked callbacks (guard, CONFIG if needed, TEMP if eligible). One attempt. A wait condition returns immediately. |
 | `readFreshBlocking(Sample&, uint32_t timeoutMs)`, `readOneShotBlocking(Sample&, uint32_t timeoutMs)` | Same trust/ownership as try-fresh, clock and positive bounded deadline. Continuous for the former, shutdown for the latter. | Tracked, paced continuous observation or one guarded trigger followed by polling. Each step uses at most one callback. |
 | `reset()` | Initialized, free, supported model, verified stable CONFIG, valid startup proof, clock and guard. | One addressed command plus bounded observations described below. No replay on return. Later explicit recover can reapply the retained target. |
