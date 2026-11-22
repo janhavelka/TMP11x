@@ -81,3 +81,22 @@ Windows verification used GNU C++ 15.1.0, CMake/CTest 4.0.1, Python 3.12.10 and 
 | `python -B scripts/check_references.py`, `python -B scripts/check_promptset.py` | PASS, 14 PDF pins and 55 stages. |
 
 Successful managed acquisition and scalar transport failures through the public API require stage 18 initialization. Phase c reviews these artifacts against the private-engine and public-admission boundaries. MCU links, remote CI and physical qualification retain their scheduled owners.
+
+## Phase c review, 2026-11-22
+
+**PARTIAL.** The clean review baseline on `main` was `ebec09acd79fb6813f212b56d82828cd471a8596`. Its subject and all 18 paths match the phase-b commit request. The wrapper recorded upstream equality at 20:17:40 Prague time, and local `origin/main` matched at review entry.
+
+Two independent read-only reviews covered the codec and latest-read engine. The codec review checked the TI pages listed in phase a, all 11 signed-word vectors and all 14 inverse vectors using signed big-endian integers and decimal half-away rounding. The signed decode, input bounds, tie handling and startup-word interpretation agreed. The selected TMP1x2 and ADS1115 source files at the phase-b revisions still matched the cited pins.
+
+The latest-read review traced public admission, the TEMP frame, completion tick, transport health and cache lifetime through the register fake. It identified a missing read effect in the public Doxygen. `readLatest` now documents that an attempted transfer may consume DATA_READY even when it fails and preserves both sample copies. Stage 18 owns the initialized public success and transfer-failure cases.
+
+The lead also found an integer-promotion issue in the callback deadline comparison. On a C++17 implementation whose `int` can represent every `uint32_t` value, subtracting the two ticks can produce a negative signed value across wrap. The engine now stores that difference in `uint32_t` before comparing with the remaining budget. A new literal case starts TEMP at `0xFFFFFFFF` with 5 ms remaining and completes at tick 4. Both physical success and a short read must return logical timeout, retain their physical outcomes and preserve the prior cache and caller output. [Engine](../../src/LatestRead.cpp), [regression](../../test/test_latest.cpp).
+
+| Local check on Windows | Result |
+| --- | --- |
+| Release host and tests-off consumer configure/build commands from phase b, GNU C++ 15.1.0 and CMake/CTest 4.0.1 | PASS. The consumer printed `0.1.0`. |
+| `ctest --test-dir build/host -C Release -R "^(latest\|temperature)_cpp$" --output-on-failure`, then the full suite | PASS, 2/2 focused and 13/13 overall, including all 65,536 codec round trips. |
+| Model wider signed promotion in temporary baseline and corrected copies of `LatestRead.cpp` by converting both callback ticks to `int64_t` before subtraction. Compile each with `g++ -std=c++17 -Wall -Wextra -Werror -Wpedantic -Isrc -Iinclude <copy> test/test_latest.cpp test/support/FakeTmp11xDevice.cpp build/host/libTMP11x.a -o <exe>` and run it. | The baseline failed the new timeout assertion. The corrected copy passed. This experiment used the host compiler. |
+| `python -B scripts/check_references.py`, `python -B scripts/check_promptset.py`, `git diff --check` | PASS, 14 pinned PDFs, 55 stages and a clean whitespace check. |
+
+Phase d owns final local acceptance, the progress row and the report index. MCU links, remote CI and physical qualification remain with their scheduled stages.

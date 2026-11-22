@@ -132,7 +132,8 @@ class TMP11x {
   /// Requires binding and managed initialization. A complete TEMP read acknowledges
   /// DATA_READY. It proves no new conversion, including when the word is 0x8000.
   /// On success, copy the sample to @p out and the cache with current profile evidence
-  /// and an optional callback-completion timestamp. A failure preserves both copies.
+  /// and an optional callback-completion timestamp. Any failure preserves both
+  /// copies. An attempted TEMP read can consume DATA_READY even if it fails.
   Status readLatest(Sample& out);
 
   /// Read once through readLatest and return its Celsius value in @p out on success.

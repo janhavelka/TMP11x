@@ -195,9 +195,17 @@ void failedReadsAndLifecycle() {
 
 void wrappedDeadline() {
   constexpr ReadBudget budget{0xFFFFFFF8u, 12};
-  // At 0xFFFFFFFC the time since admission has wrapped, but both the
-  // pre-read interval and the callback interval are individually measurable.
-  for (const auto completed : {0u, 3u, 4u, 5u, 0xFFFFFFFCu}) {
+  constexpr struct {
+    std::uint32_t before;
+    std::uint32_t completed;
+    std::uint32_t grant;
+    bool expired;
+  } cases[] = {
+      {0xFFFFFFFFu, 0, 5, false}, {0xFFFFFFFFu, 4, 5, true},  // Wrap during TEMP.
+      {1, 3, 3, false}, {1, 4, 3, true}, {1, 5, 3, true},    // Wrap before TEMP.
+      {1, 0xFFFFFFFCu, 3, true},  // More than one full clock cycle since admission.
+  };
+  for (const auto& row : cases) {
     for (const bool shortRead : {false, true}) {
       Fixture f{Model::TMP119, Mode::CONTINUOUS, true};
       auto view = LatestRead{f.device};
@@ -206,33 +214,31 @@ void wrappedDeadline() {
       Sample prior;
       CHECK(view.read(prior).status.ok() && prior.raw == 0x0D00);
 
-      // Completion at tick zero crosses wrap inside the callback.
-      const auto before = completed == 0 ? 0xFFFFFFFFu : 1u;
-      f.ticks = {before, completed};
+      f.ticks = {row.before, row.completed};
       f.chip.words[0] = 0x0C80;
       f.chip.words[1] = 0xE000;
       if (shortRead) f.bus.script.push_back({Status::Error(Err::I2C_SHORT_TRANSFER, "short", 1), 1, true});
       auto out = callerValue;
       const auto result = view.read(out, budget);
       CHECK(f.ticks.empty() && f.bus.trace.size() == 2);
-      checkTempFrame(f, completed == 0 ? 5 : 3);
-      CHECK(result.transfer.attempted && result.transfer.completedMs == completed);
+      checkTempFrame(f, row.grant);
+      CHECK(result.transfer.attempted && result.transfer.completedMs == row.completed);
       CHECK(f.chip.words[1] == 0xC000);
       const auto health = f.device.healthSnapshot();
       if (shortRead) {
         CHECK(result.transfer.status.is(Err::I2C_SHORT_TRANSFER) && result.transfer.status.detail == 1);
         CHECK(!result.raw && health.totalSuccess == 1 && health.totalFailures == 1);
-        CHECK(health.lastErrorMsValid && health.lastErrorMs == completed);
+        CHECK(health.lastErrorMsValid && health.lastErrorMs == row.completed);
       } else {
         CHECK(result.transfer.status.ok() && result.raw == 0x0C80);
         CHECK(health.totalSuccess == 2 && health.totalFailures == 0);
-        CHECK(health.lastSuccessMsValid && health.lastSuccessMs == completed);
+        CHECK(health.lastSuccessMsValid && health.lastSuccessMs == row.completed);
       }
-      if (completed >= 4) CHECK(result.status.is(Err::OPERATION_TIMEOUT));
+      if (row.expired) CHECK(result.status.is(Err::OPERATION_TIMEOUT));
       else CHECK(result.status.is(shortRead ? Err::I2C_SHORT_TRANSFER : Err::OK));
       if (result.status.ok()) {
         CHECK(out.raw == 0x0C80 && out.celsius == 25.0 && !out.freshConversion);
-        CHECK(out.timestampValid && out.observedAtMs == completed);
+        CHECK(out.timestampValid && out.observedAtMs == row.completed);
         sameSample(view.cache.value(), out);
       } else {
         sameSample(out, callerValue);

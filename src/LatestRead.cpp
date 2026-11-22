@@ -27,8 +27,11 @@ LatestReadResult LatestRead::read(Sample& out, std::optional<ReadBudget> budget)
   const auto transfer = readWord(_transport, command::temperature, raw, remaining);
   LatestReadResult result{transfer.status, transfer, std::nullopt};
   if (transfer.status.ok()) result.raw = raw;
-  if (budget && transfer.attempted && (*transfer.completedMs - before) >= remaining) {
-    result.status = Status::Error(Err::OPERATION_TIMEOUT, "TEMP read reached the operation deadline");
+  if (budget && transfer.attempted) {
+    const std::uint32_t callbackElapsed = *transfer.completedMs - before;
+    if (callbackElapsed >= remaining) {
+      result.status = Status::Error(Err::OPERATION_TIMEOUT, "TEMP read reached the operation deadline");
+    }
   }
   if (!result.status.ok()) return result;
 
