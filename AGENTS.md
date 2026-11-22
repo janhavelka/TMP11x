@@ -65,6 +65,18 @@ fixes before final closure. Keep existing automatic workflow triggers intact.
 - Use short, precise engineering language. Deliver behavior, meaningful public
   Doxygen, relevant tests and affected documentation together.
 
+## Workspace hygiene
+
+- Put local build, test, package, and generated documentation output under the
+  ignored `build/` directory. Use subdirectories such as `build/host`,
+  `build/consumer`, and `build/package`. Reuse a matching build directory or
+  use a short separate subdirectory when the toolchain or configuration differs.
+- At a checkpoint, record the verification commands and results. Keep artifacts
+  that unfinished work still uses and preserve unique evidence outside the
+  checkout with its location in the handoff. Remove or archive retired output
+  after confirming it is generated and no active session uses it. Preserve
+  source, pinned references, tracked evidence, and unrelated local work.
+
 ## Project guidance
 
 - TMP11x targets TMP116/TMP116N, TMP117/TMP117M/TMP117N and TMP119, with TMP117

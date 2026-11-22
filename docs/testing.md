@@ -5,12 +5,12 @@
 From a development checkout, use CMake 3.16 or newer, a C++17 compiler,
 the selected CMake generator's build tool and Python 3.10 or newer.
 The Python checks use the standard library.
+Keep generated output under the ignored `build/` directory.
 
 ```sh
-cmake -S . -B build-tests -DTMP11X_BUILD_TESTS=ON -DCMAKE_BUILD_TYPE=Release
-cmake --build build-tests --config Release --parallel
-cd build-tests
-ctest -C Release --output-on-failure
+cmake -S . -B build/host -DTMP11X_BUILD_TESTS=ON -DCMAKE_BUILD_TYPE=Release
+cmake --build build/host --config Release --parallel
+ctest --test-dir build/host -C Release --output-on-failure
 ```
 
 On Windows with MinGW, add `-G "MinGW Makefiles"` to the configure command.
@@ -30,12 +30,10 @@ CTest registers these cases when `TMP11X_BUILD_TESTS=ON`.
 | `register_ledger` | Validate the six-model register ledger and its references. |
 | `register_ledger_regressions` | Exercise the ledger validator against valid and deliberately inconsistent inputs. |
 
-To run only the transport cases in a configured build, use
-`ctest -C Release -R "^register_transport_cpp$" --output-on-failure`
-from the build directory. The fake records each callback's bytes and result.
-Use `ctest -C Release -R "^identity_cpp$" --output-on-failure` there for
-the private identity cases or `ctest -C Release -R "^binding_cpp$" --output-on-failure`
-for the public lifecycle cases.
+Use `ctest --test-dir build/host -C Release -R "^register_transport_cpp$" --output-on-failure`
+to run just the transport cases. The fake records each callback's bytes and
+result. Use the filters `^identity_cpp$` for the private identity cases and
+`^binding_cpp$` for the public lifecycle cases.
 Adapter timing, repeated START and ACK/NACK on the wires require separate
 adapter and fixture evidence. [Bus framing](board-integration.md#register-transfers).
 
@@ -49,14 +47,14 @@ be disabled without affecting the build. The example sets
 library source tree. From the checkout root, configure the consumer separately.
 
 ```sh
-cmake -S examples/native_consumer -B build-consumer -DCMAKE_BUILD_TYPE=Release -DCMAKE_DISABLE_FIND_PACKAGE_Python3=TRUE -DCMAKE_DISABLE_FIND_PACKAGE_Git=TRUE
-cmake --build build-consumer --config Release --parallel
-./build-consumer/tmp11x_native_consumer
+cmake -S examples/native_consumer -B build/consumer -DCMAKE_BUILD_TYPE=Release -DCMAKE_DISABLE_FIND_PACKAGE_Python3=TRUE -DCMAKE_DISABLE_FIND_PACKAGE_Git=TRUE
+cmake --build build/consumer --config Release --parallel
+./build/consumer/tmp11x_native_consumer
 ```
 
 On Windows with MinGW, add `-G "MinGW Makefiles"` and use the executable's
 `.exe` suffix. With a multi-config generator, run the executable under
-`build-consumer/Release/`. It checks the public register policy for TMP117
+`build/consumer/Release/`. It checks the public register policy for TMP117
 offset and reads a new device's health snapshot and online state. It prints
 the linked version when these checks pass and the header version matches.
 
@@ -78,9 +76,9 @@ On Windows, use the managed PlatformIO launcher and inspect the archive
 locally. Create the ignored output directory before packing.
 
 ```powershell
-New-Item -ItemType Directory -Force build-package | Out-Null
-scripts/pio.cmd package pack --output build-package/TMP11x.tar.gz
-tar -tf build-package/TMP11x.tar.gz
+New-Item -ItemType Directory -Force build/package | Out-Null
+scripts/pio.cmd package pack --output build/package/TMP11x.tar.gz
+tar -tf build/package/TMP11x.tar.gz
 ```
 
 The archive contains the portable source and headers, build and package
