@@ -10,3 +10,5 @@
   identity and sample evidence types with native tests for all six BOM models.
 - Added model-specific register metadata and a private single-word I2C
   transport with clipped timeouts, guarded writes and native failure tests.
+- Added private family validation for all six BOM models. A complete ID
+  mismatch reports the observed word, recognized group and available revision.

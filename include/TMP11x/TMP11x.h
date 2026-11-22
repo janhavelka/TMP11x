@@ -14,6 +14,8 @@ namespace TMP11x {
 /// carry the revision, which is valid even when zero.
 /// The group describes the observed word even when it is incompatible with
 /// the selection. The exact model and grade come from the BOM.
+/// An explicit ID read publishes a complete word even on IDENTITY_MISMATCH.
+/// A rejected or failed transfer leaves the previous observation intact.
 struct IdentityInfo {
   Model model = Model::UNSELECTED;               ///< Exact model selected from the BOM.
   std::uint8_t i2cAddress = 0;                   ///< Bound unshifted seven-bit address.

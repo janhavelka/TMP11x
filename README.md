@@ -8,8 +8,10 @@ model capability and observation types through `<TMP11x/TMP11x.h>`.
 `TMP11x::getCapabilities()` reports features of an explicit BOM selection
 without accessing hardware. `<TMP11x/CommandTable.h>` exposes the register
 pointers, field masks and per-model access classes. The private transport
-has native tests for one-word reads and guarded writes. Public device binding
-and physical qualification are pending.
+has native tests for one-word reads and guarded writes. The private identity
+engine reads the device ID once and reports whether it matches the family
+of the selected BOM model. Public device binding and physical qualification
+are pending.
 `<TMP11x/Version.h>` exposes `TMP11x::version()` for the linked library.
 [Value and binding contracts](docs/api-contracts.md).
 

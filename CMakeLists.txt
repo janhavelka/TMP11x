@@ -3,6 +3,7 @@ cmake_minimum_required(VERSION 3.16)
 set(TMP11X_SOURCES
   src/CommandTable.cpp
   src/Config.cpp
+  src/Identity.cpp
   src/RegisterTransport.cpp
   src/Version.cpp)
 
@@ -43,7 +44,14 @@ if(TMP11X_BUILD_TESTS)
   target_include_directories(tmp11x_register_transport_test PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src")
   add_test(NAME register_transport_cpp COMMAND tmp11x_register_transport_test)
 
-  foreach(target TMP11x tmp11x_value_types_test tmp11x_register_transport_test)
+  add_executable(tmp11x_identity_test
+    test/test_identity.cpp
+    test/support/FakeTmp11xDevice.cpp)
+  target_link_libraries(tmp11x_identity_test PRIVATE TMP11x)
+  target_include_directories(tmp11x_identity_test PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src")
+  add_test(NAME identity_cpp COMMAND tmp11x_identity_test)
+
+  foreach(target TMP11x tmp11x_value_types_test tmp11x_register_transport_test tmp11x_identity_test)
     set_target_properties(${target} PROPERTIES
       CXX_STANDARD 17 CXX_STANDARD_REQUIRED YES CXX_EXTENSIONS NO)
     if(MSVC)

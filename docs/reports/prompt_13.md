@@ -97,3 +97,47 @@ Windows, GNU C++ 15.1.0, CMake/CTest 4.0.1, GNU Make 4.4.1 and Python
 The identity implementation and its native results remain open for phase b.
 Physical qualification and MCU links have later owners. The first remote CI
 checkpoint is stage 43.
+
+## Phase b implementation, 2026-11-22
+
+**PARTIAL.** The private `identity-engine` is implemented and host-tested.
+The entry revision was `a9f0541823cd240faa2c16ff3020b9bc2b6cf38e` on
+clean `main`. Its parent, subject and single report path match the phase-a
+commit request. The wrapper recorded equality with `origin/main` at 15:31:12
+Prague time.
+
+A single checked read of `command::deviceId` supplies the raw word. The
+engine matches it against the two existing descriptor rows and compares the
+recognized group with the selected model's group. On a complete mismatch it
+publishes the observation and includes the raw word in `Status::detail`.
+On a local refusal or failed callback, it preserves the caller's entire
+`IdentityInfo`. The returned `TransferResult` retains the physical status
+and attempted flag for the operation owner. [Private interface](../../src/Identity.h),
+[implementation](../../src/Identity.cpp), [descriptor table](../../src/ModelDescriptor.h).
+
+| Registered native case in `identity_cpp` | Evidence |
+| --- | --- |
+| `selectedModelsAndIdBits` | All six selections read `0x1116` and all 16 revision values with DID `0x117`. Incompatible recognized words retain their observed group and revision validity. Single-bit changes exercise every significant ID bit. `0x0116` and `0x2116` yield unknown-group mismatches. |
+| `sharedBusNeighbors` | Four addresses on one bus return the two ordinary TMP114/TMP118 negative words, a coincidental `0x2117` and an intended `0x0117`. Separate adverse TMP114 cases exercise a CRC-related NACK and a complete `0xFFFF`. Each attempt produces exactly one combined `[0F]` read requesting two bytes at the selected address. |
+| `failedReadsAndLocalRefusals` | Address NACK, timeout and shorts delivering zero or one byte preserve prior evidence and adapter detail. Invalid selections, out-of-range addresses including `0x90`, and an expired budget preserve output and produce zero callbacks. Admitted reads exercise both a 7 ms remaining budget and the 19 ms callback cap. |
+
+The [focused tests](../../test/test_identity.cpp) use the stage 12 register
+fixture with independent literals and Release-active checks. The pinned TI
+tables cited in phase a still give both `0x0117` and `0x2117` for TMP119.
+In the shared-bus fixture an unrelated responder returns `0x2117` while
+the selected model remains TMP117. This is executable evidence of the
+limit of ID-based identification. [Variant guide](../variants.md#identity-decision).
+
+### Executed checks
+
+Windows, GNU C++ 15.1.0, CMake/CTest 4.0.1, GNU Make 4.4.1 and Python 3.12.10.
+
+- PASS — `cmake -S . -B build-tests-prompt13-b -G "MinGW Makefiles" -DTMP11X_BUILD_TESTS=ON -DCMAKE_BUILD_TYPE=Release` and `cmake --build build-tests-prompt13-b --config Release --parallel`.
+- PASS — `ctest --test-dir build-tests-prompt13-b -C Release -R "^identity_cpp$" --output-on-failure` (1/1) and the same command without the name filter (9/9, including the register-ledger validator and its regressions).
+- PASS — `cmake -S examples/native_consumer -B build-consumer-prompt13-b -G "MinGW Makefiles" -DTMP11X_BUILD_TESTS=OFF -DCMAKE_BUILD_TYPE=Release -DCMAKE_DISABLE_FIND_PACKAGE_Python3=TRUE -DCMAKE_DISABLE_FIND_PACKAGE_Git=TRUE`, `cmake --build build-consumer-prompt13-b --config Release --parallel` and `./build-consumer-prompt13-b/tmp11x_native_consumer.exe` (printed `0.1.0`).
+- PASS — `python scripts/check_references.py` verified 14 pinned PDFs. `python scripts/check_promptset.py` checked 55 stages. `git diff --check` and whitespace checks of the new files passed.
+
+Phase c owns fresh review of the actual engine and tests, including the
+independent challenge of both TMP119 source tables. Stage 14 connects the
+private engine to bound diagnostics. Stage 15 verifies health accounting.
+MCU links, remote CI and physical qualification remain with their later stages.

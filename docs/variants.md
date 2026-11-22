@@ -73,6 +73,16 @@ responder can coincidentally return compatible data.
 | Any TMP117 grade or TMP119 reads `0x1116` | Incompatible ID. End validation. |
 | Any supported selection reads `0x0000` or `0xFFFF` as a complete word | Incompatible ID. End validation. |
 
+The private engine returns `IDENTITY_MISMATCH` after a successful read of
+an incompatible word. For example, a TMP116 selection that reads `0x2117`
+retains TMP116 as the selected model and reports the TMP117-like group,
+revision 2 and `compatible == false`. A local refusal or failed transfer
+preserves the caller's previous `IdentityInfo`. Stage 14 exposes this check
+as bound `readIdentity` and `probe` operations. Stage 15 owns their
+health accounting. Both diagnostics leave health counters untouched on
+every outcome. Discovery and route selection belong to the application.
+[Public operation contract](api-contracts.md).
+
 The ID operation writes the pointer byte alone and reads two data bytes after
 a repeated START in the same transfer. On failure or mismatch, it ends before
 additional register reads or data writes. Use this operation only on a known
