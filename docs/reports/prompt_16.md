@@ -1,5 +1,9 @@
 # Prompt 16 — Signed temperature and threshold codecs
 
+**COMPLETE.** All 65,536 signed register words round-tripped through Celsius.
+Across all six model selections, a latest TEMP read carried the observed word
+and left freshness unproven. [Final checks](#phase-d-acceptance-2026-11-22).
+
 ## Phase a brief, 2026-11-22
 
 **PARTIAL.** All seven prerequisites (5, 6, 11–15) are complete. Prompt 16 follows 15 in the execution sequence. Phase b owns two deliverables: the pure `temperature-codec` and the tracked `latest-read-engine` with its per-instance sample cache. [Prompt 16](../prompts/16_temperature-codec.md), [manifest](../prompts/SEQUENCE.json), [handoffs](../prompts/HANDOFFS.md).
@@ -100,3 +104,27 @@ The lead also found an integer-promotion issue in the callback deadline comparis
 | `python -B scripts/check_references.py`, `python -B scripts/check_promptset.py`, `git diff --check` | PASS, 14 pinned PDFs, 55 stages and a clean whitespace check. |
 
 Phase d owns final local acceptance, the progress row and the report index. MCU links, remote CI and physical qualification remain with their scheduled stages.
+
+## Phase d acceptance, 2026-11-22
+
+Acceptance ran on clean `main` at `763339c1b156d3da0cde76717ae1f7ca5fe976a3`.
+Its parent was `ebec09a`. The subject and four paths matched the phase-c
+commit request. The wrapper recorded equality with `origin/main` at 20:50:18
+Prague time. The TI pages cited in phase a confirmed the signed scale, startup
+word and TEMP read effect. Both sibling checkouts were clean. The selected
+files at TMP1x2 `0791429` and ADS1115 `1aab07b` still matched their cited pins.
+
+| Local acceptance on Windows | Result |
+| --- | --- |
+| Release host configure/build and tests-off consumer configure/build using the phase-b commands and directories | PASS with GNU C++ 15.1.0 and CMake 4.0.1. |
+| `ctest --test-dir build/host -C Release -R "^(latest\|temperature)_cpp$" --output-on-failure`, then repeat without the filter | PASS, 2/2 focused and 13/13 overall with CTest 4.0.1. Signed endpoints, half-count ties and all word round trips passed. Faults and deadline expiry preserved the caller's sample and the previous cache entry. |
+| `ctest --test-dir build/consumer -N` and `./build/consumer/tmp11x_native_consumer.exe` | PASS, zero registered tests and linked version `0.1.0`. |
+| Compile each public header and README C++ example with `g++ -std=c++17 -Wall -Wextra -Wpedantic -Werror -Iinclude -fsyntax-only -x c++ -` | PASS, six headers in isolation and two examples. |
+| `doxygen -` over `include/TMP11x` with XML output and `WARN_AS_ERROR=YES` | PASS with Doxygen 1.13.2. XML contained documentation for all three conversion functions and both public latest-read methods. |
+| `python -B scripts/check_references.py`, `python -B scripts/check_promptset.py`, `git diff --check` and `git diff --cached --check` | PASS, 14 pinned PDFs, 55 stages and clean whitespace. Python 3.12.10 and Git 2.52.0.windows.1. |
+
+Stage 17 can use the signed codec for profile validation. The public latest-read
+methods enforce binding and initialization. Successful reads and transfer
+failures were exercised through the private engine. Stage 18 owns those
+public-path cases after verified initialization. MCU links, physical fixture
+checks and the stage 43 remote CI checkpoint are NOT RUN for stage 16.
