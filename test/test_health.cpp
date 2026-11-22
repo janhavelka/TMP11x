@@ -176,6 +176,48 @@ void mixedTransfersAndRefusals() {
   CHECK(f.bus.trace.size() == 6);
 }
 
+void guardedWriteTimestamps() {
+  Fixture f{1, true};
+  const auto tracked = RegisterTransport::tracked(f.sensor);
+  constexpr std::uint8_t highLimit = 0x02;
+
+  const auto first = writeWord(tracked, highLimit, 0x1200, limit, 10);
+  CHECK(first.attempted && first.status.ok());
+  const auto ready = f.sensor.healthSnapshot();
+  checkCounts(ready, DriverState::READY, 1, 0, 0);
+  CHECK(ready.lastSuccessMsValid && ready.lastSuccessMs == 1 && !ready.lastErrorMsValid);
+  CHECK(f.bus.trace.size() == 1 && f.clockCalls == 1);
+
+  const auto nack = Status::Error(Err::I2C_NACK_DATA, "limit write rejected", -8);
+  f.bus.script.push_back({nack});
+  const auto failure = writeWord(tracked, highLimit, 0x2300, limit, 10);
+  CHECK(failure.attempted);
+  checkFault(failure.status, nack);
+  const auto offline = f.sensor.healthSnapshot();
+  checkCounts(offline, DriverState::OFFLINE, 1, 1, 1);
+  checkFault(offline.lastError, nack);
+  CHECK(offline.lastErrorMsValid && offline.lastErrorMs == 2);
+  CHECK(offline.lastSuccessMsValid && offline.lastSuccessMs == 1);
+  CHECK(f.bus.trace.size() == 2 && f.clockCalls == 2);
+
+  for (const auto access : {WriteAccess{WritePurpose::LIMIT, false, true},
+                            WriteAccess{WritePurpose::LIMIT, true, false}}) {
+    const auto refused = writeWord(tracked, highLimit, 0x2300, access, 10);
+    CHECK(!refused.attempted && refused.status.is(Err::INVALID_CONFIG));
+    checkPreserved(f.sensor, offline);
+    CHECK(f.bus.trace.size() == 2 && f.clockCalls == 2);
+  }
+
+  const auto recovery = writeWord(tracked, highLimit, 0x2300, limit, 10);
+  CHECK(recovery.attempted && recovery.status.ok());
+  const auto recovered = f.sensor.healthSnapshot();
+  checkCounts(recovered, DriverState::READY, 2, 1, 0);
+  CHECK(recovered.lastSuccessMsValid && recovered.lastSuccessMs == 3);
+  CHECK(recovered.lastErrorMsValid && recovered.lastErrorMs == 2);
+  checkFault(recovered.lastError, nack);
+  CHECK(f.bus.trace.size() == 3 && f.clockCalls == 3);
+}
+
 void neutralDiagnosticsAndLifecycle() {
   Fixture f{1, true};
   f.clockOrigin = maxCount;
@@ -266,6 +308,7 @@ void onlinePredicate() {
 int main() {
   disappearanceAndClockWrap();
   mixedTransfersAndRefusals();
+  guardedWriteTimestamps();
   neutralDiagnosticsAndLifecycle();
   saturatingCounters();
   onlinePredicate();

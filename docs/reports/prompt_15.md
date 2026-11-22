@@ -150,3 +150,42 @@ initialization and settings comparisons (18–19), acquisition readiness (21),
 broader raw diagnostics (26) and callback completion past the owner deadline
 (31) retain their integration checks. MCU links, physical tests and remote
 CI were not run in phase b.
+
+## Phase c review, 2026-11-22
+
+**PARTIAL.** The review started on clean `main` at
+`5eb52c18185d2f2360259d49a718e2778ab70190`. The parent, subject and all
+16 paths matched the phase-b commit request. The wrapper recorded upstream
+equality at 17:48:56 Prague time. Two read-only reviewers examined the
+physical accounting and lifecycle code, and the test and documentation
+coverage, respectively.
+
+Both read and write callbacks record one normalized outcome on return.
+Admission checks precede both callbacks. The ID engine classifies a complete
+word after the transport has recorded the outcome. Public identity diagnostics
+use a neutral binding, and an incompatible ID clears live trust while
+preserving history. The existing tests exercise these boundaries, saturation,
+clock wrap, teardown and the online predicate. [Transport](../../src/RegisterTransport.cpp),
+[identity](../../src/Identity.cpp), [lifecycle](../../src/TMP11x.cpp).
+
+The review found two gaps in write coverage. All tracked writes in the
+health suite used a clockless binding. The missing startup and locked-idle
+proofs were tested only through the neutral transport. The new
+`guardedWriteTimestamps` case checks a successful write at tick 1, a data
+NACK at tick 2 and an ordinary successful write from OFFLINE at tick 3.
+Each accepted attempt samples the clock once. Between the NACK and recovery,
+the test withholds each proof in turn and checks the refusal, attempt flag,
+trace length, clock count and complete saved history. Recovery retains the
+fault and its timestamp. [Health cases](../../test/test_health.cpp),
+[write admission cases](../../test/test_register_transport.cpp).
+
+| Local check | Review result |
+| --- | --- |
+| Fresh MinGW Release configure and build with the phase-b commands, using `build-tests-prompt15-c` and `build-consumer-prompt15-c` | PASS with GNU C++ 15.1.0 and CMake 4.0.1. The standalone tests-off consumer linked and printed `0.1.0`. |
+| `ctest --test-dir build-tests-prompt15-c -C Release -R "^health_cpp$" --output-on-failure`, then the full suite without the filter | PASS after the test change, 1/1 focused and 11/11 overall. |
+| Link the health test with two separately modified temporary copies of `RegisterTransport.cpp` | The new case detected both injected faults at the expected assertions. One omitted the write clock and the other sampled the clock on a refused write. |
+| `python -B scripts/check_promptset.py`, `python -B scripts/check_references.py`, `git diff --check` and `git diff --cached --check` | PASS with Python 3.12.10 and Git 2.52.0.windows.1. All 55 manifest stages and 14 pinned PDFs validated. |
+
+Phase d owns final acceptance and the report index and progress entries.
+Managed-operation integration, MCU links, hardware and remote CI retain the
+owners recorded above.
