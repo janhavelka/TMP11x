@@ -1,5 +1,9 @@
 # Prompt 12 — bounded 16-bit I2C register transport
 
+**COMPLETE.** The command table, private word transport and reusable register
+fixture passed native acceptance for all six BOM models. Stage 13 can use
+the checked read and fixture for identity validation.
+
 ## Phase a, 2026-11-22
 
 **PARTIAL.** All five inputs are available. Phase b can implement the private
@@ -197,3 +201,32 @@ Windows, GNU C++ 15.1.0, CMake 4.0.1, Ninja 1.12.1 and Python 3.12.10.
 Phase d owns final acceptance and the report index and progress updates.
 Adapter deadlines, wire captures and TEMP word coherence during a concurrent
 conversion remain separate qualification gates. Remote CI belongs to stage 43.
+
+## Phase d acceptance, 2026-11-22
+
+Acceptance used clean `main` at `624db948fc14c95ddb0ee05e53f3f804de5206cd`.
+Its parent was `ff6e3fcf355390ee0f9a5a4eb1c2ad939d03f468`. The subject
+and all five changed paths matched the phase-c request. The wrapper recorded
+equality with `origin/main` at 15:02:21 Prague time.
+
+The Release trace assertions checked one combined ID read at `0x48` (TX
+`[0F]`, RX `[A1 17]`), one THIGH write (TX `[02 12 A5]`), and distinct
+pointers `[05]` and `[06]` for successive shadow reads at `0x4B`. An
+adapter-reported short read captured the first byte `[A1]` and preserved
+the caller's `0xBEEF`. The suite also passed the six-model comparator
+regression from phase c. [Transport cases](../../test/test_register_transport.cpp).
+
+Final checks ran on Windows with GNU C++ 15.1.0, CMake 4.0.1, Ninja 1.12.1
+and Python 3.12.10.
+
+| Check | Commands | Result |
+| --- | --- | --- |
+| Fresh Release build | `cmake -S . -B build-tests-prompt12-d -G Ninja -DTMP11X_BUILD_TESTS=ON -DCMAKE_BUILD_TYPE=Release` and `cmake --build build-tests-prompt12-d --config Release --parallel` | PASS |
+| Transport and full host suite | `ctest --test-dir build-tests-prompt12-d -C Release -R "^register_transport_cpp$" --output-on-failure` and `ctest --test-dir build-tests-prompt12-d -C Release --output-on-failure` | PASS, 1/1 focused and 8/8 total |
+| Tests-off source consumer | `cmake -S examples/native_consumer -B build-consumer-prompt12-d -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_DISABLE_FIND_PACKAGE_Python3=TRUE -DCMAKE_DISABLE_FIND_PACKAGE_Git=TRUE`, `cmake --build build-consumer-prompt12-d --config Release --parallel` and `./build-consumer-prompt12-d/tmp11x_native_consumer.exe` | PASS, TMP117 guarded-offset lookup and linked version `0.1.0` |
+| Silicon sources and ledger | `python scripts/check_references.py`, `python -B tools/check_register_ledger.py` and `python -B tools/test_check_register_ledger.py` | PASS, 14 pinned PDFs, six models and 31 regressions |
+| Closure records | `python scripts/check_promptset.py` and `git diff --check` | PASS |
+
+MCU links and adapter deadline enforcement remain with stages 34–36. Physical
+repeated START, ACK/NACK timing and concurrent TEMP byte coherence remain
+unverified. The first remote CI checkpoint belongs to stage 43.
