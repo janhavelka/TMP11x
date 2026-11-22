@@ -1,12 +1,12 @@
 # TMP11x implementation progress
 
-**State:** Library foundation, portable sensor value types and checked register transport complete.
+**State:** Library foundation, portable sensor value types, checked register transport and private identity validation complete.
 **Target:** 55 stages in manifest order, including 11 new audit checkpoints. TMP117 is primary, with all six selected BOM-model capability gates covered by every relevant stage.
 **Repository:** `main`, tracking `origin/main` at `https://github.com/janhavelka/TMP11x.git`.
 **Preparation input HEAD:** `6c5e4496d5c896af689228d4bee4382a53c20626` (clean and synchronized at entry).
 **Hardware:** Physical TMP11x board and test wiring NOT CONFIRMED.
-**Last completed stage:** 12 (bounded 16-bit I2C register transport).
-**Last update:** 2026-11-22. Next eligible stage is 13 (identity validation).
+**Last completed stage:** 13 (identity validation for six BOM selections).
+**Last update:** 2026-11-22. Next eligible stage is 14 (bus-silent binding and lifecycle).
 
 Preparation evidence includes the [6b173cc second follow-up](../reports/audit-followup-6b173cc.md),
 the [cb73740 follow-up](../reports/audit-followup-cb73740.md#response--2026-11-17),
@@ -32,7 +32,8 @@ every planned deliverable a producer and checks consumer dependencies.
 | [10](10_package-foundation.md) | Independent C++17 library foundation | COMPLETE — [report](../reports/prompt_10.md), [host test entrypoint](../testing.md), version tools and verified source exports |
 | [11](11_status-values.md) | Portable Status, model and value types | COMPLETE — [report](../reports/prompt_11.md), six model selections, shared capability table and strict Release acceptance |
 | [12](12_i2c-register-transport.md) | Bounded 16-bit I2C register transport | COMPLETE — [report](../reports/prompt_12.md), six-model command table, private transport and reusable register fixture. All eight Release tests and the tests-off consumer passed. |
-| 13–17 | Identity, binding, health and codecs | NOT_STARTED |
+| [13](13_identity-selection.md) | Validate device family for the selected BOM model | COMPLETE — [report](../reports/prompt_13.md). All nine Release tests and the tests-off consumer passed. |
+| 14–17 | Binding, health and codecs | NOT_STARTED |
 | [47](47_audit-10-17.md) | Audit prompts 10–17 before initialization writes | NOT_STARTED |
 | 18–19 | Safe initialization and configuration trust | NOT_STARTED |
 | [48](48_audit-18-19.md) | Audit prompts 18–19 before adding settings and acquisition | NOT_STARTED |

@@ -1,5 +1,8 @@
 # Prompt 13 — identity validation
 
+**COMPLETE.** The private identity engine passed native acceptance for all six
+BOM selections. Stage 14 can use it for bound `readIdentity` and `probe`.
+
 ## Phase a, 2026-11-22
 
 **PARTIAL.** All inputs for the private `identity-engine` are available.
@@ -200,3 +203,34 @@ Windows, GNU C++ 15.1.0, CMake/CTest 4.0.1, GNU Make 4.4.1 and Python 3.12.10.
   handoffs. `git diff --check` passed.
 
 Phase d owns acceptance of the reviewed revision and the completion record.
+
+## Phase d acceptance, 2026-11-22
+
+Acceptance ran on clean `main` at `bf5cf9edf9c7a9e1f2c1e37e3926ee9f02930324`.
+Its parent was `b0f8618`. The commit subject and both changed paths matched
+the phase-c request. The wrapper verified equality with `origin/main` at
+16:07:10 Prague time.
+
+The Release suite exercised one combined read at `0x0F` per admitted
+attempt. All six selections retained the BOM model on a complete response.
+A short transfer preserved the prior observation. A complete incompatible
+word produced mismatch evidence and ended the operation. Both published
+TMP119 defaults (`0x0117` and `0x2117`) passed for all four TMP117-like
+selections. The independent source review and shared-bus test establish
+the limit of that result. [Identity decision](../variants.md#identity-decision),
+[native cases](../../test/test_identity.cpp).
+
+Final checks ran on Windows with GNU C++ 15.1.0, CMake/CTest 4.0.1,
+GNU Make 4.4.1 and Python 3.12.10.
+
+| Check | Commands | Result |
+| --- | --- | --- |
+| Fresh Release build | `cmake -S . -B build-tests-prompt13-d -G "MinGW Makefiles" -DTMP11X_BUILD_TESTS=ON -DCMAKE_BUILD_TYPE=Release` and `cmake --build build-tests-prompt13-d --config Release --parallel` | PASS |
+| Identity and full host suite | `ctest --test-dir build-tests-prompt13-d -C Release -R "^identity_cpp$" --output-on-failure` and `ctest --test-dir build-tests-prompt13-d -C Release --output-on-failure` | PASS, 1/1 focused and 9/9 overall, including the register ledger and its regressions |
+| Tests-off source consumer | `cmake -S examples/native_consumer -B build-consumer-prompt13-d -G "MinGW Makefiles" -DTMP11X_BUILD_TESTS=OFF -DCMAKE_BUILD_TYPE=Release -DCMAKE_DISABLE_FIND_PACKAGE_Python3=TRUE -DCMAKE_DISABLE_FIND_PACKAGE_Git=TRUE`, `cmake --build build-consumer-prompt13-d --config Release --parallel` and `./build-consumer-prompt13-d/tmp11x_native_consumer.exe` | PASS, linked and printed `0.1.0` |
+| Sources and closure records | `python scripts/check_references.py`, `python scripts/check_promptset.py` and `git diff --check` | PASS, 14 pinned PDFs and 55 manifest stages |
+
+Stage 14 receives the [private interface](../../src/Identity.h) and
+[implementation](../../src/Identity.cpp). Stage 15 owns the health-counter
+checks for both diagnostics. MCU links, physical qualification and the
+stage 43 remote CI checkpoint remain open.
