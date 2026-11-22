@@ -141,3 +141,62 @@ Phase c owns fresh review of the actual engine and tests, including the
 independent challenge of both TMP119 source tables. Stage 14 connects the
 private engine to bound diagnostics. Stage 15 verifies health accounting.
 MCU links, remote CI and physical qualification remain with their later stages.
+
+## Phase c review, 2026-11-22
+
+**PARTIAL.** Two independent read-only reviewers examined the silicon and
+the engine respectively. The lead verified their findings against clean
+`main` at `b0f8618707a0aba83e22c07447f8a8a8aee8810f`. Its parent,
+subject and 12 changed paths matched the phase-b request. The wrapper
+recorded equality with `origin/main` at 15:46:20 Prague time.
+
+The silicon review confirmed the TMP119 discrepancy in the pinned PDF.
+Table 8-2 lists `0x0117`. Section 8.5.11 gives `0x2117`, and Table 8-14
+identifies its upper nibble as revision 2. A TMP117 selection receiving
+this word retains TMP117 and reports a compatible TMP117-like group.
+A TMP116 selection receiving the same word retains TMP116 and reports the
+same observed group and revision with a mismatch. The engine uses the
+documented full-word comparison for TMP116/N. The Linux driver at the
+phase-a pin uses a full-word switch and a fallback to device match data.
+OPT4001 at its recorded revision checks mismatch detail and callback counts.
+[TMP119 p.32](../reference/source/TMP119-Digital-Temperature-Sensor-Datasheet-SNIS236.pdf#page=32),
+[TMP119 p.39](../reference/source/TMP119-Digital-Temperature-Sensor-Datasheet-SNIS236.pdf#page=39),
+[family rules](../variants.md#identity-decision),
+[Linux probe](https://github.com/torvalds/linux/blob/23c62304dde29abe92013d85910d03a77dada35d/drivers/iio/temperature/tmp117.c#L161),
+[OPT4001 tests](https://github.com/janhavelka/OPT4001/blob/f17d4944640145773d3331e155a5bc728fcc4c66/test/test_basic.cpp#L835).
+
+The engine review traced admission, timeout clipping and publication through
+`readWord`. Each complete response costs one combined read. A mismatch
+preserves the successful physical status and carries the raw word in the
+logical error. Local refusals cost zero callbacks. Failed transfers preserve
+all eight output fields. CMake includes the engine in the library and keeps
+the fake in the test targets. Both reviewers found the production behavior
+consistent with the contract. [Engine](../../src/Identity.cpp),
+[transport](../../src/RegisterTransport.cpp), [build registration](../../CMakeLists.txt).
+
+Two test findings were fixed in [test_identity.cpp](../../test/test_identity.cpp).
+
+- The complete-read helper always started with `rawValid == true`. The first
+  observation on each fresh bus now starts with default output. The six
+  selections exercise first publication on both match and mismatch. Later
+  reads still exercise replacement of prior evidence.
+- The bit sweep already rejected `0x1114` for TMP116/N by flipping bit 1
+  of `0x1116`. All six selections now explicitly reject both `0x1114` and
+  `0x1180` as arbitrary words returned at `0x0F`. The named TMP114 and
+  TMP118 fixtures still cover their ordinary inferred zero response, and
+  the callback trace checks that the foreign ID pointer is never accessed.
+
+### Review checks
+
+Windows, GNU C++ 15.1.0, CMake/CTest 4.0.1, GNU Make 4.4.1 and Python 3.12.10.
+
+- PASS — `cmake -S . -B build-tests-prompt13-c -G "MinGW Makefiles" -DTMP11X_BUILD_TESTS=ON -DCMAKE_BUILD_TYPE=Release` and `cmake --build build-tests-prompt13-c --config Release --parallel`.
+- PASS — After the test fixes, `ctest --test-dir build-tests-prompt13-c -C Release -R "^identity_cpp$" --output-on-failure` passed 1/1. The same command without the filter passed 9/9.
+- PASS — The Release identity test detected three injected errors in
+  temporary copies of the engine. One retained the previous validity bit,
+  one accepted `0x1114` for TMP117, and one accepted `0x1180`.
+- PASS — `python scripts/check_references.py` verified 14 PDF hashes.
+  `python scripts/check_promptset.py` verified the 55-stage manifest and
+  handoffs. `git diff --check` passed.
+
+Phase d owns acceptance of the reviewed revision and the completion record.

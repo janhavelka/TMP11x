@@ -54,8 +54,9 @@ const TransferTrace& checkFrame(const FakeTmp11xBus& bus, std::size_t before,
 // An absent revision is represented by -1 only in these expected test vectors.
 void checkObservation(const FakeTmp11xBus& bus, const Config& binding, std::uint16_t raw,
                       IdentityGroup group, int revision, bool compatible) {
-  IdentityInfo out = previous;
   const auto before = bus.trace.size();
+  // Exercise first publication on a fresh bus and replacement of prior evidence thereafter.
+  IdentityInfo out = before == 0 ? IdentityInfo{} : previous;
   const auto result = readIdentity(binding, out, 7);
   const auto& frame = checkFrame(bus, before, binding.i2cAddress, 7);
   CHECK(frame.result.ok() && result.transfer.attempted && result.transfer.status.ok());
@@ -84,7 +85,9 @@ void selectedModelsAndIdBits() {
       id = static_cast<std::uint16_t>((revision << 12) | 0x0117);
       checkObservation(bus, binding, id, IdentityGroup::TMP117_LIKE, revision, !selects116);
     }
-    for (const auto word : {0x0116, 0x2116}) {
+    // TMP114 (0x1114) and TMP118 (0x1180) expose their IDs at 0x0B.
+    // Here an arbitrary responder returns those bit patterns at 0x0F.
+    for (const auto word : {0x0116, 0x2116, 0x1114, 0x1180}) {
       id = static_cast<std::uint16_t>(word);
       checkObservation(bus, binding, id, IdentityGroup::UNKNOWN, -1, false);
     }
@@ -122,8 +125,6 @@ void sharedBusNeighbors() {
   // configures write behavior only. These probes exercise just the ID frame.
   FakeTmp11xDevice tmp114{Model::TMP117}, tmp118{Model::TMP117};
   FakeTmp11xDevice unrelated{Model::TMP117}, target{Model::TMP117};
-  tmp114.words[0x0B] = 0x1114;
-  tmp118.words[0x0B] = 0x1180;
   // Non-indexed-read rules and maps imply zero here, with TMP114 CRC disabled.
   tmp114.words[0x0F] = 0;
   tmp118.words[0x0F] = 0;
