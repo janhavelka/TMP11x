@@ -2,7 +2,7 @@
 
 #include <limits>
 
-#include "TMP11x/Config.h"
+#include "TMP11x/TMP11x.h"
 
 namespace TMP11x::detail {
 
@@ -12,6 +12,24 @@ constexpr bool isValidInterval(std::uint32_t ms) noexcept {
 }
 
 Status validateTransportBinding(const Config& binding) noexcept;
+
+// Borrow the target and optional history for one owner-serialized operation.
+// A bare binding selects the health-neutral transport used by diagnostics.
+struct RegisterTransport {
+  RegisterTransport(const Config& config, HealthSnapshot* history = nullptr) noexcept
+      : binding(config), health(history) {}
+
+  static RegisterTransport tracked(TMP11x& device) noexcept {
+    return {device._config, &device._health};
+  }
+
+  const Config& binding;
+  HealthSnapshot* health;
+};
+
+constexpr bool isOnline(bool initialized, DriverState state) noexcept {
+  return initialized && (state == DriverState::READY || state == DriverState::DEGRADED);
+}
 
 // A local refusal costs zero transfers. A callback, even an incoherent or failed
 // one, costs one and may already have affected the device.
@@ -32,16 +50,16 @@ struct WriteAccess {
 
 // Borrow an owner-serialized binding for the call. Timed owners supply the
 // current remaining budget; untimed observations can pass the per-callback cap.
-TransferResult readWord(const Config& binding, std::uint8_t pointer, std::uint16_t& out,
+TransferResult readWord(RegisterTransport transport, std::uint8_t pointer, std::uint16_t& out,
                         std::uint32_t remainingMs);
-TransferResult writeWord(const Config& binding, std::uint8_t pointer, std::uint16_t value,
+TransferResult writeWord(RegisterTransport transport, std::uint8_t pointer, std::uint16_t value,
                          WriteAccess access, std::uint32_t remainingMs);
 
 // Checked frame boundary used by the word helpers. Only one complete word is
 // legal. A failure leaves rx untouched, including an adapter-reported short.
-TransferResult readFrame(const Config& binding, const std::uint8_t* tx, std::size_t txLen,
+TransferResult readFrame(RegisterTransport transport, const std::uint8_t* tx, std::size_t txLen,
                          std::uint8_t* rx, std::size_t rxLen, std::uint32_t remainingMs);
-TransferResult writeFrame(const Config& binding, const std::uint8_t* tx, std::size_t txLen,
+TransferResult writeFrame(RegisterTransport transport, const std::uint8_t* tx, std::size_t txLen,
                           WriteAccess access, std::uint32_t remainingMs);
 
 }  // namespace TMP11x::detail

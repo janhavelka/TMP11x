@@ -1,5 +1,5 @@
 /// @file TMP11x.h
-/// @brief Device binding, identity diagnostics and measurement evidence.
+/// @brief Device binding, passive transport health, identity diagnostics and measurement evidence.
 #pragma once
 
 #include <cstdint>
@@ -8,6 +8,25 @@
 #include "TMP11x/Config.h"
 
 namespace TMP11x {
+
+namespace detail {
+struct RegisterTransport;
+}
+
+/// Per-instance evidence since the last accepted bind, end or unbind.
+/// Each tracked physical callback contributes one outcome, even before initialization.
+struct HealthSnapshot {
+  DriverState state = DriverState::UNINIT;  ///< State derived from tracked callbacks.
+  bool initialized = false;                 ///< Managed initialization state at inspection.
+  std::uint8_t consecutiveFailures = 0;     ///< Saturating failure streak, cleared by tracked success.
+  std::uint32_t totalSuccess = 0;           ///< Saturating count of successful tracked callbacks.
+  std::uint32_t totalFailures = 0;          ///< Saturating count of failed tracked callbacks.
+  std::uint32_t lastSuccessMs = 0;          ///< Wrapping clock tick at the latest tracked success.
+  std::uint32_t lastErrorMs = 0;            ///< Wrapping clock tick at the latest tracked failure.
+  bool lastSuccessMsValid = false;         ///< A clock supplied lastSuccessMs, including a valid zero.
+  bool lastErrorMsValid = false;           ///< A clock supplied lastErrorMs, including a valid zero.
+  Status lastError{};                      ///< Latest tracked fault retained across success, or OK before any fault.
+};
 
 /// Selected target and complete ID evidence when available.
 /// TMP116/N requires the full word 0x1116 and has no decoded revision.
@@ -112,6 +131,11 @@ class TMP11x {
   bool isBound() const noexcept { return _config.model != Model::UNSELECTED; }
   /// Whether managed initialization has verified the sensor profile.
   bool isInitialized() const noexcept { return _live.initialized; }
+  /// Copy the current initialization flag and tracked transport history without calling any hooks.
+  HealthSnapshot healthSnapshot() const noexcept;
+  /// True when initialized and the last tracked state is READY or DEGRADED.
+  /// Reads memory only. Profile trust and conversion freshness have separate evidence.
+  bool isOnline() const noexcept;
   /// Copy the selected target and most recent complete ID, including any mismatch.
   IdentityInfo identityInfo() const noexcept { return _identity; }
   /// Copy the software target. An unbound device returns the default settings.
@@ -120,6 +144,8 @@ class TMP11x {
   ConfigTrust configTrust() const noexcept { return _live.trust; }
 
  private:
+  friend struct detail::RegisterTransport;
+
   // These facts expire together on teardown or incompatible identity. A timed
   // initialization operation owns the first compatible ACK timestamp and proof.
   struct LiveState {
@@ -134,6 +160,7 @@ class TMP11x {
   Config _config{};
   IdentityInfo _identity{};
   LiveState _live{};
+  HealthSnapshot _health{};
 };
 
 }  // namespace TMP11x

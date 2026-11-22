@@ -9,7 +9,8 @@ model capability and observation types through `<TMP11x/TMP11x.h>`.
 without accessing hardware. `<TMP11x/CommandTable.h>` exposes the register
 pointers, field masks and per-model access classes. The private transport
 has native tests for one-word reads and guarded writes. The public device
-class supports bus-silent binding, teardown and explicit family checks.
+class supports bus-silent binding, teardown, explicit family checks and
+passive transport health.
 Verified sensor initialization and physical qualification are pending.
 `<TMP11x/Version.h>` exposes `TMP11x::version()` for the linked library.
 [Value and binding contracts](docs/api-contracts.md).
@@ -45,12 +46,45 @@ previous output. Use `probe()` for the same family check when only the status
 is needed. `end()` clears observations and retains the binding for another
 read. `unbind()` also releases the binding. Both use zero bus callbacks.
 
+## Inspect transport health
+
+`healthSnapshot()` copies the instance's tracked I2C history without calling
+the bus or the clock. To report the most recent tracked fault, including one
+followed by a successful transfer, inspect its saved status.
+
+```cpp
+#include <cstdio>
+#include <TMP11x/TMP11x.h>
+
+void printLastTransportFault(const TMP11x::TMP11x& sensor) {
+  const auto health = sensor.healthSnapshot();
+  if (health.totalFailures != 0) {
+    std::puts(TMP11x::errorName(health.lastError.code));
+  }
+}
+```
+
+An accepted bind, `end()` or `unbind()` starts a new history at `UNINIT`.
+Each tracked callback counts once, even during initialization. A success
+sets `READY` and clears the failure streak. Failures set `DEGRADED` until
+the streak reaches `Config::offlineThreshold` (default 5), then `OFFLINE`.
+The owner can still issue an authorized transfer and controls any backoff.
+The totals and streak saturate. Check `lastSuccessMsValid` or
+`lastErrorMsValid` before using the corresponding completion time. Zero is a
+valid clock tick.
+
+`probe()` and `readIdentity()` return their own status and leave tracked
+transport history intact. A diagnostic-only session therefore stays at
+`UNINIT`. The memory-only `isOnline()` requires initialization and a
+`READY` or `DEGRADED` state. Configuration trust and conversion freshness
+require their own evidence.
+
 ## Build and test
 
 Use the `TMP11x` CMake target via `add_subdirectory`. The standalone
-[native consumer](examples/native_consumer/CMakeLists.txt) shows how to link
-and call the version API. See the [testing guide](docs/testing.md) for host
-builds, CTest and version synchronization.
+[native consumer](examples/native_consumer/CMakeLists.txt) checks initial
+transport health and the linked version. See the [testing guide](docs/testing.md)
+for host builds, CTest and version synchronization.
 
 ## Start here
 

@@ -13,7 +13,7 @@ conversion or startup interval runs. [Public API and operation gates](api-contra
 | `Status.h` | SDK-independent errors, static messages, status predicates and passive transport states. |
 | `Config.h` | Value types, model and capability queries, callback types, binding and desired sensor settings. Stage 23 adds the configurable hardware offset. |
 | `CommandTable.h` | Register pointers, positioned field masks and `command::accessFor(model, pointer)`. The lookup distinguishes a protected shadow from a managed offset at `0x07`. |
-| `TMP11x.h` | Sample and identity evidence types and the `TMP11x::TMP11x` device class. The class owns one binding, its desired settings and observations, and exposes lifecycle methods and bound ID diagnostics. |
+| `TMP11x.h` | Sample, identity and health snapshots and the `TMP11x::TMP11x` device class. The class owns one binding, its desired settings and observations, and exposes lifecycle methods, bound ID diagnostics and passive health inspectors. |
 | `Version.h` | Checked-in generated package version from `library.json`. Its constants describe the header, and the out-of-line `version()` describes the linked library. |
 
 Implementation belongs in `src/`. Each public header must compile on its
@@ -41,6 +41,12 @@ word, but TEMP or CONFIG may have consumed flags. A failed write may have
 changed the device. The operation owner uses the pointer, direction and
 attempt evidence to update observation history and configuration trust.
 
+Managed engines pass `detail::RegisterTransport::tracked(device)` to the
+word or identity helper. The frame helper records the normalized outcome
+on callback return, before any register comparison. Callers use the
+`attempted` flag for their work budget. Public identity diagnostics pass
+the binding alone, which leaves counters, fault history and clock untouched.
+
 The write path checks the selected model, the typed purpose, and the
 operation owner's startup and locked-idle evidence before calling the adapter.
 Stable CONFIG accepts only bits in `0x07FC`, including canonical continuous
@@ -50,7 +56,7 @@ management, one-shot and addressed reset have their own later feature owners.
 | Owner | Exclusive decision and callers |
 | --- | --- |
 | Model and transport (11–12) | One pure model/capability table supplies family, ID policy, EEPROM index map, offset/reset support. One checked transport maps the requested function to a permitted single-word transfer and accounts its physical outcome once. Deny holes/aliases, any data write to TEMP/ID/EEPROM_UL/shadows, and command encodings on the ordinary CONFIG path. Private typed commands have distinct permission. No transfer accepts an arbitrary caller-supplied bus address. |
-| Identity (13, public at 14) | The private `detail::readIdentity` returns the family check and the underlying `TransferResult`. Stage 14 uses the family status for neutral diagnostics. Stage 18 needs the physical result to count a successful managed read even on a mismatch. ID-first dumps reuse this check at stage 26. [Identity interface](../src/Identity.h) |
+| Identity (13, public at 14) | The private `detail::readIdentity` returns the family check and the underlying `TransferResult`. Stage 14 uses the family status for neutral diagnostics. Stage 18 passes the tracked transport view so a complete ID read counts once even on a mismatch. ID-first dumps reuse this check at stage 26. [Identity interface](../src/Identity.h) |
 | Configuration (17–20, 22–23, 25) | One encoder/expected-state comparison for CONFIG. The configuration engine owns `0x04` safety decisions, stable CONFIG fields, THIGH/TLOW and supported managed OFFSET, including ordered apply and final verification. It supplies the guarded SD/command encoder to measurement and the explicit reset command at 25. Stage 19 owns common observation bookkeeping for CONFIG/TEMP and generation/trust invalidation. Every reader calls it. Stage 22 exposes retained alert events. |
 | Measurement (16, 21) | One signed-word codec for TEMP, limits and offset. One acquisition engine owns the TEMP-to-Sample publication point, continuous-ready evidence, one-shot preflight/baseline/trigger sequence, and last-good sample. It asks configuration to compare CONFIG and enforce the guard. It never installs a new profile. |
 | Diagnostics (24, 26) | Shadow access maps a one-based word index through the selected capability. Diagnostics own observation formatting, ID-first traversal and the fixed dump order. They reuse the same decoders, checked transport and read-effect bookkeeping. A raw view never applies a profile, publishes a managed sample or programs EEPROM. |

@@ -90,3 +90,63 @@ CMake/CTest 4.0.1, Python 3.12.10 and Git 2.52.0.windows.1.
 
 The phase-b cases above remain open. MCU links, physical qualification and
 the stage 43 remote CI checkpoint remain with their assigned owners.
+
+## Phase b implementation, 2026-11-22
+
+**PARTIAL.** Implemented `transport-health` on clean `main` at
+`5e197995815b1bf9cd71617af82be361b12aa505`. Its parent, subject and sole
+report path match the phase-a handoff and commit request. The wrapper
+verified upstream equality at 17:30:09 Prague time. The three clean
+sibling checkouts still matched the phase-a revisions. The wire unit
+remains a single word transfer as shown in TMP116 p. 22, TMP117 pp. 22–23
+and TMP119 p. 25. [Transfer figures](../board-integration.md#register-transfers).
+
+`healthSnapshot()` copies the instance's tracked history and takes its
+initialization flag from the current lifecycle state. `isOnline()` reads
+that same lifecycle state and the tracked transport state. Accepted bind,
+end and unbind clear history. Clearing live trust after an incompatible ID
+keeps the history available. [Public declarations](../../include/TMP11x/TMP11x.h),
+[device lifecycle](../../src/TMP11x.cpp), [API contract](../api-contracts.md).
+
+Managed callers pass `RegisterTransport::tracked(device)` to a register or
+identity read, or to a guarded write. The frame helper normalizes each
+terminal callback result and records it once. The optional clock is sampled
+there, after callback return. The ID engine passes the same view through
+to the read before classifying the word. Public diagnostics use the
+health-neutral binding. Neither frame admission nor callback execution
+checks the OFFLINE state. [Transport view](../../src/RegisterTransport.h),
+[accounting](../../src/RegisterTransport.cpp), [identity engine](../../src/Identity.cpp),
+[architecture](../architecture.md).
+
+### Native cases
+
+The tests compare per-instance snapshots against the stage 12 fake's
+callback trace. The clocked fixture derives its tick from the completed
+trace length, so sampling before the callback would change the asserted
+time. [Test source](../../test/test_health.cpp), [CTest inventory](../testing.md).
+
+| Case | Observation |
+| --- | --- |
+| `disappearanceAndClockWrap` | For each of the six BOM selections, a successful read, two address NACKs and a bus fault take an uninitialized instance through READY, DEGRADED and OFFLINE. The next ordinary read succeeds. It retains the last fault and its valid wrapped timestamp of zero. |
+| `mixedTransfersAndRefusals` | A guard read, allowed limit write and short readback yield two successes and one failure. An ambiguous write timeout counts once. An incoherent callback retains its signed detail as an I2C error. Invalid binding, invalid pointer, protected write and exhausted budget add zero. A complete incompatible ID adds one tracked success. |
+| `neutralDiagnosticsAndLifecycle` | With populated OFFLINE history, probe and explicit ID read each return a match, mismatch or physical timeout directly. Every call adds one bus trace entry and leaves clock and history intact. A rejected bind preserves history. Same-target bind, end and unbind clear it locally. |
+| `saturatingCounters` | With the threshold at 255, seeded counts cross from 254 failures to OFFLINE and receive another error. Both totals and the streak stop at their maxima. A subsequent read clears the streak. |
+| `onlinePredicate` | All eight initialization/state combinations agree with the public rule. Only initialized READY or DEGRADED returns true. |
+
+### Phase b checks
+
+Windows, GNU C++ 15.1.0, CMake/CTest 4.0.1, Python 3.12.10 and Doxygen 1.13.2.
+
+| Command or check | Result |
+| --- | --- |
+| `cmake -S . -B build-tests-prompt15-b -G "MinGW Makefiles" -DTMP11X_BUILD_TESTS=ON -DCMAKE_BUILD_TYPE=Release`, then `cmake --build build-tests-prompt15-b --config Release --parallel 4` | PASS, strict C++17 Release build. |
+| `ctest --test-dir build-tests-prompt15-b -C Release -R "^health_cpp$" --output-on-failure`, then repeat without the filter | PASS, 1/1 focused and 11/11 overall. |
+| `cmake -S examples/native_consumer -B build-consumer-prompt15-b -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release -DCMAKE_DISABLE_FIND_PACKAGE_Python3=TRUE -DCMAKE_DISABLE_FIND_PACKAGE_Git=TRUE`, then `cmake --build build-consumer-prompt15-b --config Release --parallel 2` and `./build-consumer-prompt15-b/tmp11x_native_consumer.exe` | PASS, public getters linked and returned the initial state. The consumer printed `0.1.0`. CTest's `-N` listed zero tests in the consumer build. |
+| `doxygen -` over the public headers with XML and `WARN_AS_ERROR=YES`. Compile the README C++ blocks with `g++ -std=c++17 -Wall -Wextra -Wpedantic -Werror -Iinclude -fsyntax-only -x c++ -` | PASS, all ten snapshot fields and both getters had descriptions in the XML. Both examples compiled. |
+| `python -B scripts/check_promptset.py`, `python -B scripts/check_references.py` and `git diff --check` | PASS, 55 manifest stages, 14 pinned PDF hashes and clean whitespace. |
+
+Phase c owns fresh review of these artifacts. Managed latest reads (16),
+initialization and settings comparisons (18–19), acquisition readiness (21),
+broader raw diagnostics (26) and callback completion past the owner deadline
+(31) retain their integration checks. MCU links, physical tests and remote
+CI were not run in phase b.

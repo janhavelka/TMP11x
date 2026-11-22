@@ -14,3 +14,6 @@
   mismatch reports the observed word, recognized group and available revision.
 - Added bus-silent bind, end and unbind on `TMP11x::TMP11x`. Bound callers
   can read the device ID or probe family compatibility before initialization.
+- Added `healthSnapshot()` and `isOnline()` for passive transport inspection.
+  Each tracked I2C callback updates saturating counters and records its
+  completion time when a clock is available.

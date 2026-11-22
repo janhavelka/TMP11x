@@ -23,6 +23,7 @@ CTest registers these cases when `TMP11X_BUILD_TESTS=ON`.
 | `register_transport_cpp` | Check the command table against independent literals for each model, exercise all address and pointer byte values, inspect shared-bus frames and timeout grants, and script partial reads and ambiguous writes. |
 | `identity_cpp` | Validate all six model selections, observed groups and revision fields. Check shared-bus TMP114 and TMP118 responses, coincidental matches, transfer failures and local refusals against the callback trace and output evidence. |
 | `binding_cpp` | Exercise the public device lifecycle with the register fake. Check structural validation, rejected and accepted rebinds, callback-free teardown, retained ID evidence after errors, and two independent routes to address `0x48`. |
+| `health_cpp` | Compare tracked outcomes with the callback trace, including mixed reads and writes, local refusals and an ordinary success from OFFLINE. Check neutral identity diagnostics, lifecycle resets, saturating counters, optional and wrapping timestamps, and the online predicate. |
 | `version_generator_check` | Compare `Version.h` and the ESP-IDF manifest's version with `library.json` using the generator's check command. |
 | `version_sync` | Run the delegated version check through the checker script. |
 | `version_generator_regressions` | Exercise IDF version drift and an unwritable mirror. |
@@ -56,7 +57,8 @@ cmake --build build-consumer --config Release --parallel
 On Windows with MinGW, add `-G "MinGW Makefiles"` and use the executable's
 `.exe` suffix. With a multi-config generator, run the executable under
 `build-consumer/Release/`. It checks the public register policy for TMP117
-offset and prints the linked version when it matches the version in the header.
+offset and reads a new device's health snapshot and online state. It prints
+the linked version when these checks pass and the header version matches.
 
 ## Version and package checks
 

@@ -19,9 +19,20 @@ Status TMP11x::bind(const Config& config) noexcept {
 
 void TMP11x::clearObservations() noexcept {
   _live = {};
+  _health = {};
   _identity = {};
   _identity.model = _config.model;
   _identity.i2cAddress = _config.i2cAddress;
+}
+
+HealthSnapshot TMP11x::healthSnapshot() const noexcept {
+  auto snapshot = _health;
+  snapshot.initialized = isInitialized();
+  return snapshot;
+}
+
+bool TMP11x::isOnline() const noexcept {
+  return detail::isOnline(isInitialized(), _health.state);
 }
 
 Status TMP11x::end() noexcept {

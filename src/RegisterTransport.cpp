@@ -24,7 +24,7 @@ Status admitTransfer(const Config& binding, std::uint32_t remainingMs) {
   return Status::Ok();
 }
 
-TransferResult callbackResult(Status status) {
+Status normalizeCallbackStatus(Status status) {
   switch (status.code) {
     case Err::OK:
     case Err::I2C_ERROR:
@@ -33,9 +33,42 @@ TransferResult callbackResult(Status status) {
     case Err::I2C_NACK_DATA:
     case Err::I2C_SHORT_TRANSFER:
     case Err::I2C_TIMEOUT:
-    case Err::I2C_BUS: return {status, true};
-    default: return {Status::Error(Err::I2C_ERROR, "Invalid I2C callback status", status.detail), true};
+    case Err::I2C_BUS: return status;
+    default: return Status::Error(Err::I2C_ERROR, "Invalid I2C callback status", status.detail);
   }
+}
+
+template<typename Counter>
+void incrementSaturating(Counter& counter) noexcept {
+  if (counter < std::numeric_limits<Counter>::max()) ++counter;
+}
+
+// Called exactly once on return from either bus callback. Admission failures
+// and logical operation results never pass through this boundary.
+TransferResult callbackResult(RegisterTransport transport, Status rawStatus) {
+  const auto status = normalizeCallbackStatus(rawStatus);
+  if (transport.health == nullptr) return {status, true};
+
+  auto& health = *transport.health;
+  const auto& binding = transport.binding;
+  const bool timed = binding.nowMs != nullptr;
+  const auto completedMs = timed ? binding.nowMs(binding.timeUser) : 0u;
+  if (status.ok()) {
+    incrementSaturating(health.totalSuccess);
+    health.consecutiveFailures = 0;
+    health.state = DriverState::READY;
+    health.lastSuccessMs = completedMs;
+    health.lastSuccessMsValid = timed;
+  } else {
+    incrementSaturating(health.totalFailures);
+    incrementSaturating(health.consecutiveFailures);
+    health.state = health.consecutiveFailures >= binding.offlineThreshold
+                       ? DriverState::OFFLINE : DriverState::DEGRADED;
+    health.lastError = status;
+    health.lastErrorMs = completedMs;
+    health.lastErrorMsValid = timed;
+  }
+  return {status, true};
 }
 
 std::uint16_t decodeWord(const std::uint8_t* bytes) {
@@ -73,8 +106,9 @@ Status checkWrite(command::Access policy, std::uint16_t value, WriteAccess acces
 
 }  // namespace
 
-TransferResult readFrame(const Config& binding, const std::uint8_t* tx, std::size_t txLen,
+TransferResult readFrame(RegisterTransport transport, const std::uint8_t* tx, std::size_t txLen,
                          std::uint8_t* rx, std::size_t rxLen, std::uint32_t remainingMs) {
+  const auto& binding = transport.binding;
   const auto admission = admitTransfer(binding, remainingMs);
   if (!admission.ok()) return {admission, false};
   if (tx == nullptr || txLen != 1 || rx == nullptr || rxLen != 2) {
@@ -86,8 +120,9 @@ TransferResult readFrame(const Config& binding, const std::uint8_t* tx, std::siz
 
   std::uint8_t scratch[2]{};
   const auto grant = std::min(binding.i2cTimeoutMs, remainingMs);
-  const auto result = callbackResult(binding.i2cWriteRead(binding.i2cAddress, tx, txLen, scratch,
-                                                         sizeof(scratch), grant, binding.i2cUser));
+  const auto status = binding.i2cWriteRead(binding.i2cAddress, tx, txLen, scratch,
+                                           sizeof(scratch), grant, binding.i2cUser);
+  const auto result = callbackResult(transport, status);
   if (result.status.ok()) {
     rx[0] = scratch[0];
     rx[1] = scratch[1];
@@ -95,8 +130,9 @@ TransferResult readFrame(const Config& binding, const std::uint8_t* tx, std::siz
   return result;
 }
 
-TransferResult writeFrame(const Config& binding, const std::uint8_t* tx, std::size_t txLen,
+TransferResult writeFrame(RegisterTransport transport, const std::uint8_t* tx, std::size_t txLen,
                           WriteAccess access, std::uint32_t remainingMs) {
+  const auto& binding = transport.binding;
   const auto admission = admitTransfer(binding, remainingMs);
   if (!admission.ok()) return {admission, false};
   if (tx == nullptr || txLen != 3) {
@@ -106,22 +142,23 @@ TransferResult writeFrame(const Config& binding, const std::uint8_t* tx, std::si
   if (!permission.ok()) return {permission, false};
 
   const auto grant = std::min(binding.i2cTimeoutMs, remainingMs);
-  return callbackResult(binding.i2cWrite(binding.i2cAddress, tx, txLen, grant, binding.i2cUser));
+  const auto status = binding.i2cWrite(binding.i2cAddress, tx, txLen, grant, binding.i2cUser);
+  return callbackResult(transport, status);
 }
 
-TransferResult readWord(const Config& binding, std::uint8_t pointer, std::uint16_t& out,
+TransferResult readWord(RegisterTransport transport, std::uint8_t pointer, std::uint16_t& out,
                         std::uint32_t remainingMs) {
   std::uint8_t bytes[2]{};
-  const auto result = readFrame(binding, &pointer, 1, bytes, sizeof(bytes), remainingMs);
+  const auto result = readFrame(transport, &pointer, 1, bytes, sizeof(bytes), remainingMs);
   if (result.status.ok()) out = decodeWord(bytes);
   return result;
 }
 
-TransferResult writeWord(const Config& binding, std::uint8_t pointer, std::uint16_t value,
+TransferResult writeWord(RegisterTransport transport, std::uint8_t pointer, std::uint16_t value,
                          WriteAccess access, std::uint32_t remainingMs) {
   const std::uint8_t bytes[] = {pointer, static_cast<std::uint8_t>(value >> 8),
                                 static_cast<std::uint8_t>(value & 0xFF)};
-  return writeFrame(binding, bytes, sizeof(bytes), access, remainingMs);
+  return writeFrame(transport, bytes, sizeof(bytes), access, remainingMs);
 }
 
 }  // namespace TMP11x::detail

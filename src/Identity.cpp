@@ -4,12 +4,12 @@
 
 namespace TMP11x::detail {
 
-IdentityResult readIdentity(const Config& binding, IdentityInfo& out, std::uint32_t remainingMs) {
+IdentityResult readIdentity(RegisterTransport transport, IdentityInfo& out, std::uint32_t remainingMs) {
   IdentityInfo observed{};
-  observed.model = binding.model;
-  observed.i2cAddress = binding.i2cAddress;
+  observed.model = transport.binding.model;
+  observed.i2cAddress = transport.binding.i2cAddress;
   std::uint16_t raw = 0;
-  const auto transfer = readWord(binding, command::deviceId, raw, remainingMs);
+  const auto transfer = readWord(transport, command::deviceId, raw, remainingMs);
   if (!transfer.status.ok()) return {transfer.status, transfer};
 
   observed.raw = raw;

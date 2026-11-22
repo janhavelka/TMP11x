@@ -145,6 +145,13 @@ health-neutral on both success and failure. OFFLINE leaves admission open.
 Invalidating device trust preserves transport history. This differs from the
 initialization-gated transitions in [TMP1x2](library-comparison.md).
 
+`totalSuccess` and `totalFailures` saturate at the 32-bit unsigned maximum.
+`consecutiveFailures` saturates at 255. `lastError` retains the normalized
+fault code, signed detail and static message across subsequent successes.
+`lastSuccessMs` and `lastErrorMs` record the optional wrapping millisecond
+clock at the respective callback returns. Each has its own validity flag
+(`lastSuccessMsValid` or `lastErrorMsValid`) so a tick of zero is usable.
+
 All output references stay unchanged on failure, including a rejected start
 token, failed sample, scalar read and unmatched result token. There are two
 evidence-bearing exceptions. An explicit ID read (`readIdentity` or
