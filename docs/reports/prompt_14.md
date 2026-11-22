@@ -1,5 +1,8 @@
 # Prompt 14 — Bus-silent binding and lifecycle
 
+**COMPLETE.** All six BOM selections passed native acceptance for bus-silent
+binding and explicit identity reads before initialization.
+
 ## Phase a, 2026-11-22
 
 **PARTIAL.** Prompt 14 is the next eligible stage. Its five prerequisites
@@ -190,3 +193,36 @@ diagnostic health-counter evidence. Stage 18 owns transitions from an
 initialized profile and timed startup proof. Stage 28 owns occupied-slot
 guards. Remote CI, MCU links and hardware qualification remain at their
 assigned stages.
+
+## Phase d acceptance, 2026-11-22
+
+Acceptance ran on clean `main` at `338bfe61570963f1f778a81997cc1de0194ce2b5`.
+Its parent, subject and three changed paths matched the phase-c request.
+The wrapper verified equality with `origin/main` at 17:01:46 Prague time.
+
+The [public header](../../include/TMP11x/TMP11x.h) and
+[implementation](../../src/TMP11x.cpp) deliver `binding-api` and
+`public-identity-api`. The five [lifecycle cases](../../test/test_binding.cpp)
+passed in Release. Rejected rebinds preserved the original settings, ID,
+route and callback timeout. Accepted rebinds discarded prior observations.
+Repeated teardown generated zero bus callbacks and left a second instance
+at the same address usable. Each bound diagnostic made one combined ID read.
+A complete mismatch published the observed word. Failed transfers preserved
+both the caller's output and the last complete observation.
+
+Final checks ran on Windows with GNU C++ 15.1.0, GNU Make 4.4.1,
+CMake/CTest 4.0.1, Python 3.12.10 and Doxygen 1.13.2.
+
+| Check | Command | Result |
+| --- | --- | --- |
+| Fresh Release build | `cmake -S . -B build-tests-prompt14-d -G "MinGW Makefiles" -DTMP11X_BUILD_TESTS=ON -DCMAKE_BUILD_TYPE=Release` and `cmake --build build-tests-prompt14-d --config Release --parallel` | PASS |
+| Public lifecycle and complete host suite | `ctest --test-dir build-tests-prompt14-d -C Release -R "^binding_cpp$" --output-on-failure`, then repeat without the filter | PASS, 1/1 focused and 10/10 overall |
+| Tests-off source consumer | `cmake -S examples/native_consumer -B build-consumer-prompt14-d -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release -DCMAKE_DISABLE_FIND_PACKAGE_Python3=TRUE -DCMAKE_DISABLE_FIND_PACKAGE_Git=TRUE`, `cmake --build build-consumer-prompt14-d --config Release --parallel`, `ctest --test-dir build-consumer-prompt14-d -N` and `./build-consumer-prompt14-d/tmp11x_native_consumer.exe` | PASS, zero registered tests, linked library printed `0.1.0` |
+| Public API documentation | `doxygen -` over `include/TMP11x` with recursive XML output and `WARN_AS_ERROR=YES` | PASS, all five lifecycle/identity methods and five inspectors have documented XML entries |
+| README observation example | Compile the README C++ block with `g++ -std=c++17 -Wall -Wextra -Wpedantic -Werror -fsyntax-only -Iinclude -x c++ -` | PASS |
+| Sources and completion records | `python scripts/check_references.py`, `python scripts/check_promptset.py` and `git diff --check` | PASS, 14 pinned PDFs, 55 manifest stages and clean whitespace |
+
+Stage 15 can consume the binding API for passive transport health. Stage 18
+owns complete profile validation and verified initialization with timed startup
+proof. Stage 28 owns occupied-job and retained-result guards. MCU links,
+physical qualification and the stage 43 remote CI checkpoint remain open.
