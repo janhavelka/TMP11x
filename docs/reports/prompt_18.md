@@ -223,3 +223,44 @@ all 15 tests with GCC 15.1.0 and CMake/CTest 4.0.1. Python 3.12.10 passed
 The next phase-c slice reviews late and failed CONFIG observations across
 generations, retained alert provenance, the latest sample cache and unknown
 offset. Phase d owns final acceptance.
+
+### Final CONFIG read after a verified profile change begins
+
+The review started on clean `main` at
+`5fcd9a249d107dd9d2eb8b0b914e88cf5af2375c`. The commit's parent, subject
+and two paths matched the comparator review request. The wrapper recorded
+upstream equality at 23:29:46 Prague time on 2026-11-23. Two read-only
+reviewers traced alert retention and sample publication independently.
+The implementation matched both contracts. The existing final-read fault
+test started before the first successful initialization, so it could not
+detect replacement of an earlier sample or loss of a verified ALERT event.
+[Publication contract](../api-contracts.md#acquisition-and-read-effects),
+[comparator behavior](../device-behavior.md).
+
+`finalThermReadAfterVerifiedAlert` exercises an initialized TMP117 with a
+cached latest sample. Preflight captures LOW in the verified ALERT profile.
+After the staged change to THERM, final CONFIG returns HIGH and DATA_READY
+at the deadline, or returns one byte with possible destructive read effects.
+The complete late word records a HIGH level. The short read leaves the
+level unknown and records possible loss. In both cases the original LOW
+keeps its generation and timestamp. The device stays initialized with dirty
+trust, no baseline and its original cached sample. [Native test](../../test/test_apply.cpp).
+
+A subsequent public latest read records the old generation with dirty trust.
+Explicit recovery obtains a fresh guard, observes THERM HIGH clear and
+establishes a baseline at final CONFIG completion. The historical LOW and
+any possible loss survive recovery. The dirty sample stays in the cache until
+the next TEMP read, which reports the same raw value in the next verified
+generation. Both latest reads report unconfirmed freshness and unknown offset.
+[Apply engine](../../src/Apply.cpp), [CONFIG observations](../../src/TMP11x.cpp),
+[latest reads](../../src/LatestRead.cpp).
+
+The source check covered TMP116 SBOS740A pp.15–16, TMP117 SNOSD82D pp.16–17
+and TMP119 SNIS236 pp.18–19. The fixture supplies the THERM level at final
+readback because the flags' behavior across the mode transition is unspecified.
+`cmake --build build/host --config Release --parallel 4` and
+`cmake -E chdir build/host ctest -C Release --output-on-failure` passed
+all 15 tests with GCC 15.1.0 and CMake/CTest 4.0.1.
+Python 3.12.10 passed `python -B scripts/check_references.py` (14 PDF hashes)
+and `python -B scripts/check_promptset.py` (55 stages). `git diff --check` passed.
+Phase c review is finished. Phase d owns final acceptance and stage closure.

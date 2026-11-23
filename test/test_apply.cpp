@@ -559,6 +559,72 @@ void finalVerificationAndAlertEvidence() {
   }
 }
 
+void finalThermReadAfterVerifiedAlert() {
+  for (const auto failure : {Err::OPERATION_TIMEOUT, Err::I2C_SHORT_TRANSFER}) {
+    Fixture f;
+    CHECK(f.device.begin(f.config).ok());
+    Sample original;
+    CHECK(f.device.readLatest(original).ok() && original.configTrust == ConfigTrust::VERIFIED);
+    f.chip.words[0x00] = 0x0100;  // A new word is available only to an explicit TEMP read.
+    f.chip.words[0x01] |= 0x4000;  // LOW in the verified ALERT profile.
+    f.bus.trace.clear();
+
+    auto candidate = f.config.settings;
+    candidate.alertMode = AlertMode::THERM;
+    Apply change{f.device, candidate};
+    const auto deadline = f.now + f.config.operationTimeoutMs;
+    CHECK(change.start().inProgress());
+    for (unsigned i = 0; i < 3; ++i) CHECK(nextTransfer(change, f).inProgress());
+    const auto lowTime = f.device.healthSnapshot().lastSuccessMs;
+    const auto& alerts = change.alerts();
+    CHECK(alerts.pendingLow && alerts.observedAtMs == lowTime);
+    f.beforeTransfer = [&](bool read, std::uint8_t pointer) {
+      if (!read || pointer != 0x01 || f.chip.words[0x01] != 0x0230) return;
+      f.chip.words[0x01] |= 0xA000;  // THERM HIGH and DATA_READY at final readback.
+      if (failure == Err::OPERATION_TIMEOUT) f.now = deadline;
+      else f.bus.script.push_back({Status::Error(failure, "short THERM readback"), 1, true});
+    };
+    auto status = oneStep(change, f);
+    while (status.inProgress()) status = oneStep(change, f);
+    CHECK(status.is(failure));
+    CHECK(transcript(f) ==
+          "R0F R04 R01 R03 R02 W01=0620 R01 W03=0000 R03 W02=0500 R02 W01=0630 R01 W01=0230 R01");
+    CHECK(f.chip.words[0x01] == 0x8230 && f.device.desiredSettings().alertMode == AlertMode::THERM);
+    CHECK(f.device.isInitialized() && f.device.configTrust() == ConfigTrust::DIRTY && !change.baselineMs());
+    CHECK(alerts.pendingLow && !alerts.pendingHigh && !alerts.mixedOrUnknown);
+    CHECK(alerts.observedAtMs == lowTime && alerts.profileGeneration == original.profileGeneration);
+    const bool shortRead = failure == Err::I2C_SHORT_TRANSFER;
+    CHECK(alerts.possibleLoss == shortRead);
+    if (shortRead) CHECK(!alerts.thermHigh.has_value());
+    else CHECK(alerts.thermHigh == true && f.device.healthSnapshot().lastSuccessMs == deadline);
+
+    const auto& cache = LatestRead{f.device}.cache;
+    CHECK(cache && cache->raw == original.raw && cache->observedAtMs == original.observedAtMs);
+    CHECK(cache->profileGeneration == original.profileGeneration && cache->configTrust == ConfigTrust::VERIFIED);
+    Sample dirty;
+    CHECK(f.device.readLatest(dirty).ok() && dirty.raw == 0x0100 && dirty.configTrust == ConfigTrust::DIRTY);
+    CHECK(dirty.profileGeneration == original.profileGeneration && dirty.acquisitionKind == ReadKind::LATEST);
+    CHECK(!dirty.freshConversion && dirty.offset.state == OffsetState::UNKNOWN && !dirty.offset.countsValid);
+
+    f.beforeTransfer = {};
+    f.chip.words[0x01] = 0x0230;  // The next observation sees THERM HIGH clear.
+    f.bus.trace.clear();
+    CHECK(f.device.recover().ok());
+    CHECK(transcript(f) ==
+          "R0F R04 R01 R03 R02 W01=0630 R01 W03=0000 R03 W02=0500 R02 R01 W01=0230 R01");
+    CHECK(change.baselineMs() == f.device.healthSnapshot().lastSuccessMs && alerts.thermHigh == false);
+    CHECK(alerts.pendingLow && !alerts.pendingHigh && !alerts.mixedOrUnknown && alerts.possibleLoss == shortRead);
+    CHECK(alerts.observedAtMs == lowTime && alerts.profileGeneration == original.profileGeneration);
+    CHECK(cache && cache->raw == dirty.raw && cache->observedAtMs == dirty.observedAtMs);
+    CHECK(cache->profileGeneration == dirty.profileGeneration && cache->configTrust == ConfigTrust::DIRTY);
+    Sample recovered;
+    CHECK(f.device.readLatest(recovered).ok() && recovered.raw == dirty.raw);
+    CHECK(recovered.configTrust == ConfigTrust::VERIFIED && recovered.profileGeneration == original.profileGeneration + 1);
+    CHECK(!recovered.freshConversion && recovered.acquisitionKind == ReadKind::LATEST);
+    CHECK(recovered.offset.state == OffsetState::UNKNOWN && !recovered.offset.countsValid);
+  }
+}
+
 void replayAndStagedChangeOnDrift() {
   for (const bool configDrift : {false, true}) {
     Fixture f;
@@ -652,6 +718,7 @@ int main() {
   pinOnlyChangeUsesSameGuardedReplay();
   stagedIntentAndIndependentReadback();
   finalVerificationAndAlertEvidence();
+  finalThermReadAfterVerifiedAlert();
   replayAndStagedChangeOnDrift();
   workLimitsWrapAndLoadSuppression();
   return EXIT_SUCCESS;
