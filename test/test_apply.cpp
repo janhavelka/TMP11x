@@ -395,6 +395,73 @@ void ignoredLimitCannotInvertThermPair() {
   }
 }
 
+void ignoredLimitPreventsThermEntry() {
+  for (const auto ignoredPointer : {0x03, 0x02}) {
+    Fixture f;
+    f.chip.words[1] = 0x0220;
+    f.chip.words[3] = 0x0A00;  // ALERT permits the initial [20, 10] pair.
+    f.config.settings.alertMode = AlertMode::THERM;
+    f.config.settings.limits = {0, 0x0400};  // Both words must change.
+    f.beforeTransfer = [&](bool read, std::uint8_t pointer) {
+      if (!read && pointer == ignoredPointer) {
+        TransferOutcome ignored;
+        ignored.ignoreSuccessfulWrite = true;
+        f.bus.script.push_back(ignored);
+      }
+    };
+    CHECK(f.device.begin(f.config).is(Err::CONFIG_MISMATCH));
+    const std::string first = "R0F R04 R01 R03 R02 W01=0620 R01 W03=0000 R03";
+    CHECK(transcript(f) == (ignoredPointer == 0x03 ? first : first + " W02=0400 R02"));
+    CHECK(f.chip.words[1] == 0x0620 && f.chip.words[2] == 0x0500);
+    CHECK(f.chip.words[3] == (ignoredPointer == 0x03 ? 0x0A00 : 0));
+    CHECK(!f.device.isInitialized() && f.device.configTrust() == ConfigTrust::DIRTY);
+  }
+}
+
+void stagedThermLimitsAndPartialRecovery() {
+  Fixture f;
+  f.config.settings.alertMode = AlertMode::THERM;
+  CHECK(f.device.begin(f.config).ok());
+  auto candidate = f.config.settings;
+  candidate.limits = {0x0780, 0x0A00};
+  f.tickIncrement = 0;
+  f.bus.trace.clear();
+  Apply expiring{f.device, candidate};
+  CHECK(expiring.start().inProgress());
+  for (unsigned i = 0; i < 5; ++i) CHECK(nextTransfer(expiring, f).inProgress());
+  f.now += f.config.operationTimeoutMs;
+  CHECK(oneStep(expiring, f).is(Err::OPERATION_TIMEOUT));
+  CHECK(transcript(f) == "R0F R04 R01 R03 R02");
+  CHECK(f.device.desiredSettings().limits.lowCounts == 0 &&
+        f.device.desiredSettings().limits.highCounts == 0x0500);
+  CHECK(f.device.configTrust() == ConfigTrust::VERIFIED);
+
+  f.bus.trace.clear();
+  Apply change{f.device, candidate};
+  f.beforeTransfer = [&](bool read, std::uint8_t pointer) {
+    if (!read && pointer == 0x03) {
+      TransferOutcome partial;
+      partial.status = Status::Error(Err::I2C_NACK_DATA, "partial TLOW write");
+      partial.failedWriteWord = 0x0700;
+      f.bus.script.push_back(partial);
+    }
+  };
+  auto status = change.start();
+  while (status.inProgress()) status = oneStep(change, f);
+  CHECK(status.is(Err::I2C_NACK_DATA));
+  CHECK(transcript(f) == "R0F R04 R01 R03 R02 W01=0630 R01 W02=0A00 R02 W03=0780");
+  CHECK(f.chip.words[1] == 0x0630 && f.chip.words[2] == 0x0A00 && f.chip.words[3] == 0x0700);
+  CHECK(f.device.desiredSettings().limits.lowCounts == 0x0780 &&
+        f.device.desiredSettings().limits.highCounts == 0x0A00);
+  CHECK(f.device.configTrust() == ConfigTrust::DIRTY && !change.baselineMs());
+  f.beforeTransfer = {};
+  f.bus.trace.clear();
+  CHECK(f.device.recover().ok());
+  CHECK(transcript(f) ==
+        "R0F R04 R01 R03 R02 W01=0630 R01 W03=0780 R03 W02=0A00 R02 R01 W01=0230 R01");
+  CHECK(f.chip.words[3] == 0x0780 && f.device.configTrust() == ConfigTrust::VERIFIED);
+}
+
 void pinOnlyChangeUsesSameGuardedReplay() {
   Fixture f;
   CHECK(f.device.begin(f.config).ok());
@@ -580,6 +647,8 @@ int main() {
   busyRecheckAndFinalBusy();
   comparatorTransitions();
   ignoredLimitCannotInvertThermPair();
+  ignoredLimitPreventsThermEntry();
+  stagedThermLimitsAndPartialRecovery();
   pinOnlyChangeUsesSameGuardedReplay();
   stagedIntentAndIndependentReadback();
   finalVerificationAndAlertEvidence();

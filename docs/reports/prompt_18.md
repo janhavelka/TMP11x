@@ -185,3 +185,41 @@ passed all 15 tests (GCC 15.1.0, CMake/CTest 4.0.1).
 Phase c continues with comparator and limit ordering, staged first-write
 intent versus explicit recovery, and late CONFIG effects on alerts, profile
 generation and latest-read provenance.
+
+### Comparator ordering and partial-write recovery
+
+**PARTIAL, 2026-11-23.** The clean review baseline was
+`e5c0d65002c08029bf054baafe91e90df8ee595b`. Its parent, subject and three
+paths matched the preceding commit request. The wrapper recorded upstream
+equality at 23:14:57 Prague time. Two read-only reviewers traced comparator
+transitions and staged intent independently. The lead checked their findings
+against the signed limit comparisons, shutdown readback and first-write
+commit in the apply engine. The three missing fault cases passed against
+the existing implementation. [Apply engine](../../src/Apply.cpp),
+[non-atomic THERM vector](../registers/behavior-vectors.json).
+
+- `ignoredLimitPreventsThermEntry` starts with an inverted ALERT pair of
+  [20, 10] °C and requests THERM [0, 8] °C. A fixture ACK that leaves
+  either limit unchanged produces `CONFIG_MISMATCH` on its readback.
+  The transcript ends there with the device in shutdown and ALERT mode.
+  Both target words differ from their original values.
+- `stagedThermLimitsAndPartialRecovery` expires a staged change just before
+  the shutdown write. The five preflight reads preserve the verified
+  [0, 10] °C target. A second attempt to raise it to [15, 20] °C verifies
+  THIGH first, then receives a data NACK on TLOW. The fixture retains a
+  partial TLOW word of `0x0700`. The driver stops in shutdown with the
+  requested pair retained, dirty trust and no baseline. Explicit public
+  recovery acquires a new guard and verifies both words and final CONFIG.
+  [Native cases](../../test/test_apply.cpp), [apply contract](../api-contracts.md#startup-apply-and-reset).
+
+The source cross-check covered ALERT and THERM behavior in TMP116 pp.15–16,
+TMP117 pp.16–17 and TMP119 pp.18–19 from the phase-a source table.
+`cmake --build build/host --config Release --parallel 4` and
+`cmake -E chdir build/host ctest -C Release --output-on-failure` passed
+all 15 tests with GCC 15.1.0 and CMake/CTest 4.0.1. Python 3.12.10 passed
+`python -B scripts/check_references.py` (14 PDFs) and
+`python -B scripts/check_promptset.py` (55 stages). `git diff --check` passed.
+
+The next phase-c slice reviews late and failed CONFIG observations across
+generations, retained alert provenance, the latest sample cache and unknown
+offset. Phase d owns final acceptance.
