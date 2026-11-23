@@ -78,7 +78,7 @@ void allSteadySettings(Model model) {
   }
 }
 
-void statusAndReadEffects() {
+void statusAndReadEffects(Model model) {
   constexpr struct {
     std::uint16_t flags;
     bool high, low, ready, busy;
@@ -87,9 +87,13 @@ void statusAndReadEffects() {
       {0x4000, false, true, false, false},  {0x2000, false, false, true, false},
       {0x1000, false, false, false, true},  {0xB000, true, false, true, true},
   };
-  constexpr std::uint16_t configWords[] = {0x0620, 0x0630};
-  for (const auto& row : rows) {
-    for (const auto settings : configWords) {
+  for (const auto alertMode : {AlertMode::ALERT, AlertMode::THERM}) {
+    SensorSettings desired{};
+    desired.mode = Mode::SHUTDOWN;
+    desired.alertMode = alertMode;
+    const bool alert = alertMode == AlertMode::ALERT;
+    const std::uint16_t settings = alert ? 0x0620 : 0x0630;
+    for (const auto& row : rows) {
       // Include a synthetic therm LOW bit to verify raw flag retention separately
       // from its meaning. A real therm reading reports LOW zero.
       const auto word = static_cast<std::uint16_t>(settings | row.flags);
@@ -98,7 +102,8 @@ void statusAndReadEffects() {
       CHECK(!observed.timestampValid);
       CHECK(observed.high == row.high && observed.low == row.low);
       CHECK(observed.dataReady == row.ready && observed.eepromBusy == row.busy);
-      CHECK(observed.readClearMask == (settings == 0x0620 ? 0xE000 : 0x2000));
+      CHECK(observed.readClearMask == (alert ? 0xE000 : 0x2000));
+      CHECK(compareExpectedRegister(model, desired, 0x01, word).ok());
     }
   }
 }
@@ -209,10 +214,10 @@ void signedLimitComparisons(Model model) {
 }  // namespace
 
 int main() {
-  statusAndReadEffects();
   for (const auto model : {Model::TMP116, Model::TMP116N, Model::TMP117,
                            Model::TMP117M, Model::TMP117N, Model::TMP119}) {
     allSteadySettings(model);
+    statusAndReadEffects(model);
     nonfactoryResetProfile(model);
     normalizedModeComparison(model);
     signedLimitComparisons(model);

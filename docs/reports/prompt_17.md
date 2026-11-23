@@ -1,6 +1,6 @@
 # Prompt 17 — Type-safe CONFIG codecs and validation
 
-**PARTIAL — phase b implemented, 2026-11-23.** The pure C++17 `config-codec` and focused tests are in place. All seven prerequisites (5, 6, 7, 8, 11, 12 and 16) are complete. Phase c reviews the implementation. Audit 47 and stage 18 consume the codec before guarded physical apply. [Prompt 17](../prompts/17_config-codecs.md), [sequence](../prompts/SEQUENCE.json), [handoffs](../prompts/HANDOFFS.md).
+**PARTIAL — phase c reviewed, 2026-11-23.** The pure C++17 `config-codec` passed review with two corrections to its regression tests and documentation. Phase d owns final acceptance. All seven prerequisites (5, 6, 7, 8, 11, 12 and 16) are complete. Audit 47 and stage 18 consume the codec before guarded physical apply. [Prompt 17](../prompts/17_config-codecs.md), [sequence](../prompts/SEQUENCE.json), [handoffs](../prompts/HANDOFFS.md).
 
 The entry worktree was clean. Both `main` and its local tracking ref `origin/main` pointed to `6d9259519b9add1473647f4d4bad2380f0dab3f4`. Its parent was `763339c1b156d3da0cde76717ae1f7ca5fe976a3`. The subject and three documentation paths matched the stage 16 closure request. The wrapper recorded upstream equality at 21:16:49 Prague time on November 22.
 
@@ -93,3 +93,40 @@ The cases run in Release with independent assertions. [Test source](../../test/t
 
 MCU links, remote CI and physical testing were not run. Phase c owns the fresh
 review and any confirmed corrections. Phase d owns final acceptance.
+
+## Phase c review
+
+The clean entry revision was `ae5894a20b6493078749281bca243880e3bfaa1e`.
+Its 11 changed paths matched the phase-b request. The wrapper recorded
+upstream equality at 09:19:16 Prague time on November 23. Two parallel
+read-only reviews covered the TI tables and the public API and tests.
+The lead checked both findings against the source and reproduced the test gap.
+
+- **Status flags during profile comparison.** The existing tests decoded LOW
+  but every matching CONFIG comparison had LOW clear. A temporary copy of
+  the comparator that included LOW in its stable mask passed the old CONFIG test.
+  `statusAndReadEffects` now compares the desired profile against each of
+  HIGH, LOW, DATA_READY and BUSY asserted individually, in ALERT and THERM,
+  for all six BOM selections. The added assertion rejected the faulty copy
+  on the ALERT word `0x4620`. The production comparator already accepted
+  that word for a matching shutdown profile. [Focused test](../../test/test_configuration.cpp).
+- **EEPROM reload scope.** The API guide now specifies power-on and
+  general-call reset. The general-call descriptions restore power-up values
+  (TMP116 p.21, TMP117 p.22, TMP119 p.24). The addressed Soft_Reset entries
+  leave EEPROM reload unspecified (TMP117 p.28, TMP119 p.35). The nonfactory
+  fixture exercises power-on reset. [API guide](../api-contracts.md#config-word-conversion),
+  [reset policy](../eeprom-and-reset-policy.md#addressed-reset-and-recovery).
+
+The original CONFIG tables confirmed polarity, read-clear masks and the
+ordinary write mask. The MOD comparison checks trigger ownership before
+dropping MOD1. Both limit comparisons cover all 16 bits through the signed
+codec. The 3,072 steady profiles, invalid selectors and transport refusal
+vectors exercise the field boundaries. The reviewed sibling files still
+matched the pins recorded above. Physical apply, trust retention and trigger
+sequencing remain with stages 18, 19 and 21 respectively.
+
+| Windows check | Phase c result |
+| --- | --- |
+| `cmake --build build/host --config Release --parallel 4` and `ctest --test-dir build/host -C Release -R "^configuration_cpp$" --output-on-failure`, then CTest without the filter | PASS, 1/1 focused and 14/14 overall, including the register ledger and its regressions. GNU C++ 15.1.0, CMake/CTest 4.0.1. |
+| `g++ -std=c++17 -O2 -DNDEBUG -Iinclude test/test_configuration.cpp build/p17-review/include-low.cpp src/Config.cpp -o build/p17-review/include-low.exe`, then run the executable before and after the test edit | The faulty comparison passed the old test (exit 0) and failed the new assertion (exit 1). The temporary source added `command::lowFlag` to the comparison mask. |
+| `python -B scripts/check_references.py`, `python -B scripts/check_promptset.py`, `git diff --check` | PASS, 14 pinned PDFs, 55 stages and clean diff whitespace. Python 3.12.10. |

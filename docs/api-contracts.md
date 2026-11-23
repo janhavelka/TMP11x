@@ -140,10 +140,11 @@ shutdown or invalidation ends that exception. A match compares one register
 at the instant of observation. Profile trust and fresh-conversion evidence
 require their own operations.
 
-At reset, MOD0 and bits 9:2 can load previously programmed values from
-EEPROM. MOD1 has no stored value. Read live CONFIG to observe the device's
-settings. The commonly cited `0x0220` describes the factory field values.
-The per-field reset sources are in the [register ledger](registers/tmp11x.json).
+Power-on and general-call reset load MOD0 and bits 9:2 from EEPROM. MOD1
+has no stored value. EEPROM reload after an addressed Soft_Reset remains
+undocumented on the models that support it. Read live CONFIG to observe
+the device's settings. The word `0x0220` describes the factory field values.
+[Register ledger](registers/tmp11x.json), [reset policy](eeprom-and-reset-policy.md#addressed-reset-and-recovery).
 
 ## Status and retained evidence
 
