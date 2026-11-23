@@ -1,6 +1,6 @@
 # Prompt 17 — Type-safe CONFIG codecs and validation
 
-**PARTIAL — phase c reviewed, 2026-11-23.** The pure C++17 `config-codec` passed review with two corrections to its regression tests and documentation. Phase d owns final acceptance. All seven prerequisites (5, 6, 7, 8, 11, 12 and 16) are complete. Audit 47 and stage 18 consume the codec before guarded physical apply. [Prompt 17](../prompts/17_config-codecs.md), [sequence](../prompts/SEQUENCE.json), [handoffs](../prompts/HANDOFFS.md).
+**COMPLETE, 2026-11-23.** The pure C++17 `config-codec` passed native acceptance for all six BOM selections. All 3,072 steady profiles encoded to their expected register words. Readback comparisons accepted the continuous alias and required a confirmed owned trigger to accept one-shot for desired shutdown. [Phase d acceptance](#phase-d-acceptance), [prompt 17](../prompts/17_config-codecs.md).
 
 The entry worktree was clean. Both `main` and its local tracking ref `origin/main` pointed to `6d9259519b9add1473647f4d4bad2380f0dab3f4`. Its parent was `763339c1b156d3da0cde76717ae1f7ca5fe976a3`. The subject and three documentation paths matched the stage 16 closure request. The wrapper recorded upstream equality at 21:16:49 Prague time on November 22.
 
@@ -130,3 +130,33 @@ sequencing remain with stages 18, 19 and 21 respectively.
 | `cmake --build build/host --config Release --parallel 4` and `ctest --test-dir build/host -C Release -R "^configuration_cpp$" --output-on-failure`, then CTest without the filter | PASS, 1/1 focused and 14/14 overall, including the register ledger and its regressions. GNU C++ 15.1.0, CMake/CTest 4.0.1. |
 | `g++ -std=c++17 -O2 -DNDEBUG -Iinclude test/test_configuration.cpp build/p17-review/include-low.cpp src/Config.cpp -o build/p17-review/include-low.exe`, then run the executable before and after the test edit | The faulty comparison passed the old test (exit 0) and failed the new assertion (exit 1). The temporary source added `command::lowFlag` to the comparison mask. |
 | `python -B scripts/check_references.py`, `python -B scripts/check_promptset.py`, `git diff --check` | PASS, 14 pinned PDFs, 55 stages and clean diff whitespace. Python 3.12.10. |
+
+## Phase d acceptance
+
+Acceptance ran on clean `main` at `8c39261a388835853176bb52c583c8fa8a363e50`.
+The phase-c commit and its three paths matched the wrapper request. The
+wrapper recorded synchronization with `origin/main` at 09:32:18 Prague time
+on November 23. This revision includes both phase-c corrections.
+
+The three TI CONFIG tables cited above agree on POL=0 active low and
+POL=1 active high. Each steady encoding left `0xF803` clear. The transport
+test refused each forbidden bit without a bus callback and accepted
+`0x07FC`. The comparator ignored each status flag independently in ALERT
+and THERM mode and detected drift in bits 9:2 even with an owned trigger.
+[Codec cases](../../test/test_configuration.cpp), [transport cases](../../test/test_register_transport.cpp).
+
+| Windows acceptance command | Result |
+| --- | --- |
+| `cmake -S . -B build/host -G "MinGW Makefiles" -DTMP11X_BUILD_TESTS=ON -DCMAKE_BUILD_TYPE=Release`, then `cmake --build build/host --config Release --parallel 4` | PASS with CMake 4.0.1 and GNU C++ 15.1.0. |
+| `ctest --test-dir build/host -C Release -R "^configuration_cpp$" --output-on-failure`, then repeat without the filter | PASS, 1/1 focused and 14/14 overall with CTest 4.0.1, including the register ledger and its regressions. |
+| `cmake -S examples/native_consumer -B build/consumer -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release -DCMAKE_DISABLE_FIND_PACKAGE_Python3=TRUE -DCMAKE_DISABLE_FIND_PACKAGE_Git=TRUE`, then `cmake --build build/consumer --config Release --clean-first --parallel 4` | PASS, tests-off source consumer rebuilt and linked. |
+| `build/consumer/tmp11x_native_consumer.exe` and `ctest --test-dir build/consumer -C Release -N` | PASS, linked version `0.1.0` and zero registered tests. |
+| `g++ -std=c++17 -Wall -Wextra -Wpedantic -Werror -Iinclude -fsyntax-only -x c++ -` on each public header and README C++ example | PASS, seven headers in isolation and two examples. |
+| `doxygen -` over `include/TMP11x` with XML output and `WARN_AS_ERROR=YES` | PASS with Doxygen 1.13.2. The XML documents the validator, encoder, decoder, comparison and raw MOD accessor. |
+| `python -B scripts/check_references.py`, `python -B scripts/check_promptset.py`, `git diff --check` and `git diff --cached --check` | PASS, 14 pinned PDFs, 55 stages and clean whitespace. Python 3.12.10 and Git 2.52.0.windows.1. |
+
+Audit 47 consumes the public codec and its native tests. Stage 18 owns
+guarded physical apply, stage 19 owns retained observations and trust, and
+stage 21 supplies trigger provenance during acquisition. MOD readback during
+and after one-shot remains undocumented. MCU links, remote CI and physical
+qualification are NOT RUN for stage 17. [Handoffs](../prompts/HANDOFFS.md).

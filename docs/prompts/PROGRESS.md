@@ -1,12 +1,12 @@
 # TMP11x implementation progress
 
-**State:** Library foundation, portable sensor value types, checked register transport, bus-silent binding, public identity diagnostics, passive transport health, signed temperature conversion and the latest-read engine complete.
+**State:** Library foundation, portable sensor value types, checked register transport, bus-silent binding, public identity diagnostics, passive transport health, signed temperature conversion, latest reads and pure CONFIG codecs complete.
 **Target:** 55 stages in manifest order, including 11 new audit checkpoints. TMP117 is primary, with all six selected BOM-model capability gates covered by every relevant stage.
 **Repository:** `main`, tracking `origin/main` at `https://github.com/janhavelka/TMP11x.git`.
 **Preparation input HEAD:** `6c5e4496d5c896af689228d4bee4382a53c20626` (clean and synchronized at entry).
 **Hardware:** Physical TMP11x board and test wiring NOT CONFIRMED.
-**Last completed stage:** 16 (signed temperature and threshold codecs and latest reads).
-**Last update:** 2026-11-22. Next eligible stage is 17 (type-safe CONFIG codecs and validation).
+**Last completed stage:** 17 (type-safe CONFIG codecs and validation).
+**Last update:** 2026-11-23. Next eligible stage is audit 47 (library foundation and read path, prompts 10–17).
 
 Preparation evidence includes the [6b173cc second follow-up](../reports/audit-followup-6b173cc.md),
 the [cb73740 follow-up](../reports/audit-followup-cb73740.md#response--2026-11-17),
@@ -36,7 +36,7 @@ every planned deliverable a producer and checks consumer dependencies.
 | [14](14_binding-lifecycle.md) | Bus-silent binding, teardown and public identity diagnostics | COMPLETE — [report](../reports/prompt_14.md). All ten Release tests and the tests-off consumer passed. |
 | [15](15_passive-health.md) | Passive transport health | COMPLETE — [report](../reports/prompt_15.md). All six model selections recovered from OFFLINE on an ordinary tracked read. All 11 Release tests and the tests-off consumer passed. |
 | [16](16_temperature-codec.md) | Signed temperature and threshold codecs and latest reads | COMPLETE — [report](../reports/prompt_16.md). All 65,536 register words round-tripped. Latest-read tests covered all six models and preserved the previous sample on failure or expiry. All 13 Release tests and the tests-off consumer passed. |
-| [17](17_config-codecs.md) | Type-safe CONFIG codecs and validation | NOT_STARTED |
+| [17](17_config-codecs.md) | Type-safe CONFIG codecs and validation | COMPLETE — [report](../reports/prompt_17.md). All 3,072 steady profiles matched their expected encodings across six models. All 14 Release tests and the tests-off consumer passed. |
 | [47](47_audit-10-17.md) | Audit prompts 10–17 before initialization writes | NOT_STARTED |
 | 18–19 | Safe initialization and configuration trust | NOT_STARTED |
 | [48](48_audit-18-19.md) | Audit prompts 18–19 before adding settings and acquisition | NOT_STARTED |
