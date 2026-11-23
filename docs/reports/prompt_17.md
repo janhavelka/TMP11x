@@ -1,6 +1,6 @@
 # Prompt 17 — Type-safe CONFIG codecs and validation
 
-**PARTIAL — phase a, 2026-11-23.** All seven prerequisites (5, 6, 7, 8, 11, 12 and 16) are complete. Phase b can implement `config-codec` as pure C++17 word conversion, profile validation and expected-register comparison. The next consumer is audit 47, followed by stage 18 for bind validation and guarded physical apply. [Prompt 17](../prompts/17_config-codecs.md), [sequence](../prompts/SEQUENCE.json), [handoffs](../prompts/HANDOFFS.md).
+**PARTIAL — phase b implemented, 2026-11-23.** The pure C++17 `config-codec` and focused tests are in place. All seven prerequisites (5, 6, 7, 8, 11, 12 and 16) are complete. Phase c reviews the implementation. Audit 47 and stage 18 consume the codec before guarded physical apply. [Prompt 17](../prompts/17_config-codecs.md), [sequence](../prompts/SEQUENCE.json), [handoffs](../prompts/HANDOFFS.md).
 
 The entry worktree was clean. Both `main` and its local tracking ref `origin/main` pointed to `6d9259519b9add1473647f4d4bad2380f0dab3f4`. Its parent was `763339c1b156d3da0cde76717ae1f7ca5fe976a3`. The subject and three documentation paths matched the stage 16 closure request. The wrapper recorded upstream equality at 21:16:49 Prague time on November 22.
 
@@ -50,3 +50,46 @@ Both read-only worktrees were clean. The cited source files at TMP1x2 local head
 | `python scripts/check_promptset.py` | PASS, 55 stages and their artifact dependencies. |
 
 Phase b has all required inputs. TI leaves MOD readback during and after one-shot, the precise flag-clear edge, and the effect of a same-value CONFIG write on an active conversion unresolved. The comparison cases above exercise the software policy. Stage 17 implementation and acceptance remain open.
+
+## Phase b implementation
+
+Work started on clean `main` at `16f600c48028b0891a5f868ae694b7102dd5a087`.
+Git history and the wrapper log agree that this commit contained the phase-a
+report and matched `origin/main` at 09:03:04 Prague time on November 23.
+The three pinned CONFIG tables, field-level persistence and sibling source
+files were rechecked at the revisions above.
+
+`validateSettings` checks the exact model, every steady selector and the THERM
+limit order. `encodeConfiguration` writes its output only after validation.
+`decodeConfiguration` preserves the whole word, raw MOD, all four status flags
+and the read-clear mask selected by the observed T/nA bit. The pure decoder
+leaves the completion timestamp invalid. [Public interface](../../include/TMP11x/Configuration.h),
+[implementation](../../src/Configuration.cpp).
+
+`compareExpectedRegister` checks MOD=11 ownership before applying the stable
+mask. For desired shutdown, a confirmed trigger permits MOD=01 or 11 while
+bits 9:2 still have to match. For continuous, MOD=00 or 10 can match.
+THIGH and TLOW use the stage 16 signed count decoder across all 16 bits.
+Stage 18 supplies physical apply, stage 19 retains observations and trust,
+and stage 21 owns trigger provenance and fresh-conversion sequencing.
+[API guide](../api-contracts.md#config-word-conversion).
+
+| Native case | Evidence |
+| --- | --- |
+| `allSteadySettings` | All 512 stable field combinations on each of six exact models encoded to independent literals, decoded and compared. Every ordinary word left `0xF803` clear. |
+| `statusAndReadEffects`, `nonfactoryResetProfile` | Alert and therm reads retained the raw flags with read-clear masks `0xE000` and `0x2000`. Nonfactory `0x05DC` differed from the default target. Synthetic reserved and command bits survived in the raw observation and stayed clear in the encoded target. |
+| `normalizedModeComparison` | All four MOD encodings, both steady targets and both ownership states. A single changed bit at each position 9:2 still reported drift, including during a confirmed one-shot. |
+| `rejectSelector`, `signedLimitComparisons` | Every out-of-domain byte value for the six selectors preserved the encoder output. Both limit pointers detected individual changes to all 16 bits. Signed endpoints, equal limits and reversed ALERT/THERM limits exercised profile validation. |
+
+The cases run in Release with independent assertions. [Test source](../../test/test_configuration.cpp),
+[CTest registration](../../CMakeLists.txt), [testing guide](../testing.md).
+
+| Windows command | Phase b result |
+| --- | --- |
+| `cmake --build build/host --config Release --parallel 4` | PASS, strict C++17, GNU C++ 15.1.0 and CMake 4.0.1. |
+| `ctest --test-dir build/host -C Release -R "^configuration_cpp$" --output-on-failure`, then the same command without the filter | PASS, 1/1 focused and 14/14 overall, including register-ledger validation and regressions. CTest 4.0.1. |
+| `cmake --build build/consumer --config Release --parallel 4` and `build/consumer/tmp11x_native_consumer.exe` | PASS, tests-off native source consumer printed `0.1.0`. |
+| `python -B scripts/check_references.py`, `python -B scripts/check_promptset.py`, `git diff --check` | PASS, 14 pinned PDFs, 55 stages and clean diff whitespace. Python 3.12.10. |
+
+MCU links, remote CI and physical testing were not run. Phase c owns the fresh
+review and any confirmed corrections. Phase d owns final acceptance.

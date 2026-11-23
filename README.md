@@ -20,6 +20,11 @@ device. For example, `temperature::decodeCounts(0xFFFF)` in namespace
 `TMP11x` returns −1 count, or −0.0078125 °C. A stored TEMP value alone
 cannot establish when the sensor completed a conversion.
 
+Use `<TMP11x/Configuration.h>` to validate a desired profile, encode a CONFIG
+word, or interpret one already read. For example, `decodeConfiguration(0xB620)`
+in namespace `TMP11x` reports shutdown with HIGH, DATA_READY and EEPROM_BUSY
+set. The corresponding steady settings encode as `0x0620`.
+
 ## Read the device ID
 
 Supply the board's synchronous write and combined write/read callbacks and

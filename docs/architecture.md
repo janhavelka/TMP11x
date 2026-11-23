@@ -14,6 +14,7 @@ conversion or startup interval runs. [Public API and operation gates](api-contra
 | `Config.h` | Value types, model and capability queries, callback types, binding and desired sensor settings. Stage 23 adds the configurable hardware offset. |
 | `CommandTable.h` | Register pointers, positioned field masks and `command::accessFor(model, pointer)`. The lookup distinguishes a protected shadow from a managed offset at `0x07`. |
 | `Temperature.h` | Pure signed count, Celsius and register-word conversions for TEMP and thresholds. |
+| `Configuration.h` | Bus-silent profile validation, CONFIG encoding and observation, and expected-register comparison for CONFIG, THIGH and TLOW. |
 | `TMP11x.h` | Sample, identity and health snapshots and the `TMP11x::TMP11x` device class. It owns the binding, desired settings, observations and latest sample. It exposes lifecycle methods, bound ID diagnostics, passive health inspectors and managed latest reads. |
 | `Version.h` | Checked-in generated package version from `library.json`. Its constants describe the header, and the out-of-line `version()` describes the linked library. |
 

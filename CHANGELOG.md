@@ -20,3 +20,6 @@
 - Added signed TEMP and limit conversions and the managed `readLatest` and
   `readTemperature` entry points. A timely complete read updates the sample
   cache. The public calls require the verified initialization planned for stage 18.
+- Added pure CONFIG encoding and decoding, settings validation, and comparison
+  of CONFIG and both limit registers. CONFIG observations retain raw MOD, status
+  flags and the read-clear mask for the observed comparator mode.

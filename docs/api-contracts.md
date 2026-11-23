@@ -113,6 +113,38 @@ and its signed result to `toCelsius(counts)`. For a TEMP or limit word
 in the opposite direction, `encodeCelsius(celsius, raw)` returns a
 `Status`. On `INVALID_PARAM`, the caller keeps the original word.
 
+### CONFIG word conversion
+
+`<TMP11x/Configuration.h>` provides four bus-silent functions in `TMP11x`.
+`validateSettings(model, settings)` checks the exact model, all six selectors
+and the signed limit pair. In THERM the low limit must be at most the high
+limit. In ALERT the limits are independent. `encodeConfiguration(model,
+settings, word)` validates the same profile and preserves `word` on
+`INVALID_CONFIG`. It builds a canonical volatile write value from the desired
+fields, with continuous encoded as MOD=00 and shutdown as MOD=01.
+
+`decodeConfiguration(word)` returns a `ConfigurationObservation`. Inspect
+`rawMode()` for the original two MOD bits and `mode` for their interpretation.
+`readClearMask` is `0xE000` in ALERT and `0x2000` in THERM. Intersect it with
+`raw` to identify asserted flags acknowledged by that read. The original four
+status bits remain available, including therm HIGH as a level. The decoder
+has no clock. The read owner may attach its completion tick and validity.
+An EEPROM lock check needs a separate EEPROM_UL observation at `0x04`.
+
+`compareExpectedRegister(model, settings, pointer, word)` reports
+`CONFIG_MISMATCH` for drift in CONFIG or either complete limit word. It
+accepts MOD=10 for continuous. For shutdown, observed MOD=11 requires the
+explicit fifth argument `OwnedTrigger::CONFIRMED`. Supply it only for a
+physically successful trigger with retained ownership. Successful explicit
+shutdown or invalidation ends that exception. A match compares one register
+at the instant of observation. Profile trust and fresh-conversion evidence
+require their own operations.
+
+At reset, MOD0 and bits 9:2 can load previously programmed values from
+EEPROM. MOD1 has no stored value. Read live CONFIG to observe the device's
+settings. The commonly cited `0x0220` describes the factory field values.
+The per-field reset sources are in the [register ledger](registers/tmp11x.json).
+
 ## Status and retained evidence
 
 `Status{Err code, int32_t detail, const char* msg}` has static-lifetime
