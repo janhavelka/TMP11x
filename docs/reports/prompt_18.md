@@ -1,5 +1,9 @@
 # Prompt 18 — EEPROM-safe initialization and configuration writes
 
+**COMPLETE.** Both public `begin` overloads and `recover` verify volatile
+CONFIG and both limit words on all six supported BOM selections. The
+[phase d acceptance checks](#phase-d-acceptance) passed on the host.
+
 ## Phase a — requirements and inputs, 2026-11-23
 
 **PARTIAL.** All 13 inputs are available for phase b. The clean baseline was
@@ -264,3 +268,35 @@ all 15 tests with GCC 15.1.0 and CMake/CTest 4.0.1.
 Python 3.12.10 passed `python -B scripts/check_references.py` (14 PDF hashes)
 and `python -B scripts/check_promptset.py` (55 stages). `git diff --check` passed.
 Phase c review is finished. Phase d owns final acceptance and stage closure.
+
+## Phase d acceptance
+
+The acceptance baseline on 2026-11-23 was
+`ea27650b993410fb28e509e9d2d938645838956c`. The worktree was clean.
+The parent `5fcd9a2`, subject and two changed paths matched the last
+phase-c request. The wrapper recorded equality with `origin/main` at
+23:45:01 Prague time.
+
+The 17 cases in `apply_cpp` cover the two stage outputs.
+`safe-apply-engine` verifies identity, waits for startup when needed and
+checks EEPROM_UL before the first write. Its scripted traces exercise
+BUSY and EUN, suppressed writes, ordered limit verification, and a late
+final CONFIG read that retains flags and leaves the profile dirty.
+`sync-initialize-recover` uses those same steps for both `begin` overloads
+and explicit recovery. On all six model selections the tests observe a
+successful public latest read after initialization, with unknown offset
+and unconfirmed freshness. [Private engine](../../src/Apply.cpp),
+[public implementation](../../src/TMP11x.cpp), [acceptance cases](../../test/test_apply.cpp).
+
+| Acceptance command | Result |
+| --- | --- |
+| `cmake --build build/host --config Release --clean-first --parallel 4` then `cmake -E chdir build/host ctest -C Release --output-on-failure` | PASS. All 15 tests passed with GCC 15.1.0 and CMake/CTest 4.0.1, including apply, latest, health and the register-ledger checks. |
+| `cmake --build build/consumer --config Release --clean-first --parallel 4` then `build/consumer/tmp11x_native_consumer.exe` | PASS. The tests-off source consumer linked and printed `0.1.0`. |
+| `g++ -std=c++17 -Wall -Wextra -Wpedantic -Werror -Iinclude -fsyntax-only -x c++ -` | PASS. Seven headers compiled in isolation. Each of the three README C++ examples compiled with the public umbrella header. |
+| `doxygen -` with public headers as input, XML output under `build/p18d-docs` and `WARN_AS_ERROR=YES` | PASS. Doxygen 1.13.2 emitted no warnings. The XML documents both overloads and recovery. |
+| `python -B scripts/check_references.py`, `python -B scripts/check_promptset.py`, `git diff --check` | PASS. Python 3.12.10 verified the 14 pinned PDFs and the 55-stage promptset. The closure diff passed the whitespace check. |
+
+Stage 19 takes the engine and retained observations forward for public
+invalidation and trust snapshots. Stage 23 owns managed offset and stage 29
+owns job integration. MCU links (34–36), physical qualification (40–41),
+installed-package qualification (42) and remote CI (43) remain open.
