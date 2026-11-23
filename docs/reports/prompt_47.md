@@ -171,3 +171,37 @@ reviews of the cumulative change from `cac1b93`. The phase-b checks cover
 host behavior and package contents. Stages 34–36 own adapter links and
 timing, 40–41 own fixture evidence, and 43 owns the remote CI checkpoint.
 Stage 18 still requires closure of audit 47.
+
+## Phase c — independent review, 2026-11-23
+
+**PARTIAL.** Two parallel read-only reviews covered `cac1b93..a2ff94a`.
+The lead reread prompts 10–17 in full and checked the findings against the
+cumulative diff, current source, tests and original tables. At entry, clean
+`main` and local `origin/main` both resolved to
+`a2ff94a168c7bbd68df10096236da0da7492137d`. Its parent, subject and sole
+changed path matched the phase-b request. The wrapper verified upstream
+equality at 20:48:23 Prague time.
+
+| Review scope | Finding and disposition |
+| --- | --- |
+| 10–13, package through identity | The host guide advertises CMake 3.16 but used `ctest --test-dir`, introduced in 3.20. On 3.16–3.19 that option cannot select the configured test tree. The host guide and verification checklist now use `cmake -E chdir build/host ctest`. The checklist also selects Release for configure, build and test. The 3.16 manual documents `chdir`. [Host guide](../testing.md), [verification checklist](../prompts/VERIFICATION.md), [CMake 3.16 manual](https://cmake.org/cmake/help/v3.16/manual/cmake.1.html#run-a-command-line-tool), [3.20 release notes](https://cmake.org/cmake/help/v3.20/release/3.20.html#ctest). |
+| 14–17, lifecycle through CONFIG | Bind validates before replacing state. Diagnostics preserve tracked health, and a complete incompatible identity clears live trust while preserving the historical sample. At deadline equality the latest-read engine retains physical status and any complete word while preserving the caller and cache. The CONFIG comparator accepts MOD=10 for continuous and requires confirmed trigger ownership for MOD=11 with desired shutdown. Source and tests agreed with the contracts. [Binding](../../src/TMP11x.cpp), [deadline cases](../../test/test_latest.cpp), [CONFIG cases](../../test/test_configuration.cpp). |
+
+The lead rechecked the pinned TMP116 pp. 24–26, 30–31, TMP117 pp. 25–27,
+31–32 and TMP119 pp. 32–34, 38–39. The register maps, signed TEMP scale,
+POL sense and continuous alias agree with the literal test expectations.
+The TMP119 map and ID detail still give different reset words. The public
+identity sweep accepted every documented base-ID revision for each of the
+four TMP117-like selections and only 0x1116 for TMP116/N. Both reviewers
+finished. The documentation correction was the only confirmed finding.
+
+| Phase-c check | Result |
+| --- | --- |
+| `cmake -S . -B build/host -DTMP11X_BUILD_TESTS=ON -DCMAKE_BUILD_TYPE=Release`, then `cmake --build build/host --config Release --parallel 4` | PASS on the existing MinGW host build with CMake 4.0.1 and GCC 15.1.0. |
+| `cmake -E chdir build/host ctest -C Release -R "^register_transport_cpp$" --output-on-failure`, then repeat without the filter | PASS, 1/1 focused and 14/14 full from the checkout root. Execution used CTest 4.0.1. Minimum-version command support was verified against the 3.16 manual. |
+| Run `build/p47b/consumer/tmp11x_native_consumer.exe` and `build/p47b/public_identity.exe`. Compare each regular file in the phase-b archive with its checkout bytes using Python `tarfile`. | PASS, consumer printed 0.1.0, all 393,216 model/ID observations passed, and all 28 archive files matched. |
+| `python -B scripts/check_references.py`, `python -B scripts/check_promptset.py`, `git diff --check` | PASS, 14 pinned PDFs, 55 stages and clean diff whitespace. |
+
+Phase d owns final acceptance for prompts 10–17, the report index and the
+progress checkpoint. Adapter links, wire timing, fixture evidence and the
+remote CI checkpoint retain the owners recorded in phase b.

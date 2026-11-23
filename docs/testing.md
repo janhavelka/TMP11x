@@ -10,7 +10,7 @@ Keep generated output under the ignored `build/` directory.
 ```sh
 cmake -S . -B build/host -DTMP11X_BUILD_TESTS=ON -DCMAKE_BUILD_TYPE=Release
 cmake --build build/host --config Release --parallel
-ctest --test-dir build/host -C Release --output-on-failure
+cmake -E chdir build/host ctest -C Release --output-on-failure
 ```
 
 On Windows with MinGW, add `-G "MinGW Makefiles"` to the configure command.
@@ -33,7 +33,7 @@ CTest registers these cases when `TMP11X_BUILD_TESTS=ON`.
 | `register_ledger` | Validate the six-model register ledger and its references. |
 | `register_ledger_regressions` | Exercise the ledger validator against valid and deliberately inconsistent inputs. |
 
-Use `ctest --test-dir build/host -C Release -R "^register_transport_cpp$" --output-on-failure`
+Use `cmake -E chdir build/host ctest -C Release -R "^register_transport_cpp$" --output-on-failure`
 to run just the transport cases. The fake records each callback's bytes and
 result. Use the filters `^identity_cpp$` for the private identity cases and
 `^binding_cpp$` for the public lifecycle cases.

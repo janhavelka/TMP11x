@@ -78,9 +78,9 @@ Typical target commands **after the agent has implemented them**:
 python scripts/check_promptset.py
 python tools/check_register_ledger.py
 python tools/test_check_register_ledger.py
-cmake -S . -B build/host -DTMP11X_BUILD_TESTS=ON
-cmake --build build/host --parallel
-ctest --test-dir build/host --output-on-failure
+cmake -S . -B build/host -DTMP11X_BUILD_TESTS=ON -DCMAKE_BUILD_TYPE=Release
+cmake --build build/host --config Release --parallel
+cmake -E chdir build/host ctest -C Release --output-on-failure
 python tools/check_version_sync.py
 python tools/check_package.py
 python tools/check_doxygen.py
