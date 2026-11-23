@@ -1,4 +1,5 @@
 #include "Apply.h"
+#include "DeviceEvidence.h"
 #include "LatestRead.h"
 #include "support/FakeTmp11xDevice.h"
 
@@ -537,9 +538,22 @@ void finalVerificationAndAlertEvidence() {
     CHECK(f.device.begin(f.config).is(failure));
     CHECK(transcript(f) == normal && !LatestRead{f.device}.cache);
     Apply view{f.device, f.config.settings};
+    const auto snapshot = f.device.getSettingsSnapshot();
+    CHECK(snapshot.verifiedAtMs.has_value() == (failure == Err::OK));
+    if (failure == Err::I2C_SHORT_TRANSFER) {
+      CHECK(!snapshot.config);
+    } else {
+      CHECK(snapshot.config && snapshot.config->timestampValid);
+      CHECK(snapshot.config->observedAtMs == f.device.healthSnapshot().lastSuccessMs);
+      CHECK(snapshot.config->dataReady && snapshot.config->high);
+    }
     CHECK(view.alerts().pendingLow);
+    CHECK(view.alerts().source == ConfigReadSource::APPLY &&
+          view.alerts().mode == ObservedMode::CONTINUOUS && view.alerts().mixedOrUnknown);
     CHECK(view.alerts().pendingHigh == (failure != Err::I2C_SHORT_TRANSFER));
     CHECK(view.alerts().possibleLoss == (failure == Err::I2C_SHORT_TRANSFER));
+    CHECK(!view.readyPending());
+    CHECK(view.readyHistoryUncertain() == (failure == Err::I2C_SHORT_TRANSFER));
     CHECK(f.device.healthSnapshot().totalSuccess == (failure == Err::I2C_SHORT_TRANSFER ? 13u : 14u));
     CHECK(f.device.healthSnapshot().totalFailures == (failure == Err::I2C_SHORT_TRANSFER ? 1u : 0u));
     CHECK((f.chip.words[1] & 0xE000) == 0);
@@ -648,6 +662,125 @@ void replayAndStagedChangeOnDrift() {
   }
 }
 
+void retainedAlertsAcrossGenerations() {
+  Fixture f;
+  CHECK(f.device.begin(f.config).ok());
+  Apply view{f.device};
+  ConfigurationObservation observed;
+  f.bus.trace.clear();
+  f.chip.words[1] = 0xA220;
+  CHECK(f.device.readConfiguration(observed).ok());
+  CHECK(observed.dataReady && observed.high && !observed.low);
+  const auto first = view.alerts();
+  CHECK(first.pendingHigh && !first.pendingLow && !first.mixedOrUnknown);
+  CHECK(first.source == ConfigReadSource::OBSERVATION && first.mode == ObservedMode::CONTINUOUS);
+  CHECK(first.observedAtMs == observed.observedAtMs);
+  CHECK(first.profileGeneration == f.device.getSettingsSnapshot().verifiedGeneration);
+  CHECK(f.device.readConfiguration(observed).ok() && !observed.high && !observed.dataReady);
+  CHECK(view.readyPending());
+  CHECK(transcript(f) == "R01 R01" && view.alerts().observedAtMs == first.observedAtMs);
+
+  CHECK(f.device.recover().ok());
+  CHECK(f.device.getSettingsSnapshot().verifiedGeneration != first.profileGeneration);
+  CHECK(!view.readyPending() && !view.readyHistoryUncertain());
+  CHECK(view.alerts().pendingHigh && view.alerts().profileGeneration == first.profileGeneration);
+  f.chip.words[1] |= 0x4000;
+  CHECK(f.device.verifyConfiguration().ok());
+  CHECK(view.alerts().pendingHigh && view.alerts().pendingLow && view.alerts().mixedOrUnknown);
+  CHECK(view.alerts().source == first.source && view.alerts().mode == first.mode);
+  CHECK(view.alerts().observedAtMs == first.observedAtMs && view.alerts().profileGeneration == first.profileGeneration);
+  CHECK(!view.alerts().possibleLoss);
+
+  Sample historical;
+  f.chip.words[0] = 0xF380;
+  CHECK(f.device.readLatest(historical).ok());
+  const auto history = view.alerts();
+  const auto calls = f.bus.trace.size();
+  CHECK(f.device.invalidateDeviceState().ok());
+  CHECK(f.bus.trace.size() == calls && !view.baselineMs() && !view.alerts().thermHigh);
+  CHECK(view.alerts().pendingHigh && view.alerts().pendingLow && view.alerts().mixedOrUnknown);
+  CHECK(view.alerts().observedAtMs == history.observedAtMs &&
+        view.alerts().profileGeneration == history.profileGeneration);
+  const auto saved = LatestRead{f.device}.cache;
+  CHECK(saved && saved->raw == 0xF380 && saved->configTrust == ConfigTrust::VERIFIED);
+  CHECK(saved->profileGeneration == historical.profileGeneration && saved->observedAtMs == historical.observedAtMs);
+}
+
+void busyAndAmbiguousReadEvidence() {
+  Fixture f;
+  CHECK(f.device.begin(f.config).ok());
+  Apply view{f.device};
+  ConfigurationObservation out;
+  f.bus.trace.clear();
+  f.chip.words[1] = 0xA220;  // Alert HIGH and eligible readiness.
+  CHECK(f.device.readConfiguration(out).ok() && view.readyPending() && view.alerts().pendingHigh);
+  f.chip.words[1] = 0x3A20;  // BUSY, READY and the continuous alias.
+  CHECK(f.device.readConfiguration(out).ok() && out.eepromBusy && out.dataReady);
+  CHECK(!view.readyPending() && f.device.configTrust() == ConfigTrust::VERIFIED);
+  f.chip.words[1] = 0x3224;  // BUSY and READY with an externally changed stable selector.
+  CHECK(f.device.readConfiguration(out).ok() && out.raw == 0x3224);
+  CHECK(!view.readyPending() && !view.baselineMs() && f.device.configTrust() == ConfigTrust::DIRTY);
+  f.chip.words[1] = 0x6220;
+  f.bus.script.push_back({Status::Error(Err::I2C_SHORT_TRANSFER, "CONFIG short"), 1, true});
+  CHECK(f.device.readConfiguration(out).is(Err::I2C_SHORT_TRANSFER));
+  CHECK(out.raw == 0x3224 && f.chip.words[1] == 0x0220);
+  CHECK(!view.readyPending() && view.readyHistoryUncertain() && view.alerts().possibleLoss);
+  CHECK(view.alerts().pendingHigh && !view.alerts().pendingLow);
+  CHECK(transcript(f) == "R01 R01 R01 R01");
+}
+
+void physicalTriggerEvidence() {
+  for (const bool succeeded : {false, true}) {
+    Fixture f;
+    f.config.settings.mode = Mode::SHUTDOWN;
+    CHECK(f.device.begin(f.config).ok());
+    // Inject only the terminal physical outcome. Stage 21 owns guarded trigger
+    // dispatch and its deadline. An owner can already have timed out at this tick.
+    const TransferResult trigger{succeeded ? Status::Ok() : Status::Error(Err::I2C_TIMEOUT, "trigger"),
+                                 true, f.now};
+    DeviceEvidence evidence{f.device};
+    evidence.observeWrite(0x01, 0x0E20, trigger);
+    f.chip.words[1] = 0x0E20;
+    if (!succeeded) {
+      CHECK(f.device.configTrust() == ConfigTrust::DIRTY);
+      CHECK(f.device.verifyConfiguration().is(Err::CONFIG_MISMATCH));
+      continue;
+    }
+    CHECK(f.device.verifyConfiguration().ok());
+    evidence.observeWrite(0x01, 0x0620, {Status::Error(Err::OPERATION_TIMEOUT, "no SD callback"), false});
+    CHECK(f.device.configTrust() == ConfigTrust::VERIFIED);
+    CHECK(f.device.verifyConfiguration().ok());  // Refused SD retained the trigger evidence.
+    f.chip.words[1] = 0x0620;
+    CHECK(f.device.verifyConfiguration().ok());
+    f.chip.words[1] = 0x0E20;
+    CHECK(f.device.verifyConfiguration().ok());  // Observed SD did not end ownership.
+
+    f.beforeTransfer = [&](bool read, std::uint8_t pointer) {
+      if (!read && pointer == 0x01) {
+        f.bus.script.push_back({Status::Error(Err::I2C_NACK_DATA, "ambiguous SD")});
+      }
+    };
+    CHECK(f.device.recover().is(Err::I2C_NACK_DATA));
+    CHECK(f.device.configTrust() == ConfigTrust::DIRTY);
+    f.beforeTransfer = {};
+    CHECK(f.chip.words[1] == 0x0E20 && f.device.verifyConfiguration().is(Err::CONFIG_DIRTY));
+
+    f.chip.words[1] ^= 0x0004;
+    CHECK(f.device.verifyConfiguration().is(Err::CONFIG_MISMATCH));
+    CHECK(f.device.configTrust() == ConfigTrust::DIRTY);
+    f.chip.words[1] = 0x0E20;
+    const auto deadline = f.now + f.config.operationTimeoutMs;
+    f.beforeTransfer = [&](bool read, std::uint8_t pointer) {
+      if (!read && pointer == 0x01) f.now = deadline;
+    };
+    CHECK(f.device.recover().is(Err::OPERATION_TIMEOUT));
+    CHECK(f.chip.words[1] == 0x0620);  // Physically successful SD at deadline ends ownership.
+    f.beforeTransfer = {};
+    f.chip.words[1] = 0x0E20;
+    CHECK(f.device.verifyConfiguration().is(Err::CONFIG_MISMATCH));
+  }
+}
+
 void workLimitsWrapAndLoadSuppression() {
   Fixture frozen;
   frozen.tickIncrement = 0;
@@ -719,6 +852,9 @@ int main() {
   stagedIntentAndIndependentReadback();
   finalVerificationAndAlertEvidence();
   finalThermReadAfterVerifiedAlert();
+  retainedAlertsAcrossGenerations();
+  busyAndAmbiguousReadEvidence();
+  physicalTriggerEvidence();
   replayAndStagedChangeOnDrift();
   workLimitsWrapAndLoadSuppression();
   return EXIT_SUCCESS;

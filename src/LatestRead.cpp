@@ -1,5 +1,6 @@
 #include "LatestRead.h"
 
+#include "DeviceEvidence.h"
 #include "TMP11x/CommandTable.h"
 #include "TMP11x/Temperature.h"
 
@@ -7,10 +8,11 @@ namespace TMP11x::detail {
 
 LatestRead::LatestRead(TMP11x& device) noexcept
     : trust(device._live.trust), generation(device._live.profileGeneration),
-      cache(device._lastSample), _transport(RegisterTransport::tracked(device)) {}
+      cache(device._lastSample), _device(device) {}
 
 LatestReadResult LatestRead::read(Sample& out, std::optional<ReadBudget> budget) const {
-  const auto& binding = _transport.binding;
+  const auto transport = RegisterTransport::tracked(_device);
+  const auto& binding = transport.binding;
   auto remaining = binding.i2cTimeoutMs;
   std::uint32_t before = 0;
   if (budget) {
@@ -24,7 +26,8 @@ LatestReadResult LatestRead::read(Sample& out, std::optional<ReadBudget> budget)
   }
 
   std::uint16_t raw = 0;
-  const auto transfer = readWord(_transport, command::temperature, raw, remaining);
+  const auto transfer = readWord(transport, command::temperature, raw, remaining);
+  DeviceEvidence{_device}.observeTemperature(transfer);
   LatestReadResult result{transfer.status, transfer, std::nullopt};
   if (transfer.status.ok()) result.raw = raw;
   if (budget && transfer.attempted) {

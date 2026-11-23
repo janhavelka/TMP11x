@@ -27,3 +27,7 @@
   an operation-local EEPROM lock/busy check and guarded CONFIG and limit
   readback. Rejected bindings preserve the prior target. Failed writes retain
   the desired settings for explicit recovery.
+- Added read-only CONFIG observation, whole-profile verification and a
+  memory-only settings snapshot with per-register evidence and dirty causes.
+  Applications can report external changes through `invalidateDeviceState()`
+  and recover the desired profile under restored ownership.

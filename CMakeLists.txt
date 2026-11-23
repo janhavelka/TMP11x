@@ -5,6 +5,7 @@ set(TMP11X_SOURCES
   src/CommandTable.cpp
   src/Config.cpp
   src/Configuration.cpp
+  src/DeviceEvidence.cpp
   src/Identity.cpp
   src/LatestRead.cpp
   src/RegisterTransport.cpp
@@ -91,9 +92,15 @@ if(TMP11X_BUILD_TESTS)
   target_include_directories(tmp11x_apply_test PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src")
   add_test(NAME apply_cpp COMMAND tmp11x_apply_test)
 
+  add_executable(tmp11x_trust_test
+    test/test_trust.cpp
+    test/support/FakeTmp11xDevice.cpp)
+  target_link_libraries(tmp11x_trust_test PRIVATE TMP11x)
+  add_test(NAME trust_cpp COMMAND tmp11x_trust_test)
+
   foreach(target TMP11x tmp11x_value_types_test tmp11x_register_transport_test tmp11x_identity_test
                  tmp11x_binding_test tmp11x_health_test tmp11x_temperature_test tmp11x_latest_test
-                 tmp11x_configuration_test tmp11x_apply_test)
+                 tmp11x_configuration_test tmp11x_apply_test tmp11x_trust_test)
     set_target_properties(${target} PROPERTIES
       CXX_STANDARD 17 CXX_STANDARD_REQUIRED YES CXX_EXTENSIONS NO)
     if(MSVC)

@@ -28,6 +28,7 @@ CTest registers these cases when `TMP11X_BUILD_TESTS=ON`.
 | `configuration_cpp` | Check 512 steady profiles per BOM selection against literal field encodings, invalid selectors, raw flags and read effects, a nonfactory reset word, MOD compatibility with and without trigger ownership, and both signed limit words. |
 | `latest_cpp` | Exercise public admission and the one-read engine with the register fake. Check all six model selections, both desired modes, optional timing, caller and cache preservation, and physical read effects at the deadline. |
 | `apply_cpp` | Exercise synchronous initialization and recovery and drive the same private steps individually. Inspect startup timing, EEPROM guards, comparator transitions, dirty intent, CONFIG and limit readback, and public latest reads. |
+| `trust_cpp` | Exercise public configuration observation and verification on six models. Check per-field timestamps, partial scans, ambiguous writes, retained dirty causes, and recovery after external correction of an EEPROM unlock. |
 | `version_generator_check` | Compare `Version.h` and the ESP-IDF manifest's version with `library.json` using the generator's check command. |
 | `version_sync` | Run the delegated version check through the checker script. |
 | `version_generator_regressions` | Exercise IDF version drift and an unwritable mirror. |

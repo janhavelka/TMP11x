@@ -31,7 +31,7 @@ struct LatestRead {
   LatestReadResult read(Sample& out, std::optional<ReadBudget> budget = std::nullopt) const;
 
  private:
-  RegisterTransport _transport;
+  TMP11x& _device;
 };
 
 }  // namespace TMP11x::detail

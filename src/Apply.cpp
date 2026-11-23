@@ -1,5 +1,6 @@
 #include "Apply.h"
 
+#include "DeviceEvidence.h"
 #include "Identity.h"
 #include "TMP11x/CommandTable.h"
 #include "TMP11x/Configuration.h"
@@ -65,16 +66,20 @@ Status Apply::step() {
   const auto now = binding.nowMs(binding.timeUser);
   const bool sameTick = now == _previousMs;
   advanceClock(now);
-  if (_remainingMs == 0) return _status = timeout;
-  if (_waitMs != 0) {
-    if (sameTick && ++_sameTickChecks > 1000000u) return _status = workLimit;
-    return pending;
+  if (_remainingMs == 0) {
+    _status = timeout;
+  } else if (_waitMs != 0) {
+    if (sameTick && ++_sameTickChecks > 1000000u) _status = workLimit;
+  } else {
+    _sameTickChecks = 0;
+    ++_dispatches;
+    _status = dispatch();
+    if (_status.inProgress() && _dispatches == 256) _status = workLimit;
   }
-
-  _sameTickChecks = 0;
-  ++_dispatches;
-  _status = dispatch();
-  if (_status.inProgress() && _dispatches == 256) _status = workLimit;
+  auto& live = _device._live;
+  if (!_status.inProgress() && live.trust == ConfigTrust::DIRTY && live.dirtyReason == DirtyReason::NONE) {
+    live.dirtyReason = DirtyReason::INCOMPLETE_APPLY;
+  }
   return _status;
 }
 
@@ -87,7 +92,7 @@ Status Apply::finishTransfer(const TransferResult& result) noexcept {
 Status Apply::readIdentityStep() {
   const auto result = detail::readIdentity(RegisterTransport::tracked(_device), _device._identity,
                                             _remainingMs);
-  if (result.status.is(Err::IDENTITY_MISMATCH)) _device.invalidateIdentity();
+  if (result.status.is(Err::IDENTITY_MISMATCH)) _device.clearLiveState();
   const auto status = finishTransfer(result.transfer);
   if (!status.ok()) return status;
   if (!result.status.ok()) return result.status;
@@ -121,24 +126,15 @@ Status Apply::readConfig() {
   const SensorSettings* expected = nullptr;
   if (_phase == Phase::FINAL_CONFIG) expected = &_candidate;
   else if (_phase != Phase::CURRENT_CONFIG) expected = &_shutdown;
-  else if (live.trust == ConfigTrust::VERIFIED) expected = &_device._config.settings;
-  Status match{};
-  if (result.status.ok() && expected) {
-    match = compareExpectedRegister(_device._config.model, *expected, command::config, raw);
-    if (!match.ok()) {
-      live.trust = ConfigTrust::DIRTY;
-      live.baselineMs.reset();
-    }
-  }
-  // Drift makes the returned comparator events' generation uncertain even
-  // when the physical read was timely. Retain the effects before any exit.
-  _device.observeApplyConfig(result, raw);
+  else if (live.initialized) expected = &_device._config.settings;
+  const auto match = DeviceEvidence{_device}.observeRegister(command::config, raw, result, expected,
+                                                            ConfigReadSource::APPLY);
+  if (result.status.ok() && (raw & command::configBusy)) _lockedIdle = false;
   if (!status.ok()) return status;
   // Explicit begin/recover repairs the existing target in this operation.
   // Its initial reads establish the starting values, even after drift.
   if (!match.ok() && !(_replayingTarget && _phase == Phase::CURRENT_CONFIG)) return match;
-  if (raw & command::configBusy) {
-    _lockedIdle = false;
+  if (!_lockedIdle) {
     _afterGuard = _phase;
     _phase = Phase::GUARD;
     return waitFor(1);
@@ -151,7 +147,12 @@ Status Apply::readConfig() {
     case Phase::FINAL_CONFIG:
       ++live.profileGeneration;
       live.baselineMs = result.completedMs;
+      live.verifiedAtMs = result.completedMs;
+      live.readyHistoryUncertain = false;
+      live.readyPending = false;
       live.trust = ConfigTrust::VERIFIED;
+      live.dirtyReason = DirtyReason::NONE;
+      live.affectedFields = 0;
       live.initialized = true;
       return Status::Ok();
     default: return Status::Error(Err::INVALID_PARAM, "Unexpected CONFIG phase");
@@ -163,25 +164,18 @@ Status Apply::readLimit(std::uint8_t pointer) {
   std::uint16_t raw = 0;
   const auto result = readWord(RegisterTransport::tracked(_device), pointer, raw, _remainingMs);
   const auto status = finishTransfer(result);
-  if (!result.status.ok()) return status;
   auto& live = _device._live;
-  (pointer == command::lowLimit ? live.low : live.high) = raw;
   const bool verifying = _phase == Phase::VERIFY_FIRST_LIMIT || _phase == Phase::VERIFY_SECOND_LIMIT;
-  if (verifying || live.trust == ConfigTrust::VERIFIED) {
-    const auto& expected = verifying ? _candidate : _device._config.settings;
-    const auto match = compareExpectedRegister(_device._config.model, expected, pointer, raw);
-    if (!match.ok()) {
-      live.trust = ConfigTrust::DIRTY;
-      live.baselineMs.reset();
-      if (verifying || !_replayingTarget) return status.ok() ? match : status;
-    }
-  }
+  const SensorSettings* expected = verifying ? &_candidate : nullptr;
+  if (!verifying && live.initialized) expected = &_device._config.settings;
+  const auto match = DeviceEvidence{_device}.observeRegister(pointer, raw, result, expected, ConfigReadSource::APPLY);
   if (!status.ok()) return status;
+  if (!match.ok() && (verifying || !_replayingTarget)) return match;
   switch (_phase) {
     case Phase::CURRENT_LOW: _phase = Phase::CURRENT_HIGH; break;
     case Phase::CURRENT_HIGH: {
       const auto oldHigh = temperature::decodeCounts(raw);
-      const auto oldLow = temperature::decodeCounts(*live.low);
+      const auto oldLow = live.low->counts;
       if (_candidate.limits.lowCounts > oldHigh) {
         _firstLimit = command::highLimit;
         _secondLimit = command::lowLimit;
@@ -220,11 +214,12 @@ Status Apply::writeConfig(const SensorSettings& settings, Phase next) {
     _device._config.settings = _candidate;
     live.trust = ConfigTrust::DIRTY;
     live.baselineMs.reset();
+    live.readyPending = false;
+    live.verificationReads = 0;
   }
-  live.config.reset();
-  _device._alerts.thermHigh.reset();
   const auto result = writeWord(transport, command::config, raw,
                                 {WritePurpose::STABLE_CONFIG, live.startupReady, _lockedIdle}, _remainingMs);
+  DeviceEvidence{_device}.observeWrite(command::config, raw, result);
   const auto status = finishTransfer(result);
   if (!status.ok()) return status;
   _phase = next;
@@ -235,9 +230,9 @@ Status Apply::writeLimit(std::uint8_t pointer, Phase next) {
   const bool low = pointer == command::lowLimit;
   const auto counts = low ? _candidate.limits.lowCounts : _candidate.limits.highCounts;
   auto& live = _device._live;
-  (low ? live.low : live.high).reset();
   const auto result = writeWord(RegisterTransport::tracked(_device), pointer, static_cast<std::uint16_t>(counts),
                                 {WritePurpose::LIMIT, live.startupReady, _lockedIdle}, _remainingMs);
+  DeviceEvidence{_device}.observeWrite(pointer, static_cast<std::uint16_t>(counts), result);
   const auto status = finishTransfer(result);
   if (!status.ok()) return status;
   _phase = next;

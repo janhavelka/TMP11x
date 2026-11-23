@@ -94,3 +94,54 @@ without state changes while an active or retained job owns the slot.
 
 Phase b owns implementation and new test results. Physical qualification
 remains open for stages 40–41. Stage 43 owns the first remote CI checkpoint.
+
+## Phase b implementation
+
+**PARTIAL, 2026-11-24.** Implementation baseline on `main` was
+`9227badfb19a3701200afc90a7fadad687ad06c4`. Its subject, parent and sole
+changed path match the phase-a commit request. The wrapper recorded upstream
+equality at 00:15:30 Prague time. The checkout was clean at entry.
+The pinned PDFs and sibling revisions listed above still matched.
+
+The public `readConfiguration` returns a complete CONFIG observation in
+one callback. `verifyConfiguration` reads CONFIG, TLOW and THIGH, compares
+each word on arrival, and retains the first mismatch and affected fields.
+A later transport failure stops the scan and leaves the observed prefix
+in the snapshot. A matching scan while dirty returns `CONFIG_DIRTY`.
+Only full, timely, guarded replay advances the generation and restores
+trust. `getSettingsSnapshot` and `invalidateDeviceState` require zero
+callbacks. Invalidation retains the historical verification time, sample
+and pending alerts. [Public API](../../include/TMP11x/TMP11x.h),
+[device implementation](../../src/TMP11x.cpp), [user guide](../../README.md#inspect-configuration-trust).
+
+The `config-trust` artifact extends the stage 18 apply engine and the
+stage 16 TEMP reader. Both record physical effects before deciding the
+operation outcome. A failed write invalidates the affected register
+observation. A complete CONFIG records raw MOD and the consumed flags even
+at the deadline. A new sticky event keeps the first event's attribution and
+marks mixed origins where applicable. A short CONFIG can lose alert and
+ready history. A short TEMP can lose ready history. [Device evidence](../../src/DeviceEvidence.cpp),
+[apply](../../src/Apply.cpp), [latest reads](../../src/LatestRead.cpp).
+
+| Host cases | Observed result |
+| --- | --- |
+| `admissionAndObservations`, `verifyLimitDrift`, `partialVerificationRetainsEvidence` | All six models passed public admission and observation. Independent one-bit changes to CONFIG, TLOW and THIGH latched drift. On a final THIGH timeout the scan preserved the new CONFIG and TLOW, the old THIGH timestamp, the two-bit completion mask and the prior verification time. |
+| `ambiguousWritesKeepTheTarget`, `interruptedReadbackKeepsItsFirstCause`, `invalidationAfterExternalCorrection` | First and middle write faults preserved intent. A later fault preserved the first unresolved cause. After external EUN correction, invalidation retained physical health and forced a new FIRST_ACK wait and guard before replay. |
+| `retainedAlertsAcrossGenerations`, `finalVerificationAndAlertEvidence`, `busyAndAmbiguousReadEvidence`, `tempConsumesRetainedReadiness` | HIGH and LOW survived zero observations and replay with the first event's time and generation. BUSY revoked eligible readiness. Late and short reads preserved physical effects separately from publication and verification. Invalidation preserved the historical sample. |
+| `physicalTriggerEvidence`, `normalizedModeComparison` | Injected physical trigger outcomes exercised the owned MOD exception and remaining stable bits. An ambiguous SD write dirtied trust. An actual successful SD callback at the deadline ended ownership. Stage 21 owns the guarded trigger command and acquisition timing. |
+
+These cases run in the registered [public trust](../../test/test_trust.cpp),
+[apply](../../test/test_apply.cpp), [latest](../../test/test_latest.cpp) and
+[codec](../../test/test_configuration.cpp) suites.
+
+| Local command | Result |
+| --- | --- |
+| `cmake --build build/host --config Release --parallel 4` then `cmake -E chdir build/host ctest -C Release --output-on-failure` | PASS, 16/16, CMake/CTest 4.0.1 and GCC 15.1.0. Includes register-ledger validation and regressions. |
+| `cmake --build build/consumer --config Release --parallel 4` then `build/consumer/tmp11x_native_consumer.exe` | PASS, tests-off consumer linked and printed `0.1.0`. |
+| `doxygen -` over the public headers with `WARN_AS_ERROR=YES` | PASS, Doxygen 1.13.2. XML under `build/p19b-docs` contains all four new public members. |
+| `python -B scripts/check_references.py`, `python -B scripts/check_promptset.py`, `git diff --check` | PASS, Python 3.12.10 verified the 14 pinned PDFs and the 55-stage promptset. |
+
+The next run reviews this implementation against the phase-a cases.
+Stage 22 exposes explicit alert consumption, stage 23 extends the owned
+profile to managed offset, and stage 28 adds active/result-slot gates.
+MCU links, physical qualification and remote CI retain their later checkpoints.

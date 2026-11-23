@@ -148,10 +148,13 @@ void normalizedModeComparison(Model model) {
     for (const auto evidence : {OwnedTrigger::NONE, OwnedTrigger::CONFIRMED}) {
       const bool shutdownMatches = evidence == OwnedTrigger::CONFIRMED
                                        ? row.ownedShutdownMatches : row.shutdownMatches;
-      const auto cont = compareExpectedRegister(model, continuous, 0x01, row.raw, evidence);
-      const auto sd = compareExpectedRegister(model, shutdown, 0x01, row.raw, evidence);
-      CHECK(cont.is(row.continuousMatches ? Err::OK : Err::CONFIG_MISMATCH));
-      CHECK(sd.is(shutdownMatches ? Err::OK : Err::CONFIG_MISMATCH));
+      for (unsigned flags = 0; flags < 16; ++flags) {
+        const auto word = static_cast<std::uint16_t>((flags << 12) | row.raw);
+        const auto cont = compareExpectedRegister(model, continuous, 0x01, word, evidence);
+        const auto sd = compareExpectedRegister(model, shutdown, 0x01, word, evidence);
+        CHECK(cont.is(row.continuousMatches ? Err::OK : Err::CONFIG_MISMATCH));
+        CHECK(sd.is(shutdownMatches ? Err::OK : Err::CONFIG_MISMATCH));
+      }
       // Flip each non-mode field bit. Even a confirmed trigger only excuses MOD.
       for (unsigned bit = 2; bit <= 9; ++bit) {
         const auto changed = static_cast<std::uint16_t>(row.raw ^ (1u << bit));

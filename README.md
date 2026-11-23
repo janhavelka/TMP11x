@@ -87,6 +87,28 @@ read consumes DATA_READY. A subsequent `readLatest` reports the stored word
 with `freshConversion == false`, including immediately after initialization.
 [Startup, read effects and recovery](docs/api-contracts.md#startup-apply-and-reset).
 
+## Inspect configuration trust
+
+After initialization, `readConfiguration(out)` reads CONFIG once and returns
+the observed fields, including HIGH, LOW and DATA_READY before acknowledgement.
+A complete read returns success even when a changed stable field latches
+`DIRTY`. To check the entire owned profile, call `verifyConfiguration()`.
+It reads CONFIG, TLOW and THIGH in order and reports `CONFIG_MISMATCH` on
+drift. A transfer error stops the scan.
+
+`getSettingsSnapshot()` uses no bus or clock callbacks. It shows the desired
+profile, the last complete observation of each register, and the generation
+and time of the last full verification. After a failed scan, `verificationReads`
+identifies the registers read before the failure. While dirty, a latest
+temperature read carries that trust in its sample. Call `recover()` to
+replay and verify the retained target.
+
+The owner must report a power interruption, external reset or loss of exclusive
+access with `invalidateDeviceState()`. Cached words cannot detect every such
+change. This call costs zero callbacks. Restore stable power and exclusive
+access before calling `recover()`. Recovery checks identity, waits from the
+new compatible read, and checks EEPROM lock and busy before its first write.
+
 ## Inspect transport health
 
 `healthSnapshot()` copies the instance's tracked I2C history without calling

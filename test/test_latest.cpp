@@ -1,3 +1,4 @@
+#include "Apply.h"
 #include "LatestRead.h"
 #include "support/FakeTmp11xDevice.h"
 
@@ -266,6 +267,53 @@ void wrappedDeadline() {
   CHECK(health.totalSuccess == 1 && health.totalFailures == 0);
 }
 
+void tempConsumesRetainedReadiness() {
+  constexpr ReadBudget budget{1000, 5};
+  constexpr struct {
+    std::uint32_t before;
+    std::uint32_t completed;
+    bool shortRead;
+    Err expected;
+  } cases[] = {
+      {1005, 0, false, Err::OPERATION_TIMEOUT},     // No callback at admission.
+      {1000, 1001, false, Err::OK},
+      {1000, 1001, true, Err::I2C_SHORT_TRANSFER},
+      {1000, 1005, false, Err::OPERATION_TIMEOUT},  // Late complete word.
+      {1000, 1005, true, Err::OPERATION_TIMEOUT},   // Late ambiguous read.
+  };
+  for (const auto& row : cases) {
+    Fixture f{Model::TMP117, Mode::CONTINUOUS, true};
+    f.chip.words[0x0F] = 0xA117;
+    for (unsigned i = 0; i < 100; ++i) f.ticks.push_back(i);
+    CHECK(f.device.begin().ok());
+    f.ticks = {995, 996, 997, 998, 999};
+    f.chip.words[1] |= 0xA000;
+    ConfigurationObservation observed;
+    CHECK(f.device.readConfiguration(observed).ok() && observed.raw == 0xA220);
+    Apply evidence{f.device};
+    CHECK(evidence.readyPending() && !evidence.readyHistoryUncertain());
+    CHECK(evidence.alerts().pendingHigh && !evidence.alerts().possibleLoss);
+
+    f.chip.words[1] |= 0x6000;  // New LOW/READY since the captured HIGH.
+    f.ticks = {row.before};
+    const bool attempted = row.before < 1005;
+    if (attempted) f.ticks.push_back(row.completed);
+    if (row.shortRead) f.bus.script.push_back({Status::Error(Err::I2C_SHORT_TRANSFER, "TEMP short"), 1, true});
+    auto out = callerValue;
+    const auto result = LatestRead{f.device}.read(out, budget);
+    CHECK(result.status.is(row.expected) && result.transfer.attempted == attempted);
+    CHECK(evidence.readyPending() == !attempted);
+    CHECK(evidence.readyHistoryUncertain() == row.shortRead);
+    CHECK(evidence.baselineMs().has_value() == !row.shortRead);
+    CHECK(evidence.alerts().pendingHigh && !evidence.alerts().pendingLow && !evidence.alerts().possibleLoss);
+    CHECK(f.chip.words[1] == (attempted ? 0x4220 : 0x6220));
+    if (!result.status.ok()) {
+      sameSample(out, callerValue);
+      CHECK(!LatestRead{f.device}.cache);
+    }
+  }
+}
+
 }  // namespace
 
 int main() {
@@ -273,5 +321,6 @@ int main() {
   clocklessLatest();
   failedReadsAndLifecycle();
   wrappedDeadline();
+  tempConsumesRetainedReadiness();
   return EXIT_SUCCESS;
 }

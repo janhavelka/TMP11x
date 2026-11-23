@@ -15,7 +15,7 @@ conversion or startup interval runs. [Public API and operation gates](api-contra
 | `CommandTable.h` | Register pointers, positioned field masks and `command::accessFor(model, pointer)`. The lookup distinguishes a protected shadow from a managed offset at `0x07`. |
 | `Temperature.h` | Pure signed count, Celsius and register-word conversions for TEMP and thresholds. |
 | `Configuration.h` | Bus-silent profile validation, CONFIG encoding and observation, and expected-register comparison for CONFIG, THIGH and TLOW. |
-| `TMP11x.h` | Sample, identity and health snapshots and the `TMP11x::TMP11x` device class. It owns the binding, desired settings, observations and latest sample. It exposes binding, initialization and recovery, bound ID diagnostics, passive health inspectors and managed latest reads. |
+| `TMP11x.h` | Sample, identity, health and settings evidence and the `TMP11x::TMP11x` device class. It exposes binding, initialization, recovery, invalidation, ID diagnostics, CONFIG observation and profile verification, passive inspectors and latest reads. |
 | `Version.h` | Checked-in generated package version from `library.json`. Its constants describe the header, and the out-of-line `version()` describes the linked library. |
 
 Implementation belongs in `src/`. Each public header must compile on its
@@ -54,6 +54,13 @@ sample timestamp and the timed owner's expiry check. Its result retains a
 complete TEMP word even at expiry. A short read retains the physical fault
 and possible loss of readiness. Only a timely success replaces the caller's
 sample and the instance cache. [Latest-read engine](../src/LatestRead.cpp).
+
+`detail::DeviceEvidence` records each CONFIG, limit and TEMP outcome for
+apply, managed observation and verification. It captures flags on complete
+CONFIG reads, records possible loss after ambiguous reads and keeps each
+register's observation time. The owner resolves its deadline separately,
+so a late CONFIG word can record a mismatch and pending alerts even though
+the operation returns a timeout. [Read and write bookkeeping](../src/DeviceEvidence.cpp).
 
 The write path checks the selected model, the typed purpose, and the
 operation owner's startup and locked-idle evidence before calling the adapter.

@@ -22,6 +22,8 @@ struct Apply {
 
   const auto& alerts() const noexcept { return _device._alerts; }
   std::optional<std::uint32_t> baselineMs() const noexcept { return _device._live.baselineMs; }
+  bool readyPending() const noexcept { return _device._live.readyPending; }
+  bool readyHistoryUncertain() const noexcept { return _device._live.readyHistoryUncertain; }
 
  private:
   enum class Phase {

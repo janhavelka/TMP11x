@@ -1,8 +1,10 @@
 #include "TMP11x/TMP11x.h"
 
 #include "Apply.h"
+#include "DeviceEvidence.h"
 #include "Identity.h"
 #include "LatestRead.h"
+#include "TMP11x/CommandTable.h"
 
 namespace TMP11x {
 
@@ -40,44 +42,65 @@ Status TMP11x::recover() {
   return begin();
 }
 
-void TMP11x::invalidateIdentity() noexcept {
-  // Historical alerts and samples still refer to their original generation.
+void TMP11x::clearLiveState() noexcept {
   const auto generation = _live.profileGeneration;
+  const auto verifiedAt = _live.verifiedAtMs;
   _live = {};
   _live.profileGeneration = generation;
+  _live.verifiedAtMs = verifiedAt;
   _alerts.thermHigh.reset();
 }
 
-void TMP11x::observeApplyConfig(const detail::TransferResult& transfer, std::uint16_t raw) noexcept {
-  if (!transfer.attempted) return;
-  if (!transfer.status.ok()) {
-    _alerts.possibleLoss = true;
-    _alerts.thermHigh.reset();
-    _live.baselineMs.reset();
-    return;
-  }
-  auto config = decodeConfiguration(raw);
-  config.timestampValid = transfer.completedMs.has_value();
-  config.observedAtMs = transfer.completedMs.value_or(0);
-  _live.config = config;
-  if (config.alertMode == AlertMode::THERM) {
-    _alerts.thermHigh = config.high;
-    return;
-  }
-  _alerts.thermHigh.reset();
-  if (!config.high && !config.low) return;
+Status TMP11x::invalidateDeviceState() noexcept {
+  if (!isBound()) return Status::Error(Err::NOT_BOUND, "No sensor binding");
+  clearLiveState();
+  _eepromUnsafe = false;  // Recovery must acquire new startup and lock evidence.
+  return Status::Ok();
+}
 
-  const bool pending = _alerts.pendingHigh || _alerts.pendingLow;
-  // A returned latch can predate this read. During replay it cannot be
-  // attributed to the generation about to be verified.
-  if (_live.trust != ConfigTrust::VERIFIED ||
-      (pending && _alerts.profileGeneration != _live.profileGeneration)) {
-    _alerts.mixedOrUnknown = true;
+SettingsSnapshot TMP11x::getSettingsSnapshot() const noexcept {
+  const auto reason = _live.trust == ConfigTrust::DIRTY && _live.dirtyReason == DirtyReason::NONE
+                          ? DirtyReason::INCOMPLETE_APPLY : _live.dirtyReason;
+  return {_config.settings, _live.config, _live.low, _live.high, _live.trust, reason,
+          _live.affectedFields, _live.verificationReads, _live.profileGeneration, _live.verifiedAtMs};
+}
+
+Status TMP11x::requireInitialized() const noexcept {
+  if (!isBound()) return Status::Error(Err::NOT_BOUND, "No sensor binding");
+  if (!isInitialized()) return Status::Error(Err::NOT_INITIALIZED, "Managed initialization required");
+  return Status::Ok();
+}
+
+Status TMP11x::readConfiguration(ConfigurationObservation& out) {
+  const auto admission = requireInitialized();
+  if (!admission.ok()) return admission;
+  std::uint16_t raw = 0;
+  const auto transfer = detail::readWord(detail::RegisterTransport::tracked(*this), command::config,
+                                         raw, _config.i2cTimeoutMs);
+  detail::DeviceEvidence{*this}.observeRegister(command::config, raw, transfer, &_config.settings,
+                                               detail::ConfigReadSource::OBSERVATION);
+  if (transfer.status.ok()) out = *_live.config;
+  return transfer.status;
+}
+
+Status TMP11x::verifyConfiguration() {
+  const auto admission = requireInitialized();
+  if (!admission.ok()) return admission;
+  _live.verificationReads = 0;
+  const auto transport = detail::RegisterTransport::tracked(*this);
+  Status firstMismatch{};
+  for (const auto pointer : {command::config, command::lowLimit, command::highLimit}) {
+    std::uint16_t raw = 0;
+    const auto transfer = detail::readWord(transport, pointer, raw, _config.i2cTimeoutMs);
+    const auto match = detail::DeviceEvidence{*this}.observeRegister(pointer, raw, transfer, &_config.settings,
+                                                                    detail::ConfigReadSource::VERIFICATION);
+    if (!transfer.status.ok()) return transfer.status;
+    if (firstMismatch.ok() && !match.ok()) firstMismatch = match;
   }
-  _alerts.pendingHigh |= config.high;
-  _alerts.pendingLow |= config.low;
-  _alerts.observedAtMs = transfer.completedMs;
-  _alerts.profileGeneration = _live.profileGeneration;
+  if (!firstMismatch.ok()) return firstMismatch;
+  if (_live.trust == ConfigTrust::DIRTY) return Status::Error(Err::CONFIG_DIRTY, "Verified replay required");
+  _live.verifiedAtMs = _live.high->observedAtMs;
+  return Status::Ok();
 }
 
 void TMP11x::clearObservations() noexcept {
@@ -114,7 +137,7 @@ Status TMP11x::unbind() noexcept {
 Status TMP11x::probe() {
   if (!isBound()) return Status::Error(Err::NOT_BOUND, "No sensor binding");
   const auto result = detail::readIdentity(_config, _identity, _config.i2cTimeoutMs);
-  if (result.status.is(Err::IDENTITY_MISMATCH)) invalidateIdentity();
+  if (result.status.is(Err::IDENTITY_MISMATCH)) clearLiveState();
   return result.status;
 }
 
@@ -125,8 +148,8 @@ Status TMP11x::readIdentity(IdentityInfo& out) {
 }
 
 Status TMP11x::readLatest(Sample& out) {
-  if (!isBound()) return Status::Error(Err::NOT_BOUND, "No sensor binding");
-  if (!isInitialized()) return Status::Error(Err::NOT_INITIALIZED, "Managed initialization required");
+  const auto admission = requireInitialized();
+  if (!admission.ok()) return admission;
   return detail::LatestRead{*this}.read(out).status;
 }
 

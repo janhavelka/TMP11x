@@ -11,9 +11,16 @@ namespace TMP11x {
 
 namespace detail {
 struct Apply;
+struct DeviceEvidence;
 struct RegisterTransport;
 struct TransferResult;
 struct LatestRead;
+/// Origin of a destructive CONFIG read that captured an alert.
+enum class ConfigReadSource : std::uint8_t {
+  APPLY,         ///< Guarded profile apply or replay.
+  OBSERVATION,   ///< A single managed CONFIG query.
+  VERIFICATION,  ///< Read-only profile verification.
+};
 }
 
 /// Per-instance evidence since the last accepted bind, end or unbind.
@@ -62,6 +69,42 @@ enum class ConfigTrust : std::uint8_t {
   UNKNOWN,   ///< No current profile verification evidence.
   DIRTY,     ///< An unresolved change or mismatch requires verified replay.
   VERIFIED,  ///< Owned settings were verified for the current profile generation.
+};
+
+/// First unresolved cause of lost profile trust.
+enum class DirtyReason : std::uint8_t {
+  NONE,               ///< No unresolved change.
+  READBACK_MISMATCH,  ///< A complete owned register differed from its expected value.
+  AMBIGUOUS_WRITE,    ///< The callback failed after a write was attempted.
+  INCOMPLETE_APPLY,   ///< Replay started writing and has yet to verify the entire target.
+};
+
+/// Register bits in SettingsSnapshot::affectedFields and SettingsSnapshot::verificationReads.
+enum class SettingsField : std::uint8_t {
+  CONFIG = 1,      ///< Stable CONFIG fields at 0x01.
+  LOW_LIMIT = 2,   ///< Complete TLOW word at 0x03.
+  HIGH_LIMIT = 4,  ///< Complete THIGH word at 0x02.
+};
+
+/// Complete threshold word and its signed value in units of 1/128 degree Celsius.
+struct LimitObservation {
+  std::uint16_t raw{};   ///< Two received bytes in register bit order.
+  std::int16_t counts{}; ///< Signed two's-complement interpretation of raw.
+  std::optional<std::uint32_t> observedAtMs;  ///< Wrapping completion tick when available.
+};
+
+/// Separate the software target, latest complete observations and whole-profile verification.
+struct SettingsSnapshot {
+  SensorSettings desired{};                       ///< Owned replay target.
+  std::optional<ConfigurationObservation> config; ///< Last complete CONFIG since invalidation or write.
+  std::optional<LimitObservation> low;             ///< Last complete TLOW since invalidation or write.
+  std::optional<LimitObservation> high;            ///< Last complete THIGH since invalidation or write.
+  ConfigTrust trust = ConfigTrust::UNKNOWN;        ///< Current live profile trust.
+  DirtyReason dirtyReason = DirtyReason::NONE;     ///< Retained until verified replay or invalidation.
+  std::uint8_t affectedFields = 0;                 ///< Registers written or found different while dirty.
+  std::uint8_t verificationReads = 0;              ///< Last explicit verification's completed fields. Replay or invalidation clears it.
+  std::uint32_t verifiedGeneration = 0;            ///< Generation established by the last full replay.
+  std::optional<std::uint32_t> verifiedAtMs;       ///< Last successful full check, including read-only verification.
 };
 
 /// Origin and trust of a sample's hardware-offset evidence.
@@ -128,6 +171,22 @@ class TMP11x {
   /// or rollback. A known unlocked device requires external correction and invalidation.
   Status recover();
 
+  /// Report loss of stable power or exclusive access. Drops initialization, startup proof
+  /// and live observations without calling any hooks. Keeps the target, health, last
+  /// verification and historical samples/events. After external correction of an EEPROM
+  /// unlock, this permits a fresh locked/idle check. Requires an existing binding.
+  Status invalidateDeviceState() noexcept;
+
+  /// Read CONFIG once after initialization. Publishes a complete observation even on
+  /// drift, latching DIRTY. Reading acknowledges DATA_READY and ALERT-mode latches.
+  /// A failed transfer preserves @p out and may already have acknowledged hardware.
+  Status readConfiguration(ConfigurationObservation& out);
+
+  /// Read CONFIG, TLOW and THIGH after initialization. Each complete read records its
+  /// evidence. A transport fault stops the scan. CONFIG_MISMATCH reports observed drift,
+  /// CONFIG_DIRTY a matching scan with unresolved changes. Only guarded replay clears DIRTY.
+  Status verifyConfiguration();
+
   /// Clear local observations, initialization and startup proof, keeping the bound
   /// target and desired settings. Safe to repeat. The physical power mode is untouched.
   Status end() noexcept;
@@ -175,9 +234,12 @@ class TMP11x {
   SensorSettings desiredSettings() const noexcept { return _config.settings; }
   /// Return the current trust in the sensor's live configuration.
   ConfigTrust configTrust() const noexcept { return _live.trust; }
+  /// Copy the target, observations and trust evidence without calling the bus or clock.
+  SettingsSnapshot getSettingsSnapshot() const noexcept;
 
  private:
   friend struct detail::Apply;
+  friend struct detail::DeviceEvidence;
   friend struct detail::RegisterTransport;
   friend struct detail::LatestRead;
 
@@ -188,13 +250,20 @@ class TMP11x {
     bool initialized = false;
     ConfigTrust trust = ConfigTrust::UNKNOWN;
     std::uint32_t profileGeneration = 0;
+    std::optional<std::uint32_t> verifiedAtMs;
+    DirtyReason dirtyReason = DirtyReason::NONE;
+    std::uint8_t affectedFields = 0;
+    std::uint8_t verificationReads = 0;
     std::optional<ConfigurationObservation> config;
-    std::optional<std::uint16_t> low;
-    std::optional<std::uint16_t> high;
+    std::optional<LimitObservation> low;
+    std::optional<LimitObservation> high;
     std::optional<std::uint32_t> baselineMs;
+    bool readyPending = false;
+    bool readyHistoryUncertain = false;
+    OwnedTrigger trigger = OwnedTrigger::NONE;
   };
 
-  // Pending ALERT-mode events captured by apply CONFIG reads. THERM HIGH is
+  // Pending ALERT-mode events captured by CONFIG reads. THERM HIGH is
   // the level at the last applicable observation and is never latched here.
   struct AlertEvidence {
     bool pendingHigh = false;
@@ -204,11 +273,13 @@ class TMP11x {
     std::optional<bool> thermHigh;
     std::optional<std::uint32_t> observedAtMs;
     std::uint32_t profileGeneration = 0;
+    detail::ConfigReadSource source{};
+    ObservedMode mode{};
   };
 
   void clearObservations() noexcept;
-  void invalidateIdentity() noexcept;
-  void observeApplyConfig(const detail::TransferResult& transfer, std::uint16_t raw) noexcept;
+  void clearLiveState() noexcept;
+  Status requireInitialized() const noexcept;
 
   Config _config{};
   IdentityInfo _identity{};

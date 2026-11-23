@@ -259,6 +259,17 @@ observation API returns its observed data on a complete read.
 `verifyConfiguration()` reports `CONFIG_MISMATCH` on drift. Apply
 verification or acquisition stops on drift. A later matching diagnostic
 cannot clear dirty.
+
+`getSettingsSnapshot()` uses optional observations for CONFIG, TLOW and
+THIGH. An attempted write discards the previous observation for its register.
+A failed read supplies no replacement. During an explicit verification,
+`verificationReads` records each complete register using the `SettingsField`
+bits. If TLOW differs and THIGH then times out, the call returns the transport
+timeout, with TLOW drift and the completed CONFIG/TLOW prefix in the snapshot.
+A matching scan of an already dirty profile returns `CONFIG_DIRTY`. A clean
+scan updates `verifiedAtMs` while keeping the generation established by
+replay. Explicit invalidation preserves both as historical evidence.
+
 During begin/recover, initial reads establish the starting values for
 replay. Verification compares values at the step where they must already
 have taken effect. Unmanaged offset records calibration provenance without
