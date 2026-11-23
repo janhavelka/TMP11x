@@ -62,10 +62,12 @@ Status Apply::waitFor(std::uint32_t minimumMs) noexcept {
 Status Apply::step() {
   if (!_status.inProgress()) return _status;
   const auto& binding = _device._config;
-  advanceClock(binding.nowMs(binding.timeUser));
+  const auto now = binding.nowMs(binding.timeUser);
+  const bool sameTick = now == _previousMs;
+  advanceClock(now);
   if (_remainingMs == 0) return _status = timeout;
   if (_waitMs != 0) {
-    if (++_sameTickChecks > 1000000u) return _status = workLimit;
+    if (sameTick && ++_sameTickChecks > 1000000u) return _status = workLimit;
     return pending;
   }
 

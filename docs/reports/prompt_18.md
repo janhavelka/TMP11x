@@ -146,3 +146,42 @@ due in stage 19. Until then, a latched EEPROM unlock blocks subsequent
 managed writes on that instance across ordinary replay, teardown and rebind.
 MCU links, physical qualification, package qualification and remote CI were
 not run in this phase.
+
+## Phase c — startup proof, guard renewal and wait limits
+
+**PARTIAL, 2026-11-23.** Reviewed the phase-b changes at
+`719a10368120a470bf995f5fd681c8153573d7d7` on clean `main`. The
+15 changed paths and parent `1587c6b` matched the implementation request.
+The wrapper verified upstream equality at 23:04:40 Prague time. Two
+read-only reviewers examined timing and guard-test coverage in parallel.
+The silicon cross-check covered TMP116 pp.17, 26, 29, TMP117 pp.18, 30 and
+TMP119 pp.20, 37 from the phase-a source table.
+
+- Reproduced a wait-limit error in `workLimitsWrapAndLoadSuppression`.
+  After the clock advanced one tick during the startup wait, the 1,000,000th
+  subsequent unchanged check returned `WORK_LIMIT` one check early.
+  `Apply::step` now charges only checks on an unchanged tick. The advancing
+  check and the next 1,000,000 unchanged checks stay pending. The following
+  check stops with only the ID read in the transcript. [Work limits](../owner-operations.md#work-limits).
+- `recoveryStartupProof` expired one operation after its compatible ID
+  and stepped the next attempt at a later tick. The new guard first ran
+  four ticks after the new ID completion on a 1 ms clock. After successful
+  initialization, public recovery completed at a frozen tick and read a
+  fresh guard before writing.
+- `busyShutdownReadbackRequiresNewGuard` observed HIGH, DATA_READY and
+  BUSY during shutdown verification. The next transfer read EEPROM_UL.
+  Its `0xC000` response stopped both limit writes, retained HIGH and left
+  the target dirty with no verified baseline. `busyRecheckAndFinalBusy`
+  now exercises the policy's `0x3FFF` locked/idle word. [Guard vectors](../eeprom-and-reset-policy.md#transcript-vectors-for-implementation).
+
+The focused `apply_cpp` test failed on the new wait-limit assertion before
+the fix. Afterward, `cmake --build build/host --config Release --parallel 4`
+and `cmake -E chdir build/host ctest -C Release --output-on-failure`
+passed all 15 tests (GCC 15.1.0, CMake/CTest 4.0.1).
+`python -B scripts/check_references.py` verified 14 PDFs,
+`python -B scripts/check_promptset.py` passed all 55 stages and
+`git diff --check` passed.
+
+Phase c continues with comparator and limit ordering, staged first-write
+intent versus explicit recovery, and late CONFIG effects on alerts, profile
+generation and latest-read provenance.

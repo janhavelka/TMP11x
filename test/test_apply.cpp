@@ -239,6 +239,46 @@ void busyAndUnlockedGuards() {
   CHECK(f.device.healthSnapshot().lastError.detail == 17);
 }
 
+void recoveryStartupProof() {
+  Fixture f;
+  f.tickIncrement = 0;
+  CHECK(f.device.bind(f.config).ok());
+  Apply expired{f.device};
+  CHECK(expired.start().inProgress() && oneStep(expired, f).inProgress());
+  f.now = f.config.operationTimeoutMs;
+  CHECK(oneStep(expired, f).is(Err::OPERATION_TIMEOUT) && transcript(f) == "R0F");
+
+  f.bus.trace.clear();
+  Apply retry{f.device};
+  CHECK(retry.start().inProgress() && oneStep(retry, f).inProgress());
+  f.now += 3;
+  CHECK(oneStep(retry, f).inProgress() && transcript(f) == "R0F");
+  ++f.now;
+  CHECK(oneStep(retry, f).inProgress() && transcript(f) == "R0F R04");
+  auto status = oneStep(retry, f);
+  while (status.inProgress()) status = oneStep(retry, f);
+  CHECK(status.ok() && transcript(f) == normal);
+
+  // With startup proof established, recover can finish at the same tick.
+  f.bus.trace.clear();
+  CHECK(f.device.recover().ok() && transcript(f) == normal);
+}
+
+void busyShutdownReadbackRequiresNewGuard() {
+  Fixture f;
+  f.beforeTransfer = [&](bool read, std::uint8_t ptr) {
+    if (read && ptr == 1 && f.bus.trace.size() == 6) {
+      f.chip.words[1] |= 0xB000;  // HIGH, DATA_READY and BUSY on SD verification.
+      f.chip.words[4] = 0xC000;   // Renewal observes EUN and BUSY together.
+    }
+  };
+  CHECK(f.device.begin(f.config).is(Err::EEPROM_UNSAFE));
+  CHECK(transcript(f) == "R0F R04 R01 R03 R02 W01=0620 R01 R04");
+  Apply view{f.device};
+  CHECK(view.alerts().pendingHigh && !view.baselineMs());
+  CHECK(!f.device.isInitialized() && f.device.configTrust() == ConfigTrust::DIRTY);
+}
+
 void busyRecheckAndFinalBusy() {
   Fixture f;
   unsigned guards = 0;
@@ -249,7 +289,7 @@ void busyRecheckAndFinalBusy() {
   f.beforeTransfer = [&](bool read, std::uint8_t ptr) {
     if (read && ptr == 4) {
       ++guards;
-      f.chip.words[4] = guards == 1 ? 0x4000 : 0x0135;
+      f.chip.words[4] = guards == 1 ? 0x4000 : 0x3FFF;
       if (guards == 1) firstBusyCompletion = f.now;
       if (guards == 2) CHECK(f.now - firstBusyCompletion >= 2);
       if (guards == 3) CHECK(f.now - finalBusyCompletion >= 2);
@@ -481,6 +521,9 @@ void workLimitsWrapAndLoadSuppression() {
   CHECK(frozen.device.bind(frozen.config).ok());
   Apply waiting{frozen.device, frozen.config.settings};
   CHECK(waiting.start().inProgress() && nextTransfer(waiting, frozen).inProgress());
+  CHECK(oneStep(waiting, frozen).inProgress());
+  ++frozen.now;  // A changed tick resets the same-tick allowance while still parked.
+  CHECK(oneStep(waiting, frozen).inProgress());
   for (unsigned i = 0; i < 1000000u; ++i) CHECK(oneStep(waiting, frozen).inProgress());
   CHECK(oneStep(waiting, frozen).is(Err::WORK_LIMIT) && transcript(frozen) == "R0F");
   frozen.bus.trace.clear();
@@ -531,6 +574,8 @@ int main() {
   allModelsBeginRecoverLatest();
   admissionPreservesBinding();
   startupFromCompatibleCompletion();
+  recoveryStartupProof();
+  busyShutdownReadbackRequiresNewGuard();
   busyAndUnlockedGuards();
   busyRecheckAndFinalBusy();
   comparatorTransitions();
