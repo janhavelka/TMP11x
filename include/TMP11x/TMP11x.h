@@ -102,7 +102,8 @@ struct SettingsSnapshot {
   ConfigTrust trust = ConfigTrust::UNKNOWN;        ///< Current live profile trust.
   DirtyReason dirtyReason = DirtyReason::NONE;     ///< Retained until verified replay or invalidation.
   std::uint8_t affectedFields = 0;                 ///< Registers written or found different while dirty.
-  std::uint8_t verificationReads = 0;              ///< Last explicit verification's completed fields. Replay or invalidation clears it.
+  /// Fields read by the last explicit verification. The first replay write attempt or invalidation clears this mask.
+  std::uint8_t verificationReads = 0;
   std::uint32_t verifiedGeneration = 0;            ///< Generation established by the last full replay.
   std::optional<std::uint32_t> verifiedAtMs;       ///< Last successful full check, including read-only verification.
 };

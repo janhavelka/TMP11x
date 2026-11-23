@@ -482,6 +482,8 @@ void stagedIntentAndIndependentReadback() {
   for (const auto failureAt : {1u, 5u, 7u, 8u, 10u}) {
     Fixture f;
     CHECK(f.device.begin(f.config).ok());
+    CHECK(f.device.verifyConfiguration().ok());
+    CHECK(f.device.getSettingsSnapshot().verificationReads == 7);
     f.bus.trace.clear();
     auto candidate = f.config.settings;
     candidate.limits = {0x0101, 0x0402};
@@ -504,6 +506,7 @@ void stagedIntentAndIndependentReadback() {
     CHECK(status.is(failureAt < 8 ? Err::I2C_NACK_DATA : Err::CONFIG_MISMATCH));
     CHECK(f.bus.trace.size() == failureAt + 1);
     CHECK(f.device.desiredSettings().limits.lowCounts == (failureAt == 1 ? 0 : 0x0101));
+    CHECK(f.device.getSettingsSnapshot().verificationReads == (failureAt == 1 ? 7 : 0));
     CHECK(f.device.isInitialized());
     f.beforeTransfer = {};
     if (failureAt != 1) {
@@ -659,6 +662,44 @@ void replayAndStagedChangeOnDrift() {
     CHECK(status.is(Err::CONFIG_MISMATCH) && f.device.configTrust() == ConfigTrust::DIRTY);
     CHECK(transcript(f) == (configDrift ? "R0F R04 R01" : "R0F R04 R01 R03"));
     CHECK(f.device.desiredSettings().limits.lowCounts == 0);
+  }
+}
+
+void preflightDriftAtDeadline() {
+  for (const auto pointer : {0x01, 0x03}) {
+    Fixture f;
+    CHECK(f.device.begin(f.config).ok());
+    CHECK(f.device.verifyConfiguration().ok());
+    const auto verified = f.device.getSettingsSnapshot();
+    const auto health = f.device.healthSnapshot();
+    const bool config = pointer == 0x01;
+    const std::uint16_t changedWord = config ? 0xA224 : 0x0001;
+    f.chip.words[pointer] = changedWord;
+    f.bus.trace.clear();
+    const auto deadline = f.now + f.config.operationTimeoutMs;
+    f.beforeTransfer = [&](bool read, std::uint8_t reg) {
+      if (read && reg == pointer) f.now = deadline;
+    };
+
+    CHECK(f.device.recover().is(Err::OPERATION_TIMEOUT));
+    CHECK(transcript(f) == (config ? "R0F R04 R01" : "R0F R04 R01 R03"));
+    const auto snapshot = f.device.getSettingsSnapshot();
+    CHECK(snapshot.trust == ConfigTrust::DIRTY && snapshot.dirtyReason == DirtyReason::READBACK_MISMATCH);
+    const auto field = config ? SettingsField::CONFIG : SettingsField::LOW_LIMIT;
+    CHECK(snapshot.affectedFields == static_cast<std::uint8_t>(field));
+    CHECK(snapshot.verificationReads == verified.verificationReads && snapshot.verificationReads == 7);
+    CHECK(snapshot.verifiedAtMs == verified.verifiedAtMs && snapshot.verifiedGeneration == verified.verifiedGeneration);
+    if (config) {
+      CHECK(snapshot.config && snapshot.config->raw == changedWord && snapshot.config->observedAtMs == deadline);
+      const Apply evidence{f.device};
+      CHECK(evidence.alerts().pendingHigh && !evidence.readyPending());
+    } else {
+      CHECK(snapshot.low && snapshot.low->raw == changedWord && snapshot.low->observedAtMs == deadline);
+    }
+    const auto after = f.device.healthSnapshot();
+    CHECK(after.totalFailures == health.totalFailures);
+    CHECK(after.totalSuccess == health.totalSuccess + f.bus.trace.size());
+    CHECK(after.lastSuccessMs == deadline && after.initialized);
   }
 }
 
@@ -856,6 +897,7 @@ int main() {
   busyAndAmbiguousReadEvidence();
   physicalTriggerEvidence();
   replayAndStagedChangeOnDrift();
+  preflightDriftAtDeadline();
   workLimitsWrapAndLoadSuppression();
   return EXIT_SUCCESS;
 }

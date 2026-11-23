@@ -35,8 +35,17 @@ void DeviceEvidence::markDirty(DirtyReason reason, SettingsField field) noexcept
 
 void DeviceEvidence::observeTemperature(const TransferResult& transfer) noexcept {
   if (!transfer.attempted) return;
-  device._live.readyPending = false;
-  if (!transfer.status.ok()) loseReadiness();
+  if (!transfer.status.ok()) {
+    loseReadiness();
+    return;
+  }
+  auto& live = device._live;
+  live.readyPending = false;
+  // This TEMP read acknowledged DATA_READY. A later indication belongs after it.
+  if (!live.baselineMs && live.trust == ConfigTrust::VERIFIED &&
+      device._config.settings.mode == Mode::CONTINUOUS) {
+    live.baselineMs = transfer.completedMs;
+  }
 }
 
 void DeviceEvidence::captureConfig(std::uint16_t raw, std::optional<std::uint32_t> tick,

@@ -266,6 +266,7 @@ A failed read supplies no replacement. During an explicit verification,
 `verificationReads` records each complete register using the `SettingsField`
 bits. If TLOW differs and THIGH then times out, the call returns the transport
 timeout, with TLOW drift and the completed CONFIG/TLOW prefix in the snapshot.
+Replay preflight preserves this mask. The first replay write attempt clears it.
 A matching scan of an already dirty profile returns `CONFIG_DIRTY`. A clean
 scan updates `verifiedAtMs` while keeping the generation established by
 replay. Explicit invalidation preserves both as historical evidence.
@@ -409,8 +410,11 @@ and per-model evidence](eeprom-and-reset-policy.md).
 
 - **Latest.** A timely complete TEMP read publishes the word, including
   possible startup sentinel `0x8000` or an old value after a settings
-  change. Record the generation and trust *at observation*. Latest alone
-  does not attribute the stored word to a conversion under those settings.
+  change. In a verified continuous profile that lost its readiness baseline,
+  a complete TEMP read establishes a new boundary at its completion. A later
+  DATA_READY indication can then count toward freshness. Record the generation
+  and trust *at observation*. Latest alone does not attribute the stored word
+  to a conversion under those settings.
   `0x8000` decodes to −256 °C and can be a confirmed saturated result.
 - **Continuous fresh.** Obtain this operation's safe `0x04`. If the current
   generation lacks a baseline, the first destructive baseline read consumes

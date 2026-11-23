@@ -314,6 +314,35 @@ void tempConsumesRetainedReadiness() {
   }
 }
 
+void tempRestoresContinuousBaseline() {
+  for (const auto mode : {Mode::CONTINUOUS, Mode::SHUTDOWN}) {
+    Fixture f{Model::TMP117, mode, true};
+    f.chip.words[0x0F] = 0xA117;
+    for (unsigned i = 0; i < 100; ++i) f.ticks.push_back(i);
+    CHECK(f.device.begin().ok());
+    Apply evidence{f.device};
+    ConfigurationObservation config;
+    f.bus.script.push_back({Status::Error(Err::I2C_SHORT_TRANSFER, "short CONFIG"), 1, true});
+    CHECK(f.device.readConfiguration(config).is(Err::I2C_SHORT_TRANSFER));
+    CHECK(!evidence.baselineMs() && evidence.readyHistoryUncertain());
+
+    Sample latest;
+    CHECK(f.device.readLatest(latest).ok() && !latest.freshConversion);
+    const bool continuous = mode == Mode::CONTINUOUS;
+    CHECK(evidence.baselineMs().has_value() == continuous);
+    if (continuous) CHECK(evidence.baselineMs() == latest.observedAtMs);
+    CHECK(!evidence.readyPending() && evidence.alerts().possibleLoss);
+    f.chip.words[1] |= 0x2000;  // A conversion completed after the TEMP acknowledgement.
+    CHECK(f.device.readConfiguration(config).ok() && config.dataReady);
+    CHECK(evidence.readyPending() == continuous);
+
+    f.chip.words[1] ^= 0x0004;
+    CHECK(f.device.readConfiguration(config).ok() && f.device.configTrust() == ConfigTrust::DIRTY);
+    CHECK(f.device.readLatest(latest).ok() && latest.configTrust == ConfigTrust::DIRTY);
+    CHECK(!evidence.baselineMs() && !evidence.readyPending());
+  }
+}
+
 }  // namespace
 
 int main() {
@@ -322,5 +351,6 @@ int main() {
   failedReadsAndLifecycle();
   wrappedDeadline();
   tempConsumesRetainedReadiness();
+  tempRestoresContinuousBaseline();
   return EXIT_SUCCESS;
 }

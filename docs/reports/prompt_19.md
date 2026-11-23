@@ -145,3 +145,51 @@ The next run reviews this implementation against the phase-a cases.
 Stage 22 exposes explicit alert consumption, stage 23 extends the owned
 profile to managed offset, and stage 28 adds active/result-slot gates.
 MCU links, physical qualification and remote CI retain their later checkpoints.
+
+## Phase c review
+
+**PARTIAL, 2026-11-24.** Reviewed the 20-path phase-b diff at
+`dac11421a44130e6404be03930496fa5858c974d` on clean `main`. Its parent,
+subject and paths matched the implementation request. The wrapper recorded
+upstream equality at 00:36:18 Prague time. Two read-only reviewers traced
+destructive reads and profile trust in parallel. The review checked the
+seven phase-a cases against the public API, private engines and registered
+tests, using the pinned CONFIG and EEPROM_UL pages listed above. Both
+sibling comparison trees were clean at their phase-a revisions.
+
+- After a short CONFIG read, a successful TEMP read left the continuous
+  readiness baseline empty. The next CONFIG could therefore discard a new
+  DATA_READY indication. `tempRestoresContinuousBaseline` failed at the
+  missing baseline before the fix. The TEMP reader now records its completion
+  tick as the new boundary in a verified continuous profile. The latest
+  sample still carries `freshConversion == false`. The regression also
+  checks shutdown, dirty trust and retained alert-loss evidence.
+  [Physical read effects](../../src/DeviceEvidence.cpp), [latest tests](../../test/test_latest.cpp).
+- `preflightDriftAtDeadline` returns a changed CONFIG or TLOW exactly at
+  the recovery deadline. Both traces ended on that read with
+  `OPERATION_TIMEOUT`, zero writes and one tracked success per callback.
+  The snapshot retained the changed word, completion tick, dirty cause and
+  prior verification time and generation. CONFIG also retained HIGH and
+  discarded ready credit. [Apply tests](../../test/test_apply.cpp).
+- Clarified when replay clears the last explicit verification's completed
+  fields. The preflight-only failures retain the mask.
+  `stagedIntentAndIndependentReadback` checks that even an ambiguous first
+  shutdown write clears it. [Snapshot contract](../api-contracts.md),
+  [public header](../../include/TMP11x/TMP11x.h).
+
+The existing cases also covered partial verification after limit drift,
+ambiguous first and middle writes, full replay, continuous MOD aliases,
+owned one-shot MOD comparison, BUSY guard renewal, sticky alerts and
+owner-reported invalidation. The source review found no further changes
+needed for those paths. Guarded trigger dispatch, explicit alert consumption
+and managed offset remain with stages 21, 22 and 23.
+
+| Local command | Result on the reviewed changes |
+| --- | --- |
+| `cmake --build build/host --config Release --parallel 4` and `cmake -E chdir build/host ctest -C Release --output-on-failure` | PASS, 16/16 with GCC 15.1.0 and CMake/CTest 4.0.1. The focused configuration, latest, apply and trust suites also passed together. |
+| `cmake --build build/consumer --config Release --parallel 4` and `build/consumer/tmp11x_native_consumer.exe` | PASS, tests-off consumer printed `0.1.0`. |
+| `doxygen -` over the public headers with `WARN_AS_ERROR=YES` | PASS, Doxygen 1.13.2. The generated XML documents the first replay write attempt as the mask-clearing boundary. |
+| `python -B scripts/check_references.py`, `python -B scripts/check_promptset.py` and `git diff --check` | PASS, 14 pinned PDFs, 55 stages and clean whitespace. |
+
+Phase d owns final acceptance and the progress and report-index updates.
+Stage 43 owns the first remote CI checkpoint. Physical qualification remains open.
