@@ -9,9 +9,9 @@ model capability and observation types through `<TMP11x/TMP11x.h>`.
 without accessing hardware. `<TMP11x/CommandTable.h>` exposes the register
 pointers, field masks and per-model access classes. The private transport
 has native tests for one-word reads and guarded writes. The public device
-class supports bus-silent binding, teardown, explicit family checks and
-passive transport health. The managed latest-read API requires verified
-initialization, which arrives in stage 18. Physical qualification is pending.
+class supports bus-silent binding, explicit family checks, verified volatile
+initialization and recovery, latest temperature reads and passive transport
+health. Physical qualification is pending.
 `<TMP11x/Version.h>` exposes `TMP11x::version()` for the linked library.
 [Value and binding contracts](docs/api-contracts.md).
 
@@ -55,6 +55,37 @@ one combined read of register `0x0F`. On `IDENTITY_MISMATCH`, inspect
 previous output. Use `probe()` for the same family check when only the status
 is needed. `end()` clears observations and retains the binding for another
 read. `unbind()` also releases the binding. Both use zero bus callbacks.
+
+## Initialize and read a temperature
+
+For managed measurements, provide a monotonic floor clock in `cfg.nowMs` and
+set `cfg.clockResolutionMs` to its tick in whole milliseconds. Select the
+desired mode, alert settings and limits in `cfg.settings`. Keep power stable
+and hold exclusive ownership of the target throughout initialization and
+subsequent use of its startup evidence.
+
+```cpp
+TMP11x::Status initializeAndRead(TMP11x::TMP11x& sensor, const TMP11x::Config& cfg,
+                                 TMP11x::Sample& sample) {
+  const auto initialized = sensor.begin(cfg);
+  if (!initialized.ok()) return initialized;
+  return sensor.readLatest(sample);
+}
+```
+
+`begin(cfg)` checks the candidate before replacing the binding. On an
+existing binding, `begin()` and `recover()` replay its retained settings.
+Each call checks the ID and EEPROM lock/busy state, enters shutdown, verifies
+the limit words and reads back the desired CONFIG. Separate writes can
+transiently change the ALERT pin. A failed write can leave the target dirty
+and partially applied. Use the returned status to decide when to recover.
+An observed EEPROM unlock requires external correction.
+
+Successful initialization verifies CONFIG and both limits. It preserves
+hardware calibration and leaves offset provenance unknown. The final CONFIG
+read consumes DATA_READY. A subsequent `readLatest` reports the stored word
+with `freshConversion == false`, including immediately after initialization.
+[Startup, read effects and recovery](docs/api-contracts.md#startup-apply-and-reset).
 
 ## Inspect transport health
 

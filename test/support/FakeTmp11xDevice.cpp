@@ -53,6 +53,7 @@ Status writeWord(FakeTmp11xDevice& device, const std::uint8_t* tx,
     return Status::Error(Err::I2C_ERROR, "Unexpected fixture write");
   }
   if (outcome.status.ok()) {
+    if (outcome.ignoreSuccessfulWrite) return outcome.status;
     if (pointer == 0x01) {
       const auto previous = device.words[pointer];
       auto status = previous & 0xF000;

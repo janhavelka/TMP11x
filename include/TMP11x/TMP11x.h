@@ -1,16 +1,18 @@
 /// @file TMP11x.h
-/// @brief Device binding, passive transport health, identity diagnostics and measurement evidence.
+/// @brief Device binding, verified volatile initialization, transport health and measurement evidence.
 #pragma once
 
 #include <cstdint>
 #include <optional>
 
-#include "TMP11x/Config.h"
+#include "TMP11x/Configuration.h"
 
 namespace TMP11x {
 
 namespace detail {
+struct Apply;
 struct RegisterTransport;
+struct TransferResult;
 struct LatestRead;
 }
 
@@ -105,10 +107,26 @@ class TMP11x {
   TMP11x& operator=(TMP11x&&) = delete;
 
   /// Copy the selected target, hooks, transport policy and desired settings without I/O.
-  /// INVALID_CONFIG preserves the previous target and evidence. Acceptance discards
-  /// all previous observations, even on a same-target rebind after an external reset.
-  /// Only the binding structure is validated here. Sensor settings remain unverified.
+  /// INVALID_CONFIG preserves the previous target and evidence. Acceptance starts
+  /// a new observation history. A known EEPROM unlock still blocks mutation.
+  /// Checks all settings, including ordered THERM limits. Hardware verification requires begin().
   Status bind(const Config& config) noexcept;
+
+  /// Validate the candidate profile, clock and operation budget before replacing the binding,
+  /// then run begin(). Once accepted, the new target remains desired even after an I2C failure.
+  Status begin(const Config& config);
+
+  /// Apply the bound settings under stable power and exclusive ownership of this sensor.
+  /// Requires nowMs and at least one clock tick of operationTimeoutMs. Checks identity,
+  /// waits for startup, reads EEPROM_UL for locked/idle and verifies CONFIG and both limits
+  /// through guarded shutdown and restoration of the desired mode. CONFIG reads consume flags.
+  /// A successful call admits readLatest(). Hardware offset provenance remains UNKNOWN.
+  Status begin();
+
+  /// Replay and verify the retained target with the same deadline and guards as begin().
+  /// A failed write can leave partial changes and a DIRTY target. Recovery performs no reset
+  /// or rollback. A known unlocked device requires external correction and invalidation.
+  Status recover();
 
   /// Clear local observations, initialization and startup proof, keeping the bound
   /// target and desired settings. Safe to repeat. The physical power mode is untouched.
@@ -143,7 +161,8 @@ class TMP11x {
 
   /// Whether this instance holds an accepted target. All inspectors are bus-silent.
   bool isBound() const noexcept { return _config.model != Model::UNSELECTED; }
-  /// Whether managed initialization has verified the sensor profile.
+  /// Whether managed initialization has succeeded since binding or invalidation.
+  /// Inspect configTrust() separately after a failed replay.
   bool isInitialized() const noexcept { return _live.initialized; }
   /// Copy the current initialization flag and tracked transport history without calling any hooks.
   HealthSnapshot healthSnapshot() const noexcept;
@@ -158,24 +177,46 @@ class TMP11x {
   ConfigTrust configTrust() const noexcept { return _live.trust; }
 
  private:
+  friend struct detail::Apply;
   friend struct detail::RegisterTransport;
   friend struct detail::LatestRead;
 
-  // These facts expire together on teardown or incompatible identity. A timed
-  // initialization operation owns the first compatible ACK timestamp and proof.
+  // Current device knowledge expires on teardown or incompatible identity.
+  // A pending FIRST_ACK origin belongs only to the operation that read the ID.
   struct LiveState {
-    std::optional<std::uint32_t> firstAckMs;
     bool startupReady = false;
     bool initialized = false;
     ConfigTrust trust = ConfigTrust::UNKNOWN;
     std::uint32_t profileGeneration = 0;
+    std::optional<ConfigurationObservation> config;
+    std::optional<std::uint16_t> low;
+    std::optional<std::uint16_t> high;
+    std::optional<std::uint32_t> baselineMs;
+  };
+
+  // Pending ALERT-mode events captured by apply CONFIG reads. THERM HIGH is
+  // the level at the last applicable observation and is never latched here.
+  struct AlertEvidence {
+    bool pendingHigh = false;
+    bool pendingLow = false;
+    bool possibleLoss = false;
+    bool mixedOrUnknown = false;
+    std::optional<bool> thermHigh;
+    std::optional<std::uint32_t> observedAtMs;
+    std::uint32_t profileGeneration = 0;
   };
 
   void clearObservations() noexcept;
+  void invalidateIdentity() noexcept;
+  void observeApplyConfig(const detail::TransferResult& transfer, std::uint16_t raw) noexcept;
 
   Config _config{};
   IdentityInfo _identity{};
   LiveState _live{};
+  AlertEvidence _alerts{};
+  // Sticky across ordinary begin/recover, teardown and rebind. The owner must
+  // correct a known unlocked part before reporting device-state invalidation.
+  bool _eepromUnsafe = false;
   HealthSnapshot _health{};
   std::optional<Sample> _lastSample;
 };

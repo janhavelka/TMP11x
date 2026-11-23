@@ -28,6 +28,7 @@ struct TransferOutcome {
   // Script HIGH/LOW (bits 15:14) on a successful change of comparator mode.
   // TI leaves the transition unspecified. Therm mode only exposes HIGH.
   std::uint16_t comparatorFlagsOnModeChange = 0;
+  bool ignoreSuccessfulWrite = false;  // A reset-load write may ACK without changing storage.
 };
 
 struct TransferTrace {

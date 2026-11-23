@@ -11,8 +11,8 @@ Feature stages introduce the declarations with their implementations.
 
 Construct one `TMP11x::TMP11x` at a stable address per sensor. The owner
 serializes every call, including local inspection. `bind(const Config&)`
-validates the binding fields below and copies the accepted target and desired
-settings. An invalid candidate returns `INVALID_CONFIG` and preserves the
+validates the binding fields, every settings selector and the THERM limit
+ordering before copying the target. An invalid candidate returns `INVALID_CONFIG` and preserves the
 previous binding and observations. Every accepted bind, even to the same
 route, starts a new observation history with unknown profile trust.
 
@@ -28,9 +28,11 @@ These operations need no clock.
 trust. After an accepted bind, `isInitialized()` is false and trust is
 `UNKNOWN`. A compatible ID or a failed transfer preserves initialization,
 startup evidence and profile trust. A complete incompatible ID clears that
-evidence and retains the desired settings. Stage 18 owns complete profile
-validation and verified initialization, including establishing startup timing
-from its own compatible ID read. `end()` clears observations while retaining
+evidence and retains the desired settings. `begin(config)` requires a clock
+and an operation budget of at least one tick before replacing the binding.
+`begin()` and `recover()` establish startup timing from their own compatible
+ID read when proof is missing. They verify CONFIG and both limits. Offset
+provenance stays unknown until stage 23. `end()` clears observations while retaining
 the binding and desired settings. `unbind()` also drops the binding.
 Both operations succeed on an empty instance and invoke zero callbacks.
 Stage 28 adds the active-job and pending-result guards described in the

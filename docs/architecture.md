@@ -15,7 +15,7 @@ conversion or startup interval runs. [Public API and operation gates](api-contra
 | `CommandTable.h` | Register pointers, positioned field masks and `command::accessFor(model, pointer)`. The lookup distinguishes a protected shadow from a managed offset at `0x07`. |
 | `Temperature.h` | Pure signed count, Celsius and register-word conversions for TEMP and thresholds. |
 | `Configuration.h` | Bus-silent profile validation, CONFIG encoding and observation, and expected-register comparison for CONFIG, THIGH and TLOW. |
-| `TMP11x.h` | Sample, identity and health snapshots and the `TMP11x::TMP11x` device class. It owns the binding, desired settings, observations and latest sample. It exposes lifecycle methods, bound ID diagnostics, passive health inspectors and managed latest reads. |
+| `TMP11x.h` | Sample, identity and health snapshots and the `TMP11x::TMP11x` device class. It owns the binding, desired settings, observations and latest sample. It exposes binding, initialization and recovery, bound ID diagnostics, passive health inspectors and managed latest reads. |
 | `Version.h` | Checked-in generated package version from `library.json`. Its constants describe the header, and the out-of-line `version()` describes the linked library. |
 
 Implementation belongs in `src/`. Each public header must compile on its
@@ -58,7 +58,9 @@ sample and the instance cache. [Latest-read engine](../src/LatestRead.cpp).
 The write path checks the selected model, the typed purpose, and the
 operation owner's startup and locked-idle evidence before calling the adapter.
 Stable CONFIG accepts only bits in `0x07FC`, including canonical continuous
-and shutdown modes. Stage 18 establishes the guard on hardware. Offset
+and shutdown modes. The private apply engine reads EEPROM_UL before writing,
+renews the guard after an observed BUSY, and verifies the final CONFIG before
+publishing a generation. Offset
 management, one-shot and addressed reset have their own later feature owners.
 
 | Owner | Exclusive decision and callers |
@@ -89,8 +91,7 @@ over the **same** `BoardBus` object. The example BOM places a TMP112 at
 `0x48` and a TMP117 at `0x49`. Both adapters borrow the bus through
 `i2cUser` and map controller outcomes to their package's own `Status`.
 `boardMillis` reads the board clock. Each sensor object and the bus outlive
-the calls. This bring-up example describes the planned initialized interface.
-The current TMP11x interface supports the bind and observation steps.
+the calls. Both bring-up functions bind first and then initialize the sensor.
 
 ```cpp
 #include <TMP1x2/TMP1x2.h>

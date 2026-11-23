@@ -76,3 +76,73 @@ Phase b can begin. The acceptance traces above await implementation. Adapter
 links and wire timing, physical qualification, installed-package qualification
 and remote CI retain their respective checkpoints in stages 34–36, 40–41, 42
 and 43.
+
+## Phase b implementation
+
+**PARTIAL, 2026-11-23.** Phase b started at
+`1587c6b8d5280610e4254efaa53bd2ac566d98ab` on clean `main`. The phase-a
+commit changed only this report and has parent `fc1d1de`. The wrapper
+recorded upstream equality at 22:45:23 Prague time. No unexpected files
+were present. The pinned TI startup, CONFIG and EEPROM_UL pages and the
+TMP1x2 reference revision listed above were rechecked.
+
+`sync-initialize-recover` implements both `begin` overloads and `recover`.
+`bind` validates all settings before replacement. The timed overload also
+checks clock availability and budget. A successful replay enables a tracked
+latest read with verified CONFIG/limit provenance and unknown offset. A
+later ambiguous write retains the desired target and leaves an already
+initialized instance available for explicitly dirty latest observations.
+[Public API](../../include/TMP11x/TMP11x.h), [synchronous driver](../../src/TMP11x.cpp).
+
+`safe-apply-engine` verifies identity, anchors a missing startup wait to
+compatible ID completion, and obtains a fresh EEPROM_UL guard. Each step
+costs at most one sensor callback. The clock, pending interval and remaining
+dispatch count bound waits. The engine stages a settings candidate until
+the first shutdown write attempt. Explicit recovery uses the initial CONFIG
+and limits as starting values and verifies each owned field after writing.
+[Private phases](../../src/Apply.h), [apply implementation](../../src/Apply.cpp).
+
+A normal ALERT replay of the 0–10 °C test profile uses 14 callbacks. The
+trace below starts with the family check and ends with the generation
+baseline. Each write lists the complete word in wire order.
+
+```text
+R0F R04 R01 R03 R02 W01=0620 R01 W03=0000 R03 W02=0500 R02 R01 W01=0220 R01
+```
+
+The engine verifies the first limit before the second write can depend on
+it. A suppressed but acknowledged THIGH when raising a THERM pair leaves
+the old THIGH in place and stops replay before TLOW. The reverse order
+protects a descending pair. Transitions into THERM verify both ordered
+limits first. A transition out of THERM verifies shutdown in ALERT mode
+before the first inverting write. All CONFIG reads retain alert evidence,
+including at deadline equality. Only a timely final match with a valid guard
+publishes a generation. The final read consumes readiness.
+
+### Phase b host evidence
+
+| Named cases in `apply_cpp` | Result |
+| --- | --- |
+| `allModelsBeginRecoverLatest`, `admissionPreservesBinding` | PASS. Public replay, health and latest on all six BOM selections. Invalid profile or timing preserved the original binding. An accepted replacement survived a subsequent ID mismatch. |
+| `startupFromCompatibleCompletion`, `workLimitsWrapAndLoadSuppression` | PASS. Delayed power, end/begin, wrap, 1 and 10 ms clocks, frozen-clock exhaustion, 256-dispatch BUSY loop and a TMP116 clear-BUSY, ignored-write fixture. |
+| `busyAndUnlockedGuards`, `busyRecheckAndFinalBusy` | PASS. Immediate EUN refusal, paced BUSY rereads, guard failure and a new guard plus final CONFIG after BUSY at verification. |
+| `comparatorTransitions`, `ignoredLimitCannotInvertThermPair`, `pinOnlyChangeUsesSameGuardedReplay` | PASS. Both cross-mode transitions, raised and lowered THERM pairs, lost first writes, and routing/polarity-only replay. |
+| `stagedIntentAndIndependentReadback`, `finalVerificationAndAlertEvidence`, `replayAndStagedChangeOnDrift` | PASS. First-write intent, partial changes, low-bit limit mismatch, retained alerts, late or short final reads, continuous alias, staged drift refusal and recovery in one call. |
+
+The register fixture can now acknowledge a scripted write while keeping the
+previous word. The new cases compare literal addressed frames, read effects
+and transfer counts. [Tests](../../test/test_apply.cpp), [fixture](../../test/support/FakeTmp11xDevice.cpp).
+
+| Command | Result |
+| --- | --- |
+| `cmake --build build/host --config Release --parallel 4`, then `cmake -E chdir build/host ctest -C Release --output-on-failure` | PASS, 15/15 with GCC 15.1.0 and CMake/CTest 4.0.1, including register-ledger validation and regressions. |
+| `cmake --build build/consumer --config Release --parallel 4`, then `build/consumer/tmp11x_native_consumer.exe` | PASS, tests-off source consumer linked and printed `0.1.0`. |
+| `g++ -std=c++17 -Wall -Wextra -Wpedantic -Werror -Iinclude -fsyntax-only -x c++ -` | PASS, seven public headers in isolation and three README examples. |
+| `doxygen -` over `include/TMP11x` with XML output and `WARN_AS_ERROR=YES` | PASS, Doxygen 1.13.2 documented both begin overloads and recover. |
+| `python -B scripts/check_references.py`, `python -B scripts/check_promptset.py`, `git diff --check` | PASS, all 14 pinned PDFs, 55 stages and whitespace, with Python 3.12.10. |
+
+Phase c owns fresh review of these changes. The public invalidation path is
+due in stage 19. Until then, a latched EEPROM unlock blocks subsequent
+managed writes on that instance across ordinary replay, teardown and rebind.
+MCU links, physical qualification, package qualification and remote CI were
+not run in this phase.

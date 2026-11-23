@@ -19,7 +19,11 @@
   completion time when a clock is available.
 - Added signed TEMP and limit conversions and the managed `readLatest` and
   `readTemperature` entry points. A timely complete read updates the sample
-  cache. The public calls require the verified initialization planned for stage 18.
+  cache. The public calls require verified initialization.
 - Added pure CONFIG encoding and decoding, settings validation, and comparison
   of CONFIG and both limit registers. CONFIG observations retain raw MOD, status
   flags and the read-clear mask for the observed comparator mode.
+- Added synchronous `begin(config)`, `begin()` and `recover()` with timed startup,
+  an operation-local EEPROM lock/busy check and guarded CONFIG and limit
+  readback. Rejected bindings preserve the prior target. Failed writes retain
+  the desired settings for explicit recovery.
