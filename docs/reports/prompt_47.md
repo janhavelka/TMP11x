@@ -80,3 +80,94 @@ reviews, one on stages 10–13 and one on 14–17. The lead checks findings
 against source and repeats affected tests. Phase d repeats the originating
 acceptance checks. Adapter timing and electrical evidence belong to the MCU
 and physical stages. Stage 43 owns the remote CI checkpoint.
+
+## Phase b — engineering evidence, 2026-11-23
+
+The current source export passed a clean Release consumer build. Its public
+identity API classified every 16-bit word correctly for each of the six BOM
+selections. The transport, lifecycle, health, latest-read and codec checks
+below found no defect requiring a source or test change. The audit remains
+**PARTIAL** pending fresh review and final acceptance.
+
+The entry revision was `2dcb90226e45682cc4b21257ec33cb6738cf2e07` on clean
+`main`. Git history and the preceding wrapper request agree on the parent
+`0feff8a` and the single phase-a report change. The wrapper verified upstream
+equality at 20:30:04 Prague time. Two read-only agents traced stages 12–15
+and 16–17 in parallel. The lead checked their evidence against the sources,
+test cases and a clean build. The selected sibling build, status and source
+blobs still match the phase-a pins.
+
+### Source package and public entry points (10–11)
+
+- Managed PlatformIO Core 6.2.0 packed the checkout with
+  `scripts/pio.cmd package pack --output build/p47b/package/TMP11x.tar.gz`
+  using stage 10's pinned offline SPDX response. The archive contained exactly
+  28 regular files. All matched checkout bytes, including seven public headers,
+  nine implementation units and four private headers. Against Git blobs, only
+  `LICENSE` differed, by its 21 CRLF line endings in this Windows checkout.
+  The license text matched. Archive SHA-256
+  `27ea0a3ad6b1212abc4a7646bb2c8f60a97dd9ba465c18769cb97e075d964faf`.
+  ESP-IDF 5.5.5 Component Manager 2.5.2 loaded version 0.1.0 in component
+  upload mode and its file filter selected the same 28 files. [Package manifest](../../library.json), [IDF manifest](../../idf_component.yml).
+- The exported example was copied to a separate application directory. Its
+  Release build compiled nine sources from the extracted library and one from
+  that application. It linked, exercised public health and register policy,
+  printed `0.1.0` and registered zero tests. Each exported public header
+  compiled alone in strict C++17 with exceptions and RTTI disabled. Both
+  C++ examples in the exported README compiled. [Consumer](../../examples/native_consumer/main.cpp).
+- In `build/p47b/version`, independent header and IDF version drift each
+  caused both check commands to exit 1. Neither check changed bytes or
+  timestamps. Sync repaired each mirror and reproduced a missing header byte
+  for byte. A subsequent sync left both timestamps intact. [Generator](../../scripts/generate_version.py), [delegated check](../../tools/check_version_sync.py).
+- `value_types_cpp` exercised all 256 byte values for model, address and
+  selectors with its allocation trap active under `-DNDEBUG`. Invalid models
+  preserved the caller's capabilities. The public query and register policy
+  both use the descriptor selected by the BOM. The ID engine recognizes the
+  observed group from the same table. [Model descriptor](../../src/ModelDescriptor.h), [value cases](../../test/test_value_types.cpp).
+
+### Transport, identity, binding and health (12–15)
+
+| Check | Observed result |
+| --- | --- |
+| Register callbacks and write permission | For six models and 256 pointers, the suite checked a read and all three write purposes. Each allowed frame carried its own pointer. The byte cases included `0F → A1 17` and `02 12 A5`. On the four valid addresses the short budget clipped the grant to 3 ms and the larger budget to the 50 ms callback cap. A one-byte response left the caller's previous word intact. Prohibited EEPROM writes and missing guards issued zero callbacks. [Register cases](../../test/test_register_transport.cpp). |
+| Family identification through the extracted library | A separate public-header caller supplied all 65,536 ID words to each BOM selection. For all 393,216 calls it checked one combined read of 0x0F, the raw word, selected target, recognized group, revision validity/value and returned status. Totals stayed zero and state stayed UNINIT. TMP116/N accepted exactly 0x1116. The other four accepted all 16 revisions of base 0x117. Capability and pointer 0x07 checks distinguished four protected shadows from three shadows plus guarded offset. The named TMP114/TMP118 fixtures also checked that mismatch ends the probe. [ID engine](../../src/Identity.cpp), [negative responders](../../test/test_identity.cpp). |
+| Binding and passive health | Rejected rebind preserved previous settings and evidence. Accepted rebind, end and unbind cleared observations with zero callbacks. Independent routes to the same address stayed separate. In each model's five-transfer health trace, the third fault wrapped to tick 0. An ordinary success at tick 1 recovered READY with two successes, three failures and the prior fault retained. The instance remained uninitialized. Saturation, neutral diagnostics and local refusals passed. [Binding cases](../../test/test_binding.cpp), [health cases](../../test/test_health.cpp). |
+
+### Temperature, latest reads and CONFIG (16–17)
+
+The exact-part TEMP, CONFIG and limit pages listed in phase a support the
+signed 1/128 °C scale, the MOD=10 continuous alias and active-high POL=1.
+The separate calculation used big-endian signed decoding for the 11 literal
+words and decimal rounding for the inverse vectors. The native codec
+round-tripped all 65,536 words, including 0x8000 at −256 °C. A latest read
+of that word carried no freshness claim. [Temperature tests](../../test/test_temperature.cpp).
+
+The deadline fixture exercised 12 wrapped callback cases with complete and
+short responses, plus expiry before transfer. At equality after a complete
+TEMP read, the engine retained the raw word and physical success, DATA_READY
+was consumed, and the caller and last-good cache kept their old samples. A
+short read preserved the adapter failure and supplied no complete word.
+Expiry before transfer preserved DATA_READY and the callback count.
+[Latest-read cases](../../test/test_latest.cpp).
+
+Independent field combinations produced 512 steady CONFIG words per model,
+all with `word & 0xF803 == 0`. The native suite checked all 3,072 profiles,
+both limit words, every raw MOD value and each bit 9:2 for drift. MOD=11
+matched desired shutdown only with a confirmed owned trigger. The CONFIG
+observation retained raw status and the mode-dependent read-clear mask.
+The nonfactory reset fixture compared against the programmed profile.
+[CONFIG cases](../../test/test_configuration.cpp).
+
+### Phase-b verification and handoff
+
+| Commands | Result |
+| --- | --- |
+| `cmake -S . -B build/p47b/host -G Ninja -DTMP11X_BUILD_TESTS=ON -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXPORT_COMPILE_COMMANDS=ON`, `cmake --build build/p47b/host --config Release --parallel 4`, `ctest --test-dir build/p47b/host -C Release --output-on-failure` | PASS, 14/14. CMake/CTest 4.0.1, Ninja 1.12.1, GNU C++ 15.1.0, Python 3.12.10. |
+| `cmake -S "build/p47b/isolated app" -B build/p47b/consumer -G Ninja "-DTMP11X_SOURCE_DIR=<absolute path to build/p47b/source export>" -DTMP11X_BUILD_TESTS=OFF -DCMAKE_DISABLE_FIND_PACKAGE_Python3=TRUE -DCMAKE_DISABLE_FIND_PACKAGE_Git=TRUE -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXPORT_COMPILE_COMMANDS=ON`, build and run `tmp11x_native_consumer.exe`, then `ctest --test-dir build/p47b/consumer -C Release -N` | PASS, both discovery flags unused, linked version 0.1.0, zero tests. Local `build/p47b/public_identity.cpp` also linked against this consumer's `tmp11x/libTMP11x.a` and passed the six-model word sweep. |
+| `python -B scripts/check_references.py`, `python -B scripts/check_promptset.py`, `git diff --check` | PASS, 14 pinned PDFs, 55 stages and clean whitespace. |
+
+Phase c owns a fresh reread of prompts 10–17 and two parallel read-only
+reviews of the cumulative change from `cac1b93`. The phase-b checks cover
+host behavior and package contents. Stages 34–36 own adapter links and
+timing, 40–41 own fixture evidence, and 43 owns the remote CI checkpoint.
+Stage 18 still requires closure of audit 47.
