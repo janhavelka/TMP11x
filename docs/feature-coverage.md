@@ -51,6 +51,10 @@ conditions and actions actually exercised.
 [Required coverage inventory](prompts/FULL_COVERAGE.md),
 [verification layers](prompts/VERIFICATION.md).
 
+Audit 47 repeated the host checks through stage 17 and verified all six model
+selections through the public identity API of the extracted source package.
+[Audit acceptance](reports/prompt_47.md#phase-d-acceptance).
+
 ## Registers
 
 | ID | Documented capability and release disposition | TI pages 116 / 117 / 119 | Planned implementation | Test owner and remaining evidence | Planned CLI |

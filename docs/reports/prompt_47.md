@@ -1,5 +1,7 @@
 # Prompt 47 — audit of the library foundation and read path
 
+**COMPLETE.** Stage 18 can consume `audit-10-17`. The audit corrected the host test command for CMake 3.16. The final Release suite and extracted source consumer passed. [Phase d acceptance](#phase-d-acceptance).
+
 ## Phase a — brief and inputs, 2026-11-23
 
 **PARTIAL.** All eight prerequisite stages have individual COMPLETE rows and
@@ -205,3 +207,45 @@ finished. The documentation correction was the only confirmed finding.
 Phase d owns final acceptance for prompts 10–17, the report index and the
 progress checkpoint. Adapter links, wire timing, fixture evidence and the
 remote CI checkpoint retain the owners recorded in phase b.
+
+## Phase d acceptance
+
+Final acceptance on 2026-11-23 covered `cac1b93..2a1a19b`. The clean
+entry revision was `2a1a19b415c4b001a1d722c0d4d5e0975220fe87` on
+`main`. Its parent `a2ff94a`, subject and three documentation paths matched
+the phase-c request. The wrapper recorded equality with `origin/main` at
+21:01:11 Prague time. Both phase-c reviews are reconciled above.
+
+| Acceptance check | Result on Windows |
+| --- | --- |
+| `cmake -S . -B build/p47d/host -G Ninja -DTMP11X_BUILD_TESTS=ON -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXPORT_COMPILE_COMMANDS=ON`, then `cmake --build build/p47d/host --config Release --parallel 4` | PASS. Fresh build with GCC 15.1.0, Ninja 1.12.1 and CMake 4.0.1. All nine library units compiled as C++17 with strict warnings and `-Werror`. |
+| `cmake -E chdir build/p47d/host ctest -C Release --output-on-failure` | PASS, 14/14 with CTest 4.0.1. The documented transport filter also passed 1/1. The identity, binding, health, temperature, latest and configuration filter passed 6/6. |
+| Compile each public header alone and both README C++ examples with `g++ -std=c++17 -Wall -Wextra -Wpedantic -Werror -fno-exceptions -fno-rtti`. Run `doxygen -` over `include/TMP11x` with XML output and `WARN_AS_ERROR=YES`. | PASS, seven headers and two examples. Doxygen 1.13.2 generated the public API index, including the binding, health and CONFIG functions. |
+| `python -B scripts/generate_version.py check` and `python -B tools/check_version_sync.py`, then independent drift and repair in `build/p47d/interface-check/version` | PASS with Python 3.12.10. Both checks detected each stale mirror and the missing header without changing file bytes or timestamps. Generator `sync` restored the checked-in bytes. A second sync preserved timestamps. |
+| `scripts/pio.cmd package pack --output build/p47d/package-check/TMP11x.tar.gz` using the pinned offline SPDX response from stage 10. Compare the archive, checkout and IDF upload selection. | PASS with managed PlatformIO Core 6.2.0. All 28 expected files matched checkout and phase-b payloads byte for byte. ESP-IDF 5.5.5 Component Manager 2.5.2 selected the same paths and version. Phase-d archive SHA-256 `60b627c75a40cad42024da8772f6b042122a4090448df698c5fef42b495e5584`. |
+| Repeat the phase-b consumer configure/build under `build/p47d/package-check` with the standalone example and fresh extraction. Run `consumer/tmp11x_native_consumer.exe`, inspect the compile database and run `cmake -E chdir build/p47d/package-check/consumer ctest -C Release -N`. | PASS. With tests off and Python/Git discovery disabled, the build compiled nine extracted library sources and the separate application. The consumer printed `0.1.0` and CTest listed zero tests. The public identity harness linked against this build and passed all 393,216 model/word cases. |
+
+The transport fixture checked the exact three write bytes `02 12 A5` and
+the two ID response bytes `A1 17`. Bind and teardown used zero callbacks.
+A tracked success restored READY from OFFLINE for all six BOM selections.
+At deadline equality, a complete TEMP read counted as a physical success
+and retained its raw word while preserving the caller's output and last-good
+sample. A short read counted as a physical failure. An expired request
+before dispatch left the fake's DATA_READY flag intact. [Transport cases](../../test/test_register_transport.cpp), [health cases](../../test/test_health.cpp), [deadline cases](../../test/test_latest.cpp).
+
+The signed codec round-tripped all 65,536 words. Independent signed-byte
+and decimal calculations matched all 11 wire and 14 inverse vectors. All
+3,072 steady CONFIG encodings cleared `0xF803`. The pinned CONFIG tables
+confirm active-high POL=1 and the MOD=10 continuous alias on TMP116 p. 26,
+TMP117 p. 27 and TMP119 p. 34. TMP119 pp. 32 and 39 still give different
+default ID words. The ID therefore establishes family compatibility only.
+[Literal vectors](../registers/behavior-vectors.json), [CONFIG cases](../../test/test_configuration.cpp), [source manifest](../reference/manifest.json).
+
+With Python 3.12.10, `scripts/check_references.py` verified all 14 pinned
+PDFs and `scripts/check_promptset.py` passed for all 55 stages. Their
+regression suites passed all nine and 36 cases, respectively.
+Stage 18 owns guarded initialization and its public integration tests.
+Adapter links and timing (34–36), physical qualification (40–41),
+installed-package qualification (42) and remote CI (43) remain open.
+The silicon uncertainties listed in phase a remain recorded for those
+operations that depend on them. [Stage 18](../prompts/18_safe-initialize.md), [verification layers](../prompts/VERIFICATION.md).

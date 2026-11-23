@@ -5,8 +5,8 @@
 **Repository:** `main`, tracking `origin/main` at `https://github.com/janhavelka/TMP11x.git`.
 **Preparation input HEAD:** `6c5e4496d5c896af689228d4bee4382a53c20626` (clean and synchronized at entry).
 **Hardware:** Physical TMP11x board and test wiring NOT CONFIRMED.
-**Last completed stage:** 17 (type-safe CONFIG codecs and validation).
-**Last update:** 2026-11-23. Next eligible stage is audit 47 (library foundation and read path, prompts 10–17).
+**Last completed stage:** 47 (audit of the library foundation and read path, prompts 10–17).
+**Last update:** 2026-11-23. Next eligible stage is [18](18_safe-initialize.md), EEPROM-safe initialization and configuration writes.
 
 Preparation evidence includes the [6b173cc second follow-up](../reports/audit-followup-6b173cc.md),
 the [cb73740 follow-up](../reports/audit-followup-cb73740.md#response--2026-11-17),
@@ -37,7 +37,7 @@ every planned deliverable a producer and checks consumer dependencies.
 | [15](15_passive-health.md) | Passive transport health | COMPLETE — [report](../reports/prompt_15.md). All six model selections recovered from OFFLINE on an ordinary tracked read. All 11 Release tests and the tests-off consumer passed. |
 | [16](16_temperature-codec.md) | Signed temperature and threshold codecs and latest reads | COMPLETE — [report](../reports/prompt_16.md). All 65,536 register words round-tripped. Latest-read tests covered all six models and preserved the previous sample on failure or expiry. All 13 Release tests and the tests-off consumer passed. |
 | [17](17_config-codecs.md) | Type-safe CONFIG codecs and validation | COMPLETE — [report](../reports/prompt_17.md). All 3,072 steady profiles matched their expected encodings across six models. All 14 Release tests and the tests-off consumer passed. |
-| [47](47_audit-10-17.md) | Audit prompts 10–17 before initialization writes | NOT_STARTED |
+| [47](47_audit-10-17.md) | Audit prompts 10–17 before initialization writes | COMPLETE — [report](../reports/prompt_47.md#phase-d-acceptance). Corrected the CMake 3.16 host test command. All 14 Release tests, the extracted consumer and all 393,216 public identity cases passed. |
 | 18–19 | Safe initialization and configuration trust | NOT_STARTED |
 | [48](48_audit-18-19.md) | Audit prompts 18–19 before adding settings and acquisition | NOT_STARTED |
 | 20–21 | Conversion settings, fresh acquisition and one-shot | NOT_STARTED |
