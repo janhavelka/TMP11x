@@ -171,14 +171,21 @@ void partialVerificationRetainsEvidence() {
   const auto partial = f.device.getSettingsSnapshot();
   CHECK(partial.config && partial.config->raw == 0x0224);
   CHECK(partial.low && partial.high && partial.trust == ConfigTrust::DIRTY);
-  CHECK(partial.low->raw == 0xFF01 && partial.low->observedAtMs != before.low->observedAtMs);
+  const auto afterTimeout = f.device.healthSnapshot();
+  CHECK(partial.config->timestampValid && partial.config->observedAtMs > before.config->observedAtMs);
+  CHECK(partial.low->raw == 0xFF01 && partial.low->observedAtMs);
+  CHECK(*partial.low->observedAtMs > partial.config->observedAtMs);
+  CHECK(partial.low->observedAtMs == afterTimeout.lastSuccessMs);
   CHECK(partial.high->raw == 0x0500 && partial.high->observedAtMs == before.high->observedAtMs);
   const auto prefix = static_cast<unsigned>(SettingsField::CONFIG) | static_cast<unsigned>(SettingsField::LOW_LIMIT);
   CHECK(partial.affectedFields == prefix);
   CHECK(partial.verificationReads == partial.affectedFields);
   CHECK(partial.dirtyReason == DirtyReason::READBACK_MISMATCH && partial.verifiedAtMs == before.verifiedAtMs);
-  CHECK(f.device.healthSnapshot().totalSuccess == health.totalSuccess + 2);
-  CHECK(f.device.healthSnapshot().totalFailures == health.totalFailures + 1);
+  CHECK(partial.verifiedGeneration == before.verifiedGeneration);
+  CHECK(partial.desired.pinFunction == PinFunction::THRESHOLD);
+  CHECK(partial.desired.limits.lowCounts == -256 && partial.desired.limits.highCounts == 1280);
+  CHECK(afterTimeout.totalSuccess == health.totalSuccess + 2 && afterTimeout.totalFailures == health.totalFailures + 1);
+  CHECK(afterTimeout.lastError.is(Err::I2C_TIMEOUT) && afterTimeout.lastErrorMs > afterTimeout.lastSuccessMs);
 
   // An outside correction cannot certify the uninterrupted profile.
   f.chip.words[1] = 0x0220;
@@ -191,7 +198,9 @@ void partialVerificationRetainsEvidence() {
   CHECK(matching.trust == ConfigTrust::DIRTY && matching.dirtyReason == partial.dirtyReason);
   CHECK(matching.affectedFields == partial.affectedFields && matching.verifiedAtMs == before.verifiedAtMs);
   CHECK(matching.verifiedGeneration == before.verifiedGeneration);
-  CHECK(matching.verificationReads == before.verificationReads);
+  CHECK(matching.verificationReads == (prefix | static_cast<unsigned>(SettingsField::HIGH_LIMIT)));
+  CHECK(matching.config->raw == 0x0220 && matching.low->raw == 0xFF00 && matching.high->raw == 0x0500);
+  CHECK(matching.high->observedAtMs == f.device.healthSnapshot().lastSuccessMs);
 
   f.bus.script.push_back({Status::Error(Err::I2C_NACK, "CONFIG failed")});
   f.bus.trace.clear();
@@ -201,6 +210,18 @@ void partialVerificationRetainsEvidence() {
   CHECK(failed.verificationReads == 0 && failed.config->observedAtMs == matching.config->observedAtMs);
   CHECK(failed.low->observedAtMs == matching.low->observedAtMs && failed.high->observedAtMs == matching.high->observedAtMs);
   CHECK(failed.dirtyReason == DirtyReason::READBACK_MISMATCH && failed.affectedFields == prefix);
+
+  f.bus.trace.clear();
+  CHECK(f.device.recover().ok());
+  CHECK(f.bus.trace.size() == 14);
+  CHECK(f.bus.trace[0].combinedRead && f.bus.trace[0].tx[0] == 0x0F);
+  CHECK(f.bus.trace[1].combinedRead && f.bus.trace[1].tx[0] == 0x04);
+  CHECK(f.bus.trace.back().combinedRead && f.bus.trace.back().tx[0] == 0x01);
+  const auto recovered = f.device.getSettingsSnapshot();
+  CHECK(recovered.trust == ConfigTrust::VERIFIED && recovered.dirtyReason == DirtyReason::NONE);
+  CHECK(recovered.affectedFields == 0 && recovered.verificationReads == 0);
+  CHECK(recovered.verifiedGeneration == before.verifiedGeneration + 1);
+  CHECK(recovered.verifiedAtMs == f.device.healthSnapshot().lastSuccessMs);
 }
 
 void ambiguousWritesKeepTheTarget() {

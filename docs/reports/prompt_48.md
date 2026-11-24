@@ -165,5 +165,50 @@ passed, followed by five passing suites with
 `python -B scripts/check_references.py` verified 14 pinned PDFs and
 `python -B scripts/check_promptset.py` passed for 55 stages.
 
-Phase b continues with partial verification, followed by destructive
-CONFIG/TEMP reads and invalidation.
+## Phase b — Verification after drift
+
+The clean baseline was `6aec9adbbb8417d8301e23776c9a423589d4e652`.
+Its parent, subject and two paths matched the previous request. The
+wrapper verified equality with `origin/main` at 01:44:33 Prague time.
+
+Both public reads feed each physical outcome to `DeviceEvidence::observeRegister`.
+On all six selections, `readConfiguration` issued one `R01` and returned
+the complete word. Reading `FA20` preserved verified trust with the
+continuous alias and BUSY set. Reading `1A28` recorded polarity drift
+against desired active-low. Neither observation advanced the verification
+time. Explicit verification reads `R01 R03 R02`. A clean scan updates the
+time to THIGH completion and retains the generation. [Public operations](../../src/TMP11x.cpp),
+[field observations](../../src/DeviceEvidence.cpp), [trust tests](../../test/test_trust.cpp).
+
+| Scripted verification at address `0x48` | Return and state after the callback sequence |
+| --- | --- |
+| Only TLOW or THIGH drifted by one count | `CONFIG_MISMATCH` after all three reads. Only the changed limit was marked affected. The snapshot showed −255 or 1281 counts and kept the desired pair (−256, 1280). Explicit recovery restored that pair. |
+| CONFIG returned `0224`, TLOW returned `FF01`, THIGH timed out | `I2C_TIMEOUT`. CONFIG and TLOW gained new completion times in read order. THIGH retained its earlier `0500` and time. The scan mask and affected mask were both `0x03`. The first dirty cause remained `READBACK_MISMATCH`. Health counted two successes and one failure, with last success at TLOW and last error at THIGH. The desired pin function, both desired limits, verification time and generation survived. |
+| Owner restored all three words, then verification ran again | `CONFIG_DIRTY`. The full scan recorded `0220/FF00/0500` and mask `0x07`. The affected mask stayed `0x03` and the prior verified time and generation survived. A subsequent CONFIG NACK left mask zero and all three observation times intact. Explicit recovery then made 14 transfers, starting with identity and EEPROM_UL and ending with CONFIG. The final read established the next verified generation and cleared both masks. |
+
+In `replayAndStagedChangeOnDrift`, staged settings stopped at the
+mismatched CONFIG or TLOW preflight read, preserving the old target.
+Explicit replay took the full guarded sequence. The extended
+`partialVerificationRetainsEvidence` assertions connect the timeout,
+outside correction and replay on the same device. [Apply traces](../../test/test_apply.cpp),
+[verification contract](../api-contracts.md).
+
+The TI MOD tables specify `10` as a continuous alias that reads back
+as `00`, and `11` as the one-shot command. The driver also accepts an
+observed `10` for desired continuous. In `physicalTriggerEvidence`, an
+injected terminal trigger success allowed `0E20` and `0620` for desired
+shutdown. A failed trigger left `0E20` as drift. A physically successful
+shutdown write at the deadline ended the exception, so a subsequent
+`0E20` again produced `CONFIG_MISMATCH`. This tests provenance at the
+write-evidence seam. Stage 21 owns trigger dispatch. [Comparator](../../src/Configuration.cpp),
+[TMP116 p. 26](../reference/source/TMP116-Digital-Temperature-Sensor-Datasheet-SBOS740A.pdf#page=26),
+[TMP117 p. 27](../reference/source/TMP117-Digital-Temperature-Sensor-Datasheet-SNOSD82D.pdf#page=27),
+[TMP119 p. 34](../reference/source/TMP119-Digital-Temperature-Sensor-Datasheet-SNIS236.pdf#page=34).
+
+`cmake --build build/host --config Release --parallel 4` passed with
+CMake 4.0.1 and GCC 15.1.0. All four suites passed with
+`cmake -E chdir build/host ctest -C Release --output-on-failure -R '^(trust|apply|configuration|health)_cpp$'`.
+`python -B scripts/check_references.py` verified 14 PDFs and
+`python -B scripts/check_promptset.py` passed for 55 stages with Python
+3.12.10. Phase b continues with destructive CONFIG/TEMP reads and
+invalidation after owner-reported reset.
