@@ -85,3 +85,45 @@ Doxygen. Trigger dispatch (21), alert consumption (22), managed offset (23)
 and job ownership (28–29) retain their integration owners. MCU links (34–36),
 fixture qualification (40–41), package qualification (42) and the first remote
 CI checkpoint (43) retain their separate evidence gates.
+
+## Phase b — Admission, startup and EEPROM guard
+
+The clean entry revision was `72c17acdf8b6eb73c04a5997b9eda46047985ea8`.
+Its parent, subject and sole report path matched the phase-a request. The
+wrapper verified equality with `origin/main` at 01:14:47 Prague time.
+The audited implementation remains the one in `fc1d1de..d7cb61c`.
+
+TMP116 p. 17 permits reads and describes ignored writes with BUSY clear
+during loading. Its field tables describe BUSY asserted at power-up.
+TMP117 p. 18 and TMP119 p. 20 describe asserted BUSY and ignored CONFIG
+and limit writes. On all six selections, `Apply::readIdentityStep` anchors
+the policy wait at compatible ID completion when startup proof is absent.
+After that wait, `readGuard` interprets bits 15 and 14 of EEPROM_UL.
+Every replay obtains its own guard. A subsequent CONFIG with bit 12 set
+revokes it. [TMP116 pp. 17, 26, 29](../reference/source/TMP116-Digital-Temperature-Sensor-Datasheet-SBOS740A.pdf#page=17),
+[TMP117 pp. 18, 27, 30](../reference/source/TMP117-Digital-Temperature-Sensor-Datasheet-SNOSD82D.pdf#page=18),
+[TMP119 pp. 20, 34, 37](../reference/source/TMP119-Digital-Temperature-Sensor-Datasheet-SNIS236.pdf#page=20),
+[guard policy](../eeprom-and-reset-policy.md#startup-and-operation-guard), [engine](../../src/Apply.cpp).
+
+The scripted bus recorded the following frames at address `0x49`. Each
+`R` sends the indicated pointer and reads two bytes. Each `W` sends the
+pointer and one MSB-first word. [Fixture and assertions](../../test/test_apply.cpp).
+
+| Case | Expected and observed result |
+| --- | --- |
+| Rejected replacement and successful replay | In `admissionPreservesBinding`, invalid selectors, an inverted THERM pair or invalid timing produced zero callbacks and preserved the initialized binding. A valid replacement with incompatible ID ended at `R0F` with `IDENTITY_MISMATCH` and one successful transfer. In `allModelsBeginRecoverLatest`, begin and recovery each produced `R0F R04 R01 R03 R02 W01=0620 R01 W03=0000 R03 W02=0500 R02 R01 W01=0220 R01` on all six models. Recovery advanced the generation. |
+| FIRST_ACK and suppressed writes | In `startupFromCompatibleCompletion`, the fixture bound at tick 0, probed at 30 and started apply at 40. ID completed at tick 50. Only `R0F` appeared before tick 54 (1 ms clock) or 70 (10 ms clock). At that tick the next frame was `R04` and replay succeeded. In the TMP116 suppressed-write case of `workLimitsWrapAndLoadSuppression`, clear BUSY passed the guard after the wait. The first shutdown write was ACKed and ignored. Readback ended the operation at `W01=0620 R01` with `CONFIG_MISMATCH`, CONFIG still zero and initialization incomplete. |
+| EUN and transport failure | In `busyAndUnlockedGuards`, either `0x8000` or `0xC000` ended begin at `R0F R04` with `EEPROM_UNSAFE` and zero writes. A guard bus failure ended recovery on the same two reads with `I2C_BUS` and adapter detail 17. The new `unlockedGuardAtDeadline` case returned `0xC000` exactly at expiry. Begin returned `OPERATION_TIMEOUT`, remained uninitialized and recorded two successful reads, the last at the deadline. After the fixture cleared EUN, recovery still returned `EEPROM_UNSAFE` with zero callbacks. |
+| BUSY, elapsed time and work caps | With only BUSY set, the 45 ms case expired after `R0F` and paced `R04` reads with zero transport failures. With a large deadline, dispatch 256 ended on `R04` with `WORK_LIMIT`. A frozen startup wait allowed 1,000,000 unchanged-tick checks and stopped on the next with only `R0F`. Begin across unsigned wrap completed the normal 14 frames. [Work-limit cases](../../test/test_apply.cpp). |
+| BUSY found on CONFIG readback | In `busyShutdownReadbackRequiresNewGuard`, shutdown readback returned HIGH, READY and BUSY. The next and last read was `R04`, returning `0xC000`. Begin returned `EEPROM_UNSAFE` after one write, with HIGH retained, no ready baseline and trust DIRTY. In `busyRecheckAndFinalBusy`, BUSY on final CONFIG instead led to a paced `R04 R01` after the final write. A safe guard and matching reread completed initialization with HIGH retained. |
+
+The Release build and four focused suites passed with CMake/CTest 4.0.1
+and GCC 15.1.0. Commands were `cmake --build build/host --config Release --parallel 4`
+and `cmake -E chdir build/host ctest -C Release --output-on-failure -R '^(identity|apply|register_transport|trust)_cpp$'`.
+`python -B scripts/check_references.py` verified 14 pinned PDFs with Python
+3.12.10. This slice added the deadline regression to the existing apply
+suite. The production guard handled the case as required.
+
+Phase b continues with ordered limit writes, ACKed but ignored writes and ambiguous
+write intent. Partial verification, destructive reads and invalidation
+remain open for subsequent traces.

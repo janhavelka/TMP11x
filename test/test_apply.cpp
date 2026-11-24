@@ -240,6 +240,24 @@ void busyAndUnlockedGuards() {
   CHECK(f.device.healthSnapshot().lastError.detail == 17);
 }
 
+void unlockedGuardAtDeadline() {
+  Fixture f;
+  const auto deadline = f.now + f.config.operationTimeoutMs;
+  f.chip.words[4] = 0xC000;
+  f.beforeTransfer = [&](bool read, std::uint8_t pointer) {
+    if (read && pointer == 0x04) f.now = deadline;
+  };
+  CHECK(f.device.begin(f.config).is(Err::OPERATION_TIMEOUT));
+  CHECK(transcript(f) == "R0F R04" && !f.device.isInitialized());
+  const auto health = f.device.healthSnapshot();
+  CHECK(health.totalSuccess == 2 && health.totalFailures == 0);
+  CHECK(health.lastSuccessMsValid && health.lastSuccessMs == deadline);
+
+  f.chip.words[4] = 0;
+  f.bus.trace.clear();
+  CHECK(f.device.recover().is(Err::EEPROM_UNSAFE) && f.bus.trace.empty());
+}
+
 void recoveryStartupProof() {
   Fixture f;
   f.tickIncrement = 0;
@@ -884,6 +902,7 @@ int main() {
   recoveryStartupProof();
   busyShutdownReadbackRequiresNewGuard();
   busyAndUnlockedGuards();
+  unlockedGuardAtDeadline();
   busyRecheckAndFinalBusy();
   comparatorTransitions();
   ignoredLimitCannotInvertThermPair();
