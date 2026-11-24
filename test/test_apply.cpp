@@ -801,8 +801,10 @@ void retainedAlertsAcrossGenerations() {
   CHECK(f.device.getSettingsSnapshot().verifiedGeneration != first.profileGeneration);
   CHECK(!view.readyPending() && !view.readyHistoryUncertain());
   CHECK(view.alerts().pendingHigh && view.alerts().profileGeneration == first.profileGeneration);
+  CHECK(!view.alerts().pendingLow && !view.alerts().mixedOrUnknown);
   f.chip.words[1] |= 0x4000;
-  CHECK(f.device.verifyConfiguration().ok());
+  CHECK(f.device.readConfiguration(observed).ok());
+  CHECK(observed.low && !observed.high && observed.mode == first.mode);
   CHECK(view.alerts().pendingHigh && view.alerts().pendingLow && view.alerts().mixedOrUnknown);
   CHECK(view.alerts().source == first.source && view.alerts().mode == first.mode);
   CHECK(view.alerts().observedAtMs == first.observedAtMs && view.alerts().profileGeneration == first.profileGeneration);

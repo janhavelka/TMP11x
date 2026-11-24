@@ -278,3 +278,30 @@ all 16 tests with CMake/CTest 4.0.1 and GCC 15.1.0.
 `python -B scripts/check_promptset.py` passed for 55 stages with Python
 3.12.10. `git diff --check` passed. Phase c owns the two independent
 reviews of prompts 18 and 19. Stage 20 still depends on audit closure.
+
+## Phase c — Independent review, 2026-11-24
+
+Two read-only reviewers worked in parallel after rereading prompts 18 and 19.
+They examined the original changes in `fc1d1de..d7cb61c` and the subsequent
+audit tests through `0fe8ab0656eb8d8a17534d5ef3780fa047015158`. The entry
+tree was clean. The prior request matched that commit's parent, subject and
+two paths. The wrapper verified upstream equality at 02:29:53 Prague time.
+
+| Review | Finding and disposition |
+| --- | --- |
+| Guarded apply | The FIRST_ACK wait starts at compatible ID completion. After reported reset, a BUSY guard permits only a paced guard reread. A CONFIG readback with BUSY cancels the earlier guard. Signed limit ordering and verification of each write protect the intermediate THERM pair when an ACKed write is ignored. The lead checked these paths against the pinned TI pages above, the transport mask and the scripted frames. No production correction was needed. [Engine](../../src/Apply.cpp), [transport](../../src/RegisterTransport.cpp), [tests](../../test/test_apply.cpp). |
+| Trust and publication | The partial scan, short and late destructive reads, explicit invalidation and latest-sample publication matched the stage 19 contract. One regression test changed both CONFIG read source and profile generation between HIGH and LOW. Either change could set the mixed marker. The revised test captures both events through `readConfiguration` in continuous mode and checks that HIGH alone retains its original attribution across recovery. LOW then sets the mixed marker while preserving the first event's time and generation. [Evidence](../../src/DeviceEvidence.cpp), [regression](../../test/test_apply.cpp), [same-generation control](../../test/test_latest.cpp). |
+
+The lead removed only the generation comparison from a copy of
+`DeviceEvidence.cpp` under `build/p48c-alerts` and linked it into the apply
+test with GCC 15.1.0. The original test passed with that defect. The revised
+test failed at the mixed-marker assertion, as expected.
+
+`cmake --build build/host --config Release --parallel 4` and
+`cmake -E chdir build/host ctest -C Release --output-on-failure` passed
+all 16 tests against production code (CMake/CTest 4.0.1).
+`python -B scripts/check_references.py` verified 14 pinned PDFs and
+`python -B scripts/check_promptset.py` passed for 55 stages with Python
+3.12.10. `git diff --check` passed. Both reviewers finished. Phase d owns
+the remaining clean-build, consumer, header, README and Doxygen acceptance
+checks and the audit closure.
