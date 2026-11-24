@@ -244,3 +244,37 @@ rows. [Latest-read tests](../../test/test_latest.cpp), [apply tests](../../test/
 Python 3.12.10 verified 14 PDFs with `python -B scripts/check_references.py`
 and 55 stages with `python -B scripts/check_promptset.py`. The remaining
 phase-b trace covers owner-reported reset and renewal of FIRST_ACK.
+
+## Phase b — Recovery after an owner-reported reset
+
+The clean entry revision was `018fa7d0732040fb7832cd0eb5b1dddb3743889f`.
+Its parent, subject and two paths matched the previous request. The wrapper
+verified equality with `origin/main` at 02:15:01 Prague time.
+
+`invalidateDeviceState()` calls `clearLiveState()` and clears the latched
+EEPROM refusal. It drops startup proof, initialized state, observed fields,
+readiness, owned-trigger provenance and the live THERM level. It keeps the
+desired profile, last verified generation and time, sample, pending ALERT
+events and transport history. The application restores stable power and
+exclusive access before replay. [Invalidation](../../src/TMP11x.cpp),
+[state fields](../../include/TMP11x/TMP11x.h), [interference policy](../eeprom-and-reset-policy.md#external-interference).
+
+| Host case | Evidence |
+| --- | --- |
+| `recoveryAfterReportedReset` on TMP117 | With DATA_READY pending after a successful begin, invalidation cleared readiness and its baseline. A latest read returned `NOT_INITIALIZED`. Neither call issued a frame. After a 100-tick idle interval the new ID callback took 10 ticks. At ID completion +3 the trace was still `R0F`. At +4 the first `R04` returned BUSY (`4000`). At +5 no further frame had run. At +6 a second `R04` returned locked and idle. Only then did replay read CONFIG and both limits, write shutdown, and finish the verified profile. The final CONFIG advanced the generation once. [Apply test](../../test/test_apply.cpp), [startup and guard steps](../../src/Apply.cpp). |
+| `retainedAlertsAcrossGenerations` | Invalidation preserved sample `F380` with its original verification trust, generation and timestamp. The retained HIGH and LOW events kept their mixed-generation marker and original observation time and generation. [History assertions](../../test/test_apply.cpp). |
+| `invalidationAfterExternalCorrection` | A timed-out TEMP read retained transport detail 17. After EUN was observed, correcting the fixture alone still produced `EEPROM_UNSAFE` without traffic. Invalidation preserved the error and transfer history, binding, desired limits and last verification time. Live trust became UNKNOWN and all three field observations were empty. Public recovery obtained a new ID and guard and advanced the generation once. [Trust test](../../test/test_trust.cpp). |
+
+The reset trace completes the phase-a evidence matrix. The existing driver
+passed. The new assertions cover the interval between ID completion and the
+first safe post-reset guard. The 3 ms minimum and clock rounding come from
+project policy. TI describes an approximate startup interval.
+[Startup policy](../eeprom-and-reset-policy.md#startup-and-operation-guard).
+
+`cmake --build build/host --config Release --parallel 4` and
+`cmake -E chdir build/host ctest -C Release --output-on-failure` passed
+all 16 tests with CMake/CTest 4.0.1 and GCC 15.1.0.
+`python -B scripts/check_references.py` verified 14 PDFs.
+`python -B scripts/check_promptset.py` passed for 55 stages with Python
+3.12.10. `git diff --check` passed. Phase c owns the two independent
+reviews of prompts 18 and 19. Stage 20 still depends on audit closure.

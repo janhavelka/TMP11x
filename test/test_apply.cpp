@@ -283,6 +283,46 @@ void recoveryStartupProof() {
   CHECK(f.device.recover().ok() && transcript(f) == normal);
 }
 
+void recoveryAfterReportedReset() {
+  Fixture f;
+  CHECK(f.device.begin(f.config).ok());
+  const auto generation = f.device.getSettingsSnapshot().verifiedGeneration;
+  const Apply view{f.device};
+  ConfigurationObservation observed;
+  f.chip.words[1] |= 0x2000;
+  CHECK(f.device.readConfiguration(observed).ok() && view.readyPending());
+  f.bus.trace.clear();
+  CHECK(f.device.invalidateDeviceState().ok());
+  CHECK(!view.readyPending() && !view.baselineMs() && !f.device.isInitialized());
+  Sample sample;
+  CHECK(f.device.readLatest(sample).is(Err::NOT_INITIALIZED) && f.bus.trace.empty());
+
+  f.chip.words[4] = 0x4000;  // Still loading after power returns.
+  f.tickIncrement = 0;
+  f.now += 100;
+  Apply replay{f.device};
+  CHECK(replay.start().inProgress() && f.bus.trace.empty());
+  f.beforeTransfer = [&](bool, std::uint8_t pointer) {
+    if (pointer == 0x0F) f.now += 10;  // FIRST_ACK is at completion.
+  };
+  CHECK(oneStep(replay, f).inProgress() && transcript(f) == "R0F");
+  f.now += 3;
+  CHECK(oneStep(replay, f).inProgress() && transcript(f) == "R0F");
+  ++f.now;
+  CHECK(oneStep(replay, f).inProgress() && transcript(f) == "R0F R04");
+  f.chip.words[4] = 0;
+  ++f.now;
+  CHECK(oneStep(replay, f).inProgress() && transcript(f) == "R0F R04");
+  ++f.now;
+  CHECK(oneStep(replay, f).inProgress() && transcript(f) == "R0F R04 R04");
+  auto status = oneStep(replay, f);
+  while (status.inProgress()) status = oneStep(replay, f);
+  CHECK(status.ok() && f.device.isInitialized());
+  CHECK(transcript(f) ==
+        "R0F R04 R04 R01 R03 R02 W01=0620 R01 W03=0000 R03 W02=0500 R02 R01 W01=0220 R01");
+  CHECK(f.device.getSettingsSnapshot().verifiedGeneration == generation + 1);
+}
+
 void busyShutdownReadbackRequiresNewGuard() {
   Fixture f;
   f.beforeTransfer = [&](bool read, std::uint8_t ptr) {
@@ -918,6 +958,7 @@ int main() {
   admissionPreservesBinding();
   startupFromCompatibleCompletion();
   recoveryStartupProof();
+  recoveryAfterReportedReset();
   busyShutdownReadbackRequiresNewGuard();
   busyAndUnlockedGuards();
   unlockedGuardAtDeadline();
