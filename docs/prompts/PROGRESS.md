@@ -1,12 +1,12 @@
 # TMP11x implementation progress
 
-**State:** Library foundation, portable sensor value types, checked register transport, bus-silent binding, public identity diagnostics, passive transport health, signed temperature conversion, latest reads, CONFIG codecs and guarded initialization and recovery complete.
+**State:** Guarded initialization and recovery, latest temperature reads, configuration verification and dirty-state tracking are complete across all six model selections.
 **Target:** 55 stages in manifest order, including 11 new audit checkpoints. TMP117 is primary, with all six selected BOM-model capability gates covered by every relevant stage.
 **Repository:** `main`, tracking `origin/main` at `https://github.com/janhavelka/TMP11x.git`.
 **Preparation input HEAD:** `6c5e4496d5c896af689228d4bee4382a53c20626` (clean and synchronized at entry).
 **Hardware:** Physical TMP11x board and test wiring NOT CONFIRMED.
-**Last completed stage:** 18 (EEPROM-safe initialization and configuration writes).
-**Last update:** 2026-11-23. Next eligible stage is [19](19_config-trust.md), observed configuration, verification and dirty state.
+**Last completed stage:** 19 (observed configuration, verification and dirty state).
+**Last update:** 2026-11-24. Next eligible stage is [48](48_audit-18-19.md), the independent audit of stages 18–19.
 
 Preparation evidence includes the [6b173cc second follow-up](../reports/audit-followup-6b173cc.md),
 the [cb73740 follow-up](../reports/audit-followup-cb73740.md#response--2026-11-17),
@@ -39,7 +39,7 @@ every planned deliverable a producer and checks consumer dependencies.
 | [17](17_config-codecs.md) | Type-safe CONFIG codecs and validation | COMPLETE — [report](../reports/prompt_17.md). All 3,072 steady profiles matched their expected encodings across six models. All 14 Release tests and the tests-off consumer passed. |
 | [47](47_audit-10-17.md) | Audit prompts 10–17 before initialization writes | COMPLETE — [report](../reports/prompt_47.md#phase-d-acceptance). Corrected the CMake 3.16 host test command. All 14 Release tests, the extracted consumer and all 393,216 public identity cases passed. |
 | [18](18_safe-initialize.md) | EEPROM-safe initialization and configuration writes | COMPLETE — [acceptance report](../reports/prompt_18.md#phase-d-acceptance). All 15 Release tests passed, including guarded begin, recovery and latest reads on six model selections. |
-| [19](19_config-trust.md) | Observed configuration, verification and dirty state | NOT_STARTED |
+| [19](19_config-trust.md) | Observed configuration, verification and dirty state | COMPLETE — [acceptance report](../reports/prompt_19.md#phase-d-acceptance). All 16 Release tests passed. Partial verification retained the completed reads and detected drift. Guarded replay restored trust. |
 | [48](48_audit-18-19.md) | Audit prompts 18–19 before adding settings and acquisition | NOT_STARTED |
 | 20–21 | Conversion settings, fresh acquisition and one-shot | NOT_STARTED |
 | [49](49_audit-20-21.md) | Audit prompts 20–21 before extending synchronous features | NOT_STARTED |

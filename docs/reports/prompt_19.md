@@ -1,5 +1,7 @@
 # Prompt 19 — Observed configuration, verification and dirty state
 
+**COMPLETE, 2026-11-24.** [Phase d acceptance](#phase-d-acceptance) covers CONFIG and both limit registers on all six BOM selections.
+
 ## Phase a — Requirements and baseline, 2026-11-24
 
 **PARTIAL.** All seven inputs to `config-trust` are available. The clean
@@ -193,3 +195,36 @@ and managed offset remain with stages 21, 22 and 23.
 
 Phase d owns final acceptance and the progress and report-index updates.
 Stage 43 owns the first remote CI checkpoint. Physical qualification remains open.
+
+## Phase d acceptance
+
+The clean acceptance revision was `f5315572797a40b9c7b770c99db50bb4d86f8122`.
+Its subject and six paths matched the phase-c request, and its parent was
+`dac11421a44130e6404be03930496fa5858c974d`. The wrapper recorded equality
+with `origin/main` at 00:47:13 Prague time. Two read-only checks confirmed
+the seven prerequisite artifacts and traced the seven phase-a cases to the
+registered tests. The closure changes cover documentation only.
+
+The `config-trust` artifact exposes the desired profile, timed observations
+of CONFIG and each limit, the completed portion of a verification scan, and
+the first unresolved dirty cause. A complete CONFIG observation costs one
+read. Verification costs up to three reads and preserves earlier drift even
+if the final read fails. Matching reads leave dirty state latched until full
+guarded replay succeeds. Explicit invalidation preserves historical evidence
+and requires new startup proof before recovery.
+[Public API](../../include/TMP11x/TMP11x.h), [trust implementation](../../src/TMP11x.cpp),
+[physical read and write effects](../../src/DeviceEvidence.cpp), [public trust tests](../../test/test_trust.cpp).
+
+| Acceptance check | Result |
+| --- | --- |
+| `cmake --build build/host --config Release --clean-first --parallel 4` then `cmake -E chdir build/host ctest -C Release --output-on-failure` | PASS, 16/16. Includes CONFIG comparisons, fault injection, deadline-equality observations, guarded recovery and the continuous TEMP baseline regression. CMake/CTest 4.0.1 and GCC 15.1.0. |
+| [Tests-off consumer configuration](../testing.md#source-consumer), `cmake --build build/consumer --config Release --clean-first --parallel 4`, then `build/consumer/tmp11x_native_consumer.exe` | PASS. The clean source consumer linked with Python and Git discovery disabled and printed `0.1.0`. |
+| `g++ -std=c++17 -Wall -Wextra -Wpedantic -Werror -Iinclude -fsyntax-only -x c++ -` | PASS. Seven public headers compiled individually and all three README C++ examples compiled with the umbrella header. |
+| `doxygen -` with `INPUT=include/TMP11x`, `WARN_AS_ERROR=YES` and XML under `build/p19d-docs` | PASS. Doxygen 1.13.2 documented all four stage-19 public calls. |
+| `python -B scripts/check_references.py`, `python -B scripts/check_promptset.py`, `git diff --check` | PASS. Python 3.12.10 verified 14 pinned PDFs and the 55-stage promptset. The closure diff passed the whitespace check. |
+
+Audit 48 consumes this artifact with stage 18's apply engine and synchronous
+initialization/recovery. Stage 21 owns guarded fresh acquisition, stage 22
+exposes alert consumption, stage 23 adds managed offset to F11, and stage 28
+adds job ownership gates. MCU links (34–36), physical qualification (40–41)
+and remote CI (43) remain open.
