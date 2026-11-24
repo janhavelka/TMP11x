@@ -385,6 +385,19 @@ void comparatorTransitions() {
   }
 }
 
+void signedThermLimitOrderAcrossZero() {
+  Fixture f;
+  f.chip.words[1] = 0x0230;
+  f.chip.words[3] = 0xFF80;  // -128 counts
+  f.chip.words[2] = 0xFFFF;  // -1 count
+  f.config.settings.alertMode = AlertMode::THERM;
+  f.config.settings.limits = {0, 1};
+  CHECK(f.device.begin(f.config).ok());
+  CHECK(transcript(f) ==
+        "R0F R04 R01 R03 R02 W01=0630 R01 W02=0001 R02 W03=0000 R03 R01 W01=0230 R01");
+  CHECK(f.chip.words[3] == 0 && f.chip.words[2] == 1);
+}
+
 void ignoredLimitCannotInvertThermPair() {
   for (const bool raising : {false, true}) {
     Fixture f;
@@ -441,6 +454,7 @@ void stagedThermLimitsAndPartialRecovery() {
   Fixture f;
   f.config.settings.alertMode = AlertMode::THERM;
   CHECK(f.device.begin(f.config).ok());
+  const auto verified = f.device.getSettingsSnapshot();
   auto candidate = f.config.settings;
   candidate.limits = {0x0780, 0x0A00};
   f.tickIncrement = 0;
@@ -472,13 +486,17 @@ void stagedThermLimitsAndPartialRecovery() {
   CHECK(f.chip.words[1] == 0x0630 && f.chip.words[2] == 0x0A00 && f.chip.words[3] == 0x0700);
   CHECK(f.device.desiredSettings().limits.lowCounts == 0x0780 &&
         f.device.desiredSettings().limits.highCounts == 0x0A00);
-  CHECK(f.device.configTrust() == ConfigTrust::DIRTY && !change.baselineMs());
+  const auto dirty = f.device.getSettingsSnapshot();
+  CHECK(dirty.trust == ConfigTrust::DIRTY && dirty.dirtyReason == DirtyReason::AMBIGUOUS_WRITE);
+  CHECK(!dirty.low && dirty.high && dirty.high->raw == 0x0A00 && !change.baselineMs());
+  CHECK(dirty.verifiedGeneration == verified.verifiedGeneration && dirty.verifiedAtMs == verified.verifiedAtMs);
   f.beforeTransfer = {};
   f.bus.trace.clear();
   CHECK(f.device.recover().ok());
   CHECK(transcript(f) ==
         "R0F R04 R01 R03 R02 W01=0630 R01 W03=0780 R03 W02=0A00 R02 R01 W01=0230 R01");
   CHECK(f.chip.words[3] == 0x0780 && f.device.configTrust() == ConfigTrust::VERIFIED);
+  CHECK(f.device.getSettingsSnapshot().verifiedGeneration == verified.verifiedGeneration + 1);
 }
 
 void pinOnlyChangeUsesSameGuardedReplay() {
@@ -905,6 +923,7 @@ int main() {
   unlockedGuardAtDeadline();
   busyRecheckAndFinalBusy();
   comparatorTransitions();
+  signedThermLimitOrderAcrossZero();
   ignoredLimitCannotInvertThermPair();
   ignoredLimitPreventsThermEntry();
   stagedThermLimitsAndPartialRecovery();

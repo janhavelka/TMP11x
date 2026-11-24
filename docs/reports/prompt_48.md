@@ -124,6 +124,46 @@ and `cmake -E chdir build/host ctest -C Release --output-on-failure -R '^(identi
 3.12.10. This slice added the deadline regression to the existing apply
 suite. The production guard handled the case as required.
 
-Phase b continues with ordered limit writes, ACKed but ignored writes and ambiguous
-write intent. Partial verification, destructive reads and invalidation
-remain open for subsequent traces.
+## Phase b — Ordered limit writes and partial effects
+
+The clean entry revision was `a18edfd9df5f75296679e3d339045493915575e8`.
+Its parent, subject and two changed paths matched the previous commit
+request. The wrapper verified equality with `origin/main` at 01:29:41
+Prague time. The following results come from the scripted host fixture.
+
+TI defines TLOW and THIGH as signed 16-bit words. In THERM mode, HIGH
+asserts above THIGH and clears below TLOW. The driver reads both limits,
+compares signed counts, and verifies each write before relying on it.
+For canonical continuous and shutdown writes it emits only CONFIG bits
+10:2 (`0x07FC`). The six-model transport matrix rejects each excluded
+CONFIG bit and refuses EEPROM_UL and data-shadow writes before the callback.
+The apply fixture permits writes only to CONFIG, THIGH and TLOW. The
+private transport separately gates the offset purpose by model.
+[TMP116 pp. 15–16, 26–28](../reference/source/TMP116-Digital-Temperature-Sensor-Datasheet-SBOS740A.pdf#page=26),
+[TMP117 pp. 16–17, 27–29](../reference/source/TMP117-Digital-Temperature-Sensor-Datasheet-SNOSD82D.pdf#page=27),
+[TMP119 pp. 18–19, 34–36](../reference/source/TMP119-Digital-Temperature-Sensor-Datasheet-SNIS236.pdf#page=34),
+[transport checks](../../test/test_register_transport.cpp), [apply engine](../../src/Apply.cpp).
+
+Pairs below are hexadecimal register words in (TLOW, THIGH) order. Each
+apply trace starts with `R0F R04 R01 R03 R02`. The frame sequences in the
+table show the decisions after that preflight. [Apply cases](../../test/test_apply.cpp),
+[public trust cases](../../test/test_trust.cpp), [non-atomic THERM limit vector](../registers/behavior-vectors.json).
+
+| Boundary | Frames and retained evidence |
+| --- | --- |
+| Moving an ordered THERM pair | After verified shutdown in THERM (`W01=0630 R01`), raising (0000,0500) to (0780,0A00) produced `W02=0A00 R02 W03=0780 R03`. Lowering it back produced `W03=0000 R03 W02=0500 R02`. Both passed through (0000,0A00). The new signed-boundary case started at (FF80,FFFF), or (−128,−1) counts. It required `W02=0001 R02 W03=0000 R03` before resuming continuous THERM. Writing TLOW first would transiently invert the pair. |
+| Leaving and entering THERM | Leaving THERM for (0A00,0500) required timely ALERT shutdown readback (`W01=0620 R01`) before writing either limit. Short, mismatched and deadline-equality readbacks stopped at that `R01` with TLOW still 0000. In the reverse transition, both limits were written and read back in ALERT shutdown before `W01=0630 R01` enabled and verified THERM. |
+| ACK with no change | Suppressing the first THERM limit write in either direction stopped at that limit's readback with `CONFIG_MISMATCH` and the old pair intact. On entry from inverted ALERT (0A00,0500) to THERM (0000,0400), ignoring TLOW left (0A00,0500). Ignoring THIGH after verified TLOW left (0000,0500). Both ended in ALERT shutdown with DIRTY trust. |
+| Ambiguous first or middle write | In `ambiguousWritesKeepTheTarget`, a data NACK on the first shutdown write or on `W03=FF00` left the attempted word in the fake. The public snapshot invalidated that field, retained the desired continuous profile (FF00,0500), recorded `AMBIGUOUS_WRITE`, and preserved the previous generation and verification time. This held both before first initialization and after a verified begin. |
+| Ambiguous TLOW after verified THIGH | Staging (0780,0A00) and expiring after preflight preserved the previous verified target (0000,0500). On the subsequent attempt, `W02=0A00 R02 W03=0780` ended in a data NACK. The fixture retained (0700,0A00). The public snapshot retained THIGH=0A00, marked TLOW unknown, kept the staged target and first cause `AMBIGUOUS_WRITE`, and preserved the previous verification time and generation. Explicit recovery read the guard again, verified TLOW then THIGH, and advanced the generation exactly once after final CONFIG. |
+
+The signed ordering and partial-write snapshot assertions passed against
+the existing engine. Verification used CMake/CTest 4.0.1, GCC 15.1.0 and
+Python 3.12.10. `cmake --build build/host --config Release --parallel 4`
+passed, followed by five passing suites with
+`cmake -E chdir build/host ctest -C Release --output-on-failure -R '^(register_transport|temperature|configuration|apply|trust)_cpp$'`.
+`python -B scripts/check_references.py` verified 14 pinned PDFs and
+`python -B scripts/check_promptset.py` passed for 55 stages.
+
+Phase b continues with partial verification, followed by destructive
+CONFIG/TEMP reads and invalidation.
