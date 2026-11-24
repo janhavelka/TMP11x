@@ -212,3 +212,35 @@ CMake 4.0.1 and GCC 15.1.0. All four suites passed with
 `python -B scripts/check_promptset.py` passed for 55 stages with Python
 3.12.10. Phase b continues with destructive CONFIG/TEMP reads and
 invalidation after owner-reported reset.
+
+## Phase b — Destructive CONFIG and TEMP reads
+
+The clean baseline was `46586af12d1fbf33c3fd69cc346fc29b5466b11e`. Its
+parent, subject and two paths matched the prior request. The wrapper
+verified upstream equality at 01:59:35 Prague time.
+
+TI specifies that reading either register clears DATA_READY. In ALERT mode
+a CONFIG read also acknowledges HIGH and LOW. In THERM mode HIGH follows
+the hysteresis thresholds and LOW reads zero. The byte at which a partial
+read clears DATA_READY remains unknown. The host fixture exercises both
+outcomes. [TMP116 pp. 15–16, 26](../reference/source/TMP116-Digital-Temperature-Sensor-Datasheet-SBOS740A.pdf#page=26),
+[TMP117 pp. 16–17, 27](../reference/source/TMP117-Digital-Temperature-Sensor-Datasheet-SNOSD82D.pdf#page=27),
+[TMP119 pp. 18–19, 34](../reference/source/TMP119-Digital-Temperature-Sensor-Datasheet-SNIS236.pdf#page=34).
+
+| Host trace | Observed evidence |
+| --- | --- |
+| CONFIG, TEMP, CONFIG on initialized TMP117 | The first CONFIG returned `A220` (HIGH and READY). The fixture then raised LOW and READY. A complete TEMP left the next CONFIG at `4220`. A short TEMP could leave either `4220` or `6220`, both before and exactly at expiry. In all four short cases the driver discarded pending readiness. The following CONFIG established a baseline at tick 1006 and retained LOW alongside HIGH with its original time and generation. Admission at expiry issued no TEMP callback and preserved pending readiness. |
+| TEMP publication at expiry | In `wrappedDeadline`, a complete TEMP ending at expiry returned a physical word and counted as a transport success. A short read at the same tick counted as a transport failure. Both returned `OPERATION_TIMEOUT` and preserved the caller's sample and every field of the previous cached sample. |
+| CONFIG across a profile change | In `retainedAlertsAcrossGenerations`, HIGH survived a zero CONFIG and recovery. LOW in the next verified generation set the mixed marker and preserved the first event's time and generation. In `finalThermReadAfterVerifiedAlert`, a complete final CONFIG at expiry captured the THERM HIGH level alongside a retained ALERT LOW. A short final CONFIG left the level unknown and marked possible alert loss. Both left trust dirty and preserved the previous sample. |
+
+The only change to the tests extends `tempConsumesRetainedReadiness` through
+the next public CONFIG read. The existing implementation passed all seven
+rows. [Latest-read tests](../../test/test_latest.cpp), [apply tests](../../test/test_apply.cpp),
+[evidence updates](../../src/DeviceEvidence.cpp), [sample publication](../../src/LatestRead.cpp).
+
+`cmake --build build/host --config Release --parallel 4` passed with GCC
+15.1.0 and CMake 4.0.1. All five suites passed with
+`cmake -E chdir build/host ctest -C Release --output-on-failure -R '^(latest|apply|trust|register_transport|health)_cpp$'`.
+Python 3.12.10 verified 14 PDFs with `python -B scripts/check_references.py`
+and 55 stages with `python -B scripts/check_promptset.py`. The remaining
+phase-b trace covers owner-reported reset and renewal of FIRST_ACK.

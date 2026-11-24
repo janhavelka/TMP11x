@@ -273,13 +273,16 @@ void tempConsumesRetainedReadiness() {
     std::uint32_t before;
     std::uint32_t completed;
     bool shortRead;
+    bool clearsReady;
     Err expected;
   } cases[] = {
-      {1005, 0, false, Err::OPERATION_TIMEOUT},     // No callback at admission.
-      {1000, 1001, false, Err::OK},
-      {1000, 1001, true, Err::I2C_SHORT_TRANSFER},
-      {1000, 1005, false, Err::OPERATION_TIMEOUT},  // Late complete word.
-      {1000, 1005, true, Err::OPERATION_TIMEOUT},   // Late ambiguous read.
+      {1005, 0, false, false, Err::OPERATION_TIMEOUT},  // No callback at admission.
+      {1000, 1001, false, true, Err::OK},
+      {1000, 1001, true, false, Err::I2C_SHORT_TRANSFER},
+      {1000, 1001, true, true, Err::I2C_SHORT_TRANSFER},
+      {1000, 1005, false, true, Err::OPERATION_TIMEOUT},
+      {1000, 1005, true, false, Err::OPERATION_TIMEOUT},
+      {1000, 1005, true, true, Err::OPERATION_TIMEOUT},
   };
   for (const auto& row : cases) {
     Fixture f{Model::TMP117, Mode::CONTINUOUS, true};
@@ -293,12 +296,15 @@ void tempConsumesRetainedReadiness() {
     Apply evidence{f.device};
     CHECK(evidence.readyPending() && !evidence.readyHistoryUncertain());
     CHECK(evidence.alerts().pendingHigh && !evidence.alerts().possibleLoss);
+    const auto firstAlert = evidence.alerts();
 
     f.chip.words[1] |= 0x6000;  // New LOW/READY since the captured HIGH.
     f.ticks = {row.before};
     const bool attempted = row.before < 1005;
     if (attempted) f.ticks.push_back(row.completed);
-    if (row.shortRead) f.bus.script.push_back({Status::Error(Err::I2C_SHORT_TRANSFER, "TEMP short"), 1, true});
+    if (row.shortRead) {
+      f.bus.script.push_back({Status::Error(Err::I2C_SHORT_TRANSFER, "TEMP short"), 1, row.clearsReady});
+    }
     auto out = callerValue;
     const auto result = LatestRead{f.device}.read(out, budget);
     CHECK(result.status.is(row.expected) && result.transfer.attempted == attempted);
@@ -306,11 +312,20 @@ void tempConsumesRetainedReadiness() {
     CHECK(evidence.readyHistoryUncertain() == row.shortRead);
     CHECK(evidence.baselineMs().has_value() == !row.shortRead);
     CHECK(evidence.alerts().pendingHigh && !evidence.alerts().pendingLow && !evidence.alerts().possibleLoss);
-    CHECK(f.chip.words[1] == (attempted ? 0x4220 : 0x6220));
     if (!result.status.ok()) {
       sameSample(out, callerValue);
       CHECK(!LatestRead{f.device}.cache);
     }
+
+    // A short TEMP invalidated the baseline even if the chip still reports READY.
+    f.ticks = {1006};
+    CHECK(f.device.readConfiguration(observed).ok());
+    CHECK(observed.raw == (row.clearsReady ? 0x4220 : 0x6220));
+    CHECK(f.chip.words[1] == 0x0220 && evidence.readyPending() == !attempted);
+    if (row.shortRead) CHECK(evidence.baselineMs() == 1006);
+    const auto& alerts = evidence.alerts();
+    CHECK(alerts.pendingHigh && alerts.pendingLow && !alerts.possibleLoss && !alerts.mixedOrUnknown);
+    CHECK(alerts.profileGeneration == firstAlert.profileGeneration && alerts.observedAtMs == firstAlert.observedAtMs);
   }
 }
 
