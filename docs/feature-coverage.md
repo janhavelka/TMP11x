@@ -43,6 +43,11 @@ F20 and applies to every selected model.
 | Profile trust on all six selections | R02–R04, CONFIG/limits in F11, external invalidation in F12 | Read-only verification, timed observations, retained drift and ambiguous writes, destructive-read effects and bus-silent invalidation | Release `trust_cpp`, `apply_cpp`, `configuration_cpp` and `latest_cpp` passed partial scans, event provenance, owned-trigger comparisons, guarded replay and readiness after a complete TEMP read. [Stage 19 acceptance](reports/prompt_19.md#phase-d-acceptance) | Not run | Not run | Not run |
 | Remaining software and qualification work | Source pages and project dispositions below | Pending | Not run | Not run | Not run | Not run |
 
+Audit 48 extended host coverage for the initialization and trust rows. The
+tests cover an unlocked guard at expiry, THERM limits crossing zero, recovery
+after reported reset and ALERT events spanning verified generations.
+[Audit traces and acceptance](reports/prompt_48.md#phase-d-acceptance).
+
 When evidence differs by row or model, record its implementation path, test
 registration/result, linked target, exact CI revision and fixture identity in
 separate entries. The [stage 10 report](reports/prompt_10.md) records the F20

@@ -1,5 +1,9 @@
 # Prompt 48 — Audit of guarded initialization and configuration trust
 
+**COMPLETE, 2026-11-25.** Stage 20 can use the audited apply and trust paths.
+The audit added regression tests for faults at the EEPROM guard, between limit
+writes, during verification and across profile generations. [Final acceptance](#phase-d-acceptance).
+
 ## Phase a — Brief and baseline, 2026-11-24
 
 **PARTIAL.** Both prerequisites are complete and all three consumed artifacts are
@@ -305,3 +309,34 @@ all 16 tests against production code (CMake/CTest 4.0.1).
 3.12.10. `git diff --check` passed. Both reviewers finished. Phase d owns
 the remaining clean-build, consumer, header, README and Doxygen acceptance
 checks and the audit closure.
+
+## Phase d acceptance
+
+The clean acceptance revision was `7b214030064bd0234841d737794d7f707a020892`.
+Its parent, subject and two paths matched the phase-c request. The wrapper
+verified equality with `origin/main` at 02:45:37 Prague time on November 24.
+The original stage 18–19 review covered `fc1d1de..d7cb61c`. The subsequent
+audit changes through `7b21403` touched three test files and this report.
+
+The guard traces showed that an unlocked EEPROM word received at the deadline
+still blocks a later write, and that recovery after reported reset waits from
+the new ID completion before checking the lock. The trust traces showed which
+limit remained verified after an ambiguous write and which observations survived
+a partial scan. The phase-c test correction isolated generation as the reason
+two retained ALERT events acquired mixed provenance. All findings are closed.
+[Guard and replay tests](../../test/test_apply.cpp), [trust tests](../../test/test_trust.cpp),
+[destructive TEMP tests](../../test/test_latest.cpp).
+
+| Acceptance check | Result at the audited revision |
+| --- | --- |
+| `cmake -S . -B build/host -G "MinGW Makefiles" -DTMP11X_BUILD_TESTS=ON -DCMAKE_BUILD_TYPE=Release`, then `cmake --build build/host --config Release --clean-first --parallel 4` and `cmake -E chdir build/host ctest -C Release --output-on-failure` | PASS, 16/16 with CMake/CTest 4.0.1 and GCC 15.1.0. Includes apply, trust, latest, health, version and register-ledger checks. |
+| [Tests-off consumer configuration](../testing.md#source-consumer) with the MinGW generator, then `cmake --build build/consumer --config Release --clean-first --parallel 4` and `build/consumer/tmp11x_native_consumer.exe` | PASS. The consumer linked this checkout with Python and Git discovery disabled, printed `0.1.0` and exited successfully. |
+| `g++ -std=c++17 -Wall -Wextra -Wpedantic -Werror -Iinclude -fsyntax-only -x c++ -` | PASS. Compiled each of the seven public headers in isolation and each of the three README C++ snippets with the umbrella header. |
+| `doxygen -` on `include/TMP11x` with `WARN_AS_ERROR=YES` | PASS. Doxygen 1.13.2 emitted zero warnings. The XML in `build/p48d-docs/xml` contains descriptions for both begin overloads, recovery, invalidation, CONFIG read, verification and the settings snapshot. |
+| `python -B scripts/check_references.py`, `python -B scripts/check_promptset.py`, `git diff --check` | PASS. Python 3.12.10 verified the sizes and SHA-256 hashes of 14 PDFs and checked the 55-stage execution order, dependencies, handoffs and coverage. The closure diff passed the whitespace check. |
+
+This report supplies `audit-18-19` to stage 20 for typed conversion settings.
+The TMP116 power-up BUSY conflict and the clear point during a partial TEMP read
+remain open silicon questions. MCU links (34–36), physical qualification
+(40–41), installed-package qualification (42) and remote CI (43) retain their
+own evidence gates.
