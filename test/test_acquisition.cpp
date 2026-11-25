@@ -569,10 +569,24 @@ void residualOwnedOneShot() {
     f.readsPerTick = 0;
     auto out = sentinel;
     if (lateTrigger) {
+      Sample prior;
+      CHECK(f.device.readLatest(prior).ok());
+      f.clearTrace();
+      const auto before = f.device.healthSnapshot();
+      f.tick = 0xFFFFFFF8u;
       f.beforeIo = [&](std::size_t index) {
-        if (index == 4) f.tick = 120;
+        if (index == 3) f.tick = 1;  // Shutdown baseline completes after wrap.
+        if (index == 4) f.tick = 4;  // Trigger completes at exact expiry.
       };
-      CHECK(f.device.readOneShotBlocking(out, 20).is(Err::OPERATION_TIMEOUT));
+      CHECK(f.device.readOneShotBlocking(out, 12).is(Err::OPERATION_TIMEOUT));
+      f.checkTrace({4, 1, -1, 1, -1});
+      CHECK(f.bus.trace[3].timeoutMs == 12);
+      CHECK(f.dispatchTicks[4] == 1 && f.bus.trace[4].timeoutMs == 3);
+      const auto after = f.device.healthSnapshot();
+      CHECK(after.totalSuccess == before.totalSuccess + 5 && after.totalFailures == before.totalFailures);
+      CHECK(after.lastSuccessMsValid && after.lastSuccessMs == 4);
+      const auto& cache = LatestRead{f.device}.cache;
+      CHECK(cache && cache->raw == prior.raw && cache->observedAtMs == prior.observedAtMs);
     } else {
       Acquisition shot{f.device, ReadKind::ONE_SHOT};
       CHECK(shot.start(500).inProgress());

@@ -129,3 +129,31 @@ physical observation. [TMP116 pp. 14, 26, 29](../reference/source/TMP116-Digital
 passed all four suites with CMake/CTest 4.0.1. Python 3.12.10 passed
 `python -B scripts/check_references.py` (14 PDFs) and
 `python -B scripts/check_promptset.py` (55 stages). Item 3 remains in phase b.
+
+## Phase b — Acquisition deadlines and work limits
+
+Item 3 started on clean `main` at `f5b2823644cd02c0b8434a7dc8c24b330a3d1bc4`.
+The item 2 commit matched its request in subject, parent and both paths.
+The wrapper verified equality with `origin/main` at 03:14:23 Prague time.
+
+| Host test | Deadline or work boundary observed |
+| --- | --- |
+| `residualOwnedOneShot` | The extended test starts a 12 ms shot at tick `0xFFFFFFF8`. The shutdown baseline receives 12 ms and finishes at tick 1. The trigger receives the remaining 3 ms and succeeds physically at tick 4. The caller receives `OPERATION_TIMEOUT`. Health records five successes and no new failure. The sentinel output and the prior cached TEMP value and timestamp survive. No poll follows. The fixture then accepts a partial conversion, and the next explicit shot clears it with shutdown and publishes its own completed block. |
+| `lateContinuousTransfers` | With 4 ms at entry, the guard spends 2 ms. A CONFIG or combined TEMP read completing exactly at tick 2004 counts as a physical success. HIGH remains pending, READY is consumed, and the prior cached value and timestamp survive. The caller receives timeout with its sentinel intact. |
+| `continuousPollingAcrossWrap` | At 2 ms resolution the owner credits an overdue poll, then waits 18 ms from its completion for the 15.5 ms nominal period. Eight clock reads per tick still allow a fresh result after wrap. The combined TEMP read proves the transfer shape. Physical latching during continuous updates remains open for stages 40–41. |
+| `guardDenialsAndLimits` | With BUSY held and 5,000 ms available, an advancing clock permits 256 guard reads before `WORK_LIMIT`. A frozen clock permits one guard read, then returns `WORK_LIMIT` during the wait. The shared budget permits 1,000,000 unsuccessful same-tick checks and refuses the next. A separate 6 ms one-shot budget ends with `OPERATION_TIMEOUT` while the guard is still BUSY. All three traces contain only guard reads. |
+
+The physical callback updates health and records its completion tick. Acquisition
+records a successful trigger before checking expiry. TEMP consumes readiness
+before checking expiry and publishes only on timely success.
+[Acquisition tests](../../test/test_acquisition.cpp), [transport](../../src/RegisterTransport.cpp),
+[acquisition](../../src/Acquisition.cpp), [TEMP publication](../../src/LatestRead.cpp),
+[work limits](../../src/OperationBudget.h), [deadline contract](../owner-operations.md#deadline-arithmetic).
+
+`cmake --build build/host --config Release --parallel 4` passed.
+`cmake -E chdir build/host ctest -C Release --output-on-failure -R "^(acquisition|latest|health|register_transport)_cpp$"`
+passed all four suites with CMake/CTest 4.0.1. With Python 3.12.10,
+`python -B scripts/check_references.py` verified 14 PDFs and
+`python -B scripts/check_promptset.py` passed for 55 stages.
+All three phase-b items are checked. Phase c starts with the two independent
+reviews of prompts 20–21.
