@@ -168,3 +168,36 @@ verified 14 pinned PDFs. `python -B scripts/check_promptset.py` verified all
 Phase d owns final acceptance and the progress and index updates. Continuous
 byte latching, silicon flag-clear races and physical MOD readback remain open
 for stages 40–41. Stage 43 owns the first remote CI checkpoint.
+
+## Phase d acceptance
+
+**COMPLETE.** The three public acquisition calls and their private resumable
+engine deliver `sync-acquisition` for TMP116, TMP116N, TMP117, TMP117M,
+TMP117N and TMP119. The clean acceptance revision on `main` was
+`b241ea727747bd2426e841e80c899ff86dfe456e`. Its parent, subject and eight
+paths matched the phase-c commit request. The wrapper verified equality with
+`origin/main` at 02:22:24 Prague time on November 25. The sibling source files
+still matched the pins recorded in phase a.
+
+The six phase-a cases passed. The continuous sweep covered 192 profiles.
+The one-shot block sweep covered 384 model, CONV, AVG and MOD-readback
+combinations. The wire tests observed a single trigger after guarded shutdown
+and the stale-ready baseline. When a diagnostic saw BUSY before either write,
+the next transfers were a new EEPROM guard read and CONFIG comparison before
+the write. An ambiguous diagnostic ended the operation without another
+transfer. A late TEMP read consumed readiness and preserved both caller
+output and the previous cached sample. [Acquisition tests](../../test/test_acquisition.cpp),
+[averaging tests](../../test/test_averaging_blocks.cpp).
+
+| Acceptance check | Result |
+| --- | --- |
+| [MinGW Release host configuration](../testing.md#host-suite), `cmake --build build/host --config Release --clean-first --parallel 4`, then `cmake -E chdir build/host ctest -C Release --output-on-failure` | PASS, 20/20 suites with GCC 15.1.0 and CMake/CTest 4.0.1. |
+| [Tests-off consumer configuration](../testing.md#source-consumer) with this checkout as `TMP11X_SOURCE_DIR`, `cmake --build build/consumer --config Release --clean-first --parallel 4`, then `build/consumer/tmp11x_native_consumer.exe` | PASS with Python and Git discovery disabled. The consumer printed `0.1.0`. |
+| `g++ -std=c++17 -Wall -Wextra -Wpedantic -Werror -Iinclude -fsyntax-only -x c++ -` per public header, then `doxygen -` on `include/TMP11x` with XML and `WARN_AS_ERROR=YES` | PASS for all eight isolated headers. Doxygen 1.13.2 indexed `tryReadFresh`, `readFreshBlocking` and `readOneShotBlocking`. |
+| `python -B scripts/check_references.py`, `python -B scripts/check_promptset.py`, local Markdown targets and `git diff --check` | PASS. Python 3.12.10 verified all 14 pinned PDFs and the 55-stage manifest. |
+
+Audit 49 consumes this engine and stage 20's conversion settings. Hardware
+offset provenance remains unknown until stage 23 integrates it. Physical MOD
+readback, continuous TEMP byte latching and read-clear races remain open for
+stages 40–41. MCU links (34–36), physical qualification (40–41) and remote
+CI (43) were NOT RUN at this software checkpoint.

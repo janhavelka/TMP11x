@@ -1,12 +1,12 @@
 # TMP11x implementation progress
 
-**State:** All six model selections support guarded initialization and recovery, latest temperature reads, configuration verification, dirty-state tracking, typed conversion settings and timing estimates.
+**State:** All six model selections support guarded initialization and recovery, configuration verification and dirty-state tracking, typed conversion settings and timing estimates, latest temperature reads, continuous fresh reads and explicit one-shot acquisition.
 **Target:** 55 stages in manifest order, including 11 new audit checkpoints. TMP117 is primary, with all six selected BOM-model capability gates covered by every relevant stage.
 **Repository:** `main`, tracking `origin/main` at `https://github.com/janhavelka/TMP11x.git`.
 **Preparation input HEAD:** `6c5e4496d5c896af689228d4bee4382a53c20626` (clean and synchronized at entry).
 **Hardware:** Physical TMP11x board and test wiring NOT CONFIRMED.
-**Last completed stage:** 20 (conversion settings and timing).
-**Last update:** 2026-11-25. Next eligible stage is [21](21_fresh-one-shot.md), fresh-conversion acquisition and explicit one-shot.
+**Last completed stage:** 21 (fresh-conversion acquisition and explicit one-shot).
+**Last update:** 2026-11-25. Next eligible stage is [49](49_audit-20-21.md), the audit of conversion settings and freshness.
 
 Preparation evidence includes the [6b173cc second follow-up](../reports/audit-followup-6b173cc.md),
 the [cb73740 follow-up](../reports/audit-followup-cb73740.md#response--2026-11-17),
@@ -42,7 +42,7 @@ every planned deliverable a producer and checks consumer dependencies.
 | [19](19_config-trust.md) | Observed configuration, verification and dirty state | COMPLETE — [acceptance report](../reports/prompt_19.md#phase-d-acceptance). All 16 Release tests passed. Partial verification retained the completed reads and detected drift. Guarded replay restored trust. |
 | [48](48_audit-18-19.md) | Audit prompts 18–19 before adding settings and acquisition | COMPLETE — [acceptance report](../reports/prompt_48.md#phase-d-acceptance). All 16 Release tests passed, including renewed startup and EEPROM guards, partial verification and alert provenance across recovery. |
 | [20](20_conversion-settings.md) | Conversion settings and timing | COMPLETE — [acceptance report](../reports/prompt_20.md#phase-d-acceptance). All 19 Release tests passed, including 384 steady profiles, 192 timing selections and shutdown during averaging. |
-| [21](21_fresh-one-shot.md) | Fresh-conversion acquisition and explicit one-shot | NOT_STARTED |
+| [21](21_fresh-one-shot.md) | Fresh-conversion acquisition and explicit one-shot | COMPLETE — [acceptance report](../reports/prompt_21.md#phase-d-acceptance). All 20 Release tests passed, including guarded one-shot writes, single-use readiness and preservation of outputs on timeout. |
 | [49](49_audit-20-21.md) | Audit prompts 20–21 before extending synchronous features | NOT_STARTED |
 | 22–27 | Limits, offset, EEPROM reads, reset, diagnostics and synchronous API | NOT_STARTED |
 | [50](50_audit-22-27.md) | Audit prompts 22–27 before cooperative work | NOT_STARTED |
