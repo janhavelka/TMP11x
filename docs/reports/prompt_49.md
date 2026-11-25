@@ -157,3 +157,52 @@ passed all four suites with CMake/CTest 4.0.1. With Python 3.12.10,
 `python -B scripts/check_promptset.py` passed for 55 stages.
 All three phase-b items are checked. Phase c starts with the two independent
 reviews of prompts 20–21.
+
+## Phase c — Independent review, 2026-11-26
+
+Two read-only reviewers reread prompts 20 and 21 and inspected the changes
+from `aff8ef39570553cbce1a9eac72c265faf27fb4c1` through
+`2a0104139b12bbeeaee4b67458684a80c02eed5e` in parallel. The latter
+commit matched the phase-b request in subject, parent `f5b2823` and both
+paths. The wrapper verified upstream equality at 03:29:23 Prague time on
+November 25. The checkout was clean at review entry.
+
+- **Settings and timing.** The reviewer checked all 96 nominal cycle-table
+  cells, the TMP116 standby footnotes and the three electrical rows against
+  the independent timing expectations. The 384 public settings cases cover
+  both steady modes. The recovery trace retains HIGH and consumes stale
+  READY at final CONFIG. With AVG=8 the eighth new input then publishes a
+  result under the recovered generation, even when its temperature equals
+  the previous sample. [Timing tests](../../test/test_timing.cpp),
+  [settings tests](../../test/test_conversion_settings.cpp).
+- **Fresh acquisition and deadlines.** The reviewer traced both allowed
+  owned MOD readbacks through explicit shutdown, the stale-ready baseline
+  and one trigger. A destructive TEMP read can consume the only ready
+  event. The shot then ends without a second trigger. At clock wrap the
+  last 3 ms reach the trigger callback, whose physical success at expiry
+  preserves ownership and leaves the prior sample and timestamp intact.
+  The lead checked the wire assertions against the budget, transport and
+  publication paths. [Acquisition tests](../../test/test_acquisition.cpp),
+  [operation budget](../../src/OperationBudget.h), [TEMP publication](../../src/LatestRead.cpp).
+
+**Finding and correction.** The public fresh-read guide and Doxygen
+described CONFIG polling without qualifying the comparator mode. The lead
+checked the alert and therm sections in each pinned datasheet. In alert
+mode CONFIG acknowledges HIGH and LOW and can deassert a comparator-routed
+ALERT pin. In therm mode HIGH persists across the read. The guide now also
+shows how to identify acknowledged flags from a CONFIG observation.
+`decodeConfiguration`, the register fake and `missingReadyAndThermLevel`
+already implement and exercise this distinction. [README](../../README.md#read-a-new-conversion),
+[public header](../../include/TMP11x/TMP11x.h),
+[TMP116 pp. 15–16](../reference/source/TMP116-Digital-Temperature-Sensor-Datasheet-SBOS740A.pdf#page=16),
+[TMP117 pp. 16–17](../reference/source/TMP117-Digital-Temperature-Sensor-Datasheet-SNOSD82D.pdf#page=17),
+[TMP119 pp. 18–19](../reference/source/TMP119-Digital-Temperature-Sensor-Datasheet-SNIS236.pdf#page=19).
+
+`cmake --build build/host --config Release --parallel 4` and
+`cmake -E chdir build/host ctest -C Release --output-on-failure` passed
+all 20 suites with GCC 15.1.0 and CMake/CTest 4.0.1. Doxygen 1.13.2 ran
+on the public headers with `WARN_AS_ERROR=YES`. Its XML entry for
+`tryReadFresh` contains the corrected therm-mode behavior. Python 3.12.10
+verified all 14 PDFs and the 55-stage promptset. Phase d owns final
+acceptance on the wrapper commit. Physical MOD readback, flag-clear races
+and continuous TEMP byte latching remain open for stages 40–41.

@@ -240,7 +240,8 @@ class TMP11x {
   /// Check EEPROM lock/busy, consume same-generation ready evidence and read TEMP
   /// in one combined transfer. At most three callbacks, zero writes or waits.
   /// MEASUREMENT_NOT_READY leaves @p out and the last good sample intact.
-  /// Polling CONFIG acknowledges comparator alerts and can release ALERT.
+  /// In alert mode, a CONFIG poll acknowledges HIGH and LOW and can deassert
+  /// a comparator-routed ALERT pin. In therm mode, HIGH persists across the read.
   /// Continuous-update byte latching is undocumented. Offset provenance is UNKNOWN.
   Status tryReadFresh(Sample& out);
 

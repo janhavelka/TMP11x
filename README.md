@@ -92,8 +92,9 @@ with `freshConversion == false`, including immediately after initialization.
 In verified continuous mode, `tryReadFresh(sample)` checks once and returns
 `MEASUREMENT_NOT_READY` if a full new block is unavailable. Two successive
 blocks may have the same temperature. `readFreshBlocking(sample, timeoutMs)`
-paces its CONFIG polls at the configured block period. Reading CONFIG
-acknowledges comparator alerts and can release the ALERT pin.
+paces its CONFIG polls at the configured block period. In alert mode, reading
+CONFIG acknowledges HIGH and LOW and can deassert a comparator-routed ALERT
+pin. In therm mode, HIGH retains its level across the read.
 
 In verified shutdown, `readOneShotBlocking(sample, timeoutMs)` establishes
 a shutdown boundary, triggers one block and waits for new DATA_READY. On a
@@ -121,7 +122,8 @@ The helper reports durations in microseconds and continuous update rate in Hz.
 ## Inspect configuration trust
 
 After initialization, `readConfiguration(out)` reads CONFIG once and returns
-the observed fields, including HIGH, LOW and DATA_READY before acknowledgement.
+the observed fields. `out.raw & out.readClearMask` gives the asserted flags
+acknowledged by that read.
 A complete read returns success even when a changed stable field latches
 `DIRTY`. To check the entire owned profile, call `verifyConfiguration()`.
 It reads CONFIG, TLOW and THIGH in order and reports `CONFIG_MISMATCH` on
