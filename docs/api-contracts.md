@@ -97,6 +97,25 @@ model returns `INVALID_PARAM` and preserves `out`. Use `Cycle::CODE_0` through
 for the stable selectors. CONV codes 0–3 have AVG-dependent periods.
 [Continuous timing table](device-behavior.md#conversion-modes-and-intervals).
 
+`setMode`, `setCycle` and `setAveraging` each copy the desired profile and
+replace one selector. They require initialized, verified settings. Invalid
+selectors on a verified instance return `INVALID_CONFIG` before a callback.
+Known drift returns `CONFIG_DIRTY`. Drift first discovered during preflight
+returns `CONFIG_MISMATCH` and retains the previous target. At the first
+attempted write, the candidate becomes the recovery target and the previous
+readiness baseline expires. Even a request for the current selector goes
+through guarded shutdown, field verification and restoration of the desired
+mode. The timely final CONFIG read starts a new verified generation, consumes
+any READY seen there and retains the returned alerts. A cached sample keeps
+its original generation.
+
+`getConversionTiming(model, cycle, averaging, out)` in `<TMP11x/Timing.h>`
+is independent of the binding. It returns durations in microseconds, the
+number of conversions per result and the nominal continuous update rate in
+hertz. The active estimate also describes a single one-shot block. Shutdown
+has no periodic result stream. Invalid model or selector values return
+`INVALID_PARAM` and preserve the output.
+
 Stage 11 supplies binding and CONFIG/limits. Stages 18–21 can verify all
 then-owned fields and publish samples with unknown offset provenance. Stage
 23 adds the optional member, setter, readback, observation of unmanaged

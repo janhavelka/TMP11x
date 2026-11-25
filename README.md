@@ -87,6 +87,21 @@ read consumes DATA_READY. A subsequent `readLatest` reports the stored word
 with `freshConversion == false`, including immediately after initialization.
 [Startup, read effects and recovery](docs/api-contracts.md#startup-apply-and-reset).
 
+## Set conversion timing
+
+After successful initialization, use `setMode`, `setCycle` and `setAveraging`
+to change one selector. Each call verifies the full profile under the bound
+operation deadline. For example, `sensor.setAveraging(TMP11x::Averaging::SAMPLES_8)`
+retains the requested cycle and mode. Check the returned status. If a write
+was attempted and verification failed, inspect the snapshot and call `recover()`
+under stable power and exclusive ownership.
+
+Use `<TMP11x/Timing.h>` to estimate timing before accessing a sensor. On
+TMP117, cycle code 4 with eight conversions gives one result per second
+nominally, 875 ms nominal standby and 124 ms estimated typical active time.
+The helper reports durations in microseconds and continuous update rate in Hz.
+[Timing conditions and examples](docs/device-behavior.md#conversion-modes-and-intervals).
+
 ## Inspect configuration trust
 
 After initialization, `readConfiguration(out)` reads CONFIG once and returns

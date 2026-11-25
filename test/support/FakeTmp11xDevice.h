@@ -18,6 +18,18 @@ struct FakeTmp11xDevice {
 
   Model model;
   std::array<std::uint16_t, 16> words{};
+
+  // Feed one synthetic ADC result under continuous ALERT-mode settings.
+  // Test inputs must give exactly representable block means.
+  bool addContinuousConversion(std::int16_t counts);
+
+  // The bus supplies the complete post-write word. A successful SD write
+  // discards a partial block. Other mid-block CONFIG writes are unspecified.
+  Status applyConfigWord(std::uint16_t word);
+
+ private:
+  std::int32_t _sum = 0;
+  unsigned _count = 0;
 };
 
 struct TransferOutcome {

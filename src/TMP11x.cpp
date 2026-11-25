@@ -33,13 +33,39 @@ Status TMP11x::begin(const Config& config) {
 
 Status TMP11x::begin() {
   detail::Apply apply{*this};
-  auto status = apply.start();
-  while (status.inProgress()) status = apply.step();
-  return status;
+  return apply.run();
 }
 
 Status TMP11x::recover() {
   return begin();
+}
+
+Status TMP11x::applySettings(const SensorSettings& candidate) {
+  const auto admission = requireInitialized();
+  if (!admission.ok()) return admission;
+  if (_live.trust != ConfigTrust::VERIFIED) {
+    return Status::Error(Err::CONFIG_DIRTY, "Recover the profile before changing settings");
+  }
+  detail::Apply apply{*this, candidate};
+  return apply.run();
+}
+
+Status TMP11x::setMode(Mode mode) {
+  auto candidate = _config.settings;
+  candidate.mode = mode;
+  return applySettings(candidate);
+}
+
+Status TMP11x::setCycle(Cycle cycle) {
+  auto candidate = _config.settings;
+  candidate.cycle = cycle;
+  return applySettings(candidate);
+}
+
+Status TMP11x::setAveraging(Averaging averaging) {
+  auto candidate = _config.settings;
+  candidate.averaging = averaging;
+  return applySettings(candidate);
 }
 
 void TMP11x::clearLiveState() noexcept {

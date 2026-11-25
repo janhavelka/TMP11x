@@ -15,7 +15,8 @@ conversion or startup interval runs. [Public API and operation gates](api-contra
 | `CommandTable.h` | Register pointers, positioned field masks and `command::accessFor(model, pointer)`. The lookup distinguishes a protected shadow from a managed offset at `0x07`. |
 | `Temperature.h` | Pure signed count, Celsius and register-word conversions for TEMP and thresholds. |
 | `Configuration.h` | Bus-silent profile validation, CONFIG encoding and observation, and expected-register comparison for CONFIG, THIGH and TLOW. |
-| `TMP11x.h` | Sample, identity, health and settings evidence and the `TMP11x::TMP11x` device class. It exposes binding, initialization, recovery, invalidation, ID diagnostics, CONFIG observation and profile verification, passive inspectors and latest reads. |
+| `Timing.h` | Bus-silent conversion timing for the selected model, cycle and averaging. |
+| `TMP11x.h` | Sample, identity, health and settings evidence and the `TMP11x::TMP11x` device class. It exposes binding, initialization, recovery, invalidation, ID diagnostics, CONFIG observation, profile verification, conversion setters, passive inspectors and latest reads. |
 | `Version.h` | Checked-in generated package version from `library.json`. Its constants describe the header, and the out-of-line `version()` describes the linked library. |
 
 Implementation belongs in `src/`. Each public header must compile on its

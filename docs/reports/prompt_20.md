@@ -81,3 +81,59 @@ generation boundary. [OPT4001 source](https://github.com/janhavelka/OPT4001/blob
 
 Phase b owns implementation and the new test results. Physical qualification
 remains open for stages 40–41. Stage 43 owns the first remote checkpoint.
+
+## Phase b implementation
+
+**PARTIAL, 2026-11-25.** The three public setters and the timing query are
+implemented. The clean input was `4490d2d80cb319bf6a13c6dba86cc85ca168e98a`.
+Its parent, subject and sole changed path matched the phase-a request. The
+first push received a server error. The wrapper recorded synchronization at
+00:42:05 Prague time, and both local refs matched at this run's entry.
+The seven inputs verified in phase a remain available at this revision.
+
+`setMode`, `setCycle` and `setAveraging` copy the desired settings, change
+one selector and run the same synchronous apply loop as initialization and
+recovery. Settings changes use the candidate overload, which checks the
+previous owned profile before its first write. A mismatch found there keeps
+the original target. An attempted mutation commits candidate intent and
+invalidates prior readiness. Only timely final verification establishes the
+next generation. Stage 21 can use its baseline for continuous acquisition.
+[Public setters](../../include/TMP11x/TMP11x.h), [implementation](../../src/TMP11x.cpp),
+[apply engine](../../src/Apply.cpp).
+
+`getConversionTiming` reports integer microsecond durations and nominal
+continuous results per second. The period and standby follow the published
+table's rounded active budget. The block duration scales the separate
+single-conversion electrical row. Thus a TMP117 with CONV 010 and AVG 01
+has a 250,000 µs nominal cycle, 125,000 µs nominal standby, 124,000 µs
+typical active time and a 140,000 µs upper active estimate. Its library
+windows are 322,500 µs for continuous acquisition and 150,000 µs for
+one-shot, before rounding to the owner's tick. A one-shot has zero standby.
+The TMP117/M/N electrical row describes one-shot under the conditions cited
+in phase a. Its continuous use remains an estimate. The header is usable
+without a device instance. [Timing API](../../include/TMP11x/Timing.h),
+[calculation](../../src/Timing.cpp), [operating conditions](../device-behavior.md#conversion-modes-and-intervals).
+
+| Registered suite | Executed evidence |
+| --- | --- |
+| [timing_cpp](../../test/test_timing.cpp) | `timingTable` compared all 32 period and standby cells per selected model with independent literals. It checked count, update rate, both windows, the single-conversion electrical limits and all four derived block triples. The active estimates and one-shot window were identical across all eight cycle selectors for each AVG. Invalid queries preserved the output. |
+| [conversion_settings_cpp](../../test/test_conversion_settings.cpp) | `allPublicProfiles` exercised 384 profiles through public setters and checked CONFIG and TEMP reads, the physical mode, other owned fields and bound identity. `localRefusalsAndPreflightDrift` checked zero clock/bus callbacks on invalid, uninitialized and known-dirty requests, as well as a read-only preflight mismatch. `generationChanges` checked all 14 frames for cycle, averaging, limit-only and route-only changes, historical sample attribution and final alert/READY effects. `incompleteChangesKeepIntent` checked an ambiguous first write and mismatched or late final reads followed by explicit recovery. |
+| [averaging_blocks_cpp](../../test/test_averaging_blocks.cpp) | `allBlockLengths` checked publication on inputs 1, 8, 32 and 64 for the corresponding AVG codes. `resetAndTwoAveragingBlocks` held TEMP at `0x8000` for seven inputs, published `0x0007` and then `0x001B` at block ends, and aborted three inputs into the next block via the public shutdown setter. Eight new inputs after resumption published `0xFFF8`. The test checked READY acknowledgement separately from comparator latches. |
+
+The [register fake](../../test/support/FakeTmp11xDevice.cpp) accepts exact
+integer means for these continuous ALERT-mode traces. Block-end comparison
+is inferred for TMP116/N and explicit for TMP117/M/N and TMP119. Fractional
+rounding, same-value and in-flight CONFIG writes, and flag retention on
+shutdown remain outside the silicon claims. The routing and limit cases use
+the existing candidate seam. Stage 22 owns their public setters.
+
+| Check on the phase-b tree | Result |
+| --- | --- |
+| `cmake --build build/host --config Release --parallel 4` and `cmake -E chdir build/host ctest -C Release --output-on-failure` | PASS, all 19 tests including all three new suites, with CMake/CTest 4.0.1 and GCC 15.1.0. |
+| `cmake --build build/consumer --config Release --parallel 4` and `build/consumer/tmp11x_native_consumer.exe` | PASS, source consumer linked and printed `0.1.0`. |
+| `doxygen -` with `INPUT=include/TMP11x`, XML output and `WARN_AS_ERROR=YES` | PASS, Doxygen 1.13.2. The XML index under `build/p20b-docs` includes all four public functions. |
+| `python -B scripts/check_references.py`, `python -B scripts/check_promptset.py`, local target and whitespace checks | PASS with Python 3.12.10. Verified 14 pinned PDFs, the 55-stage manifest and 161 local Markdown targets. A read-only PyMuPDF comparison matched all 96 source period cells to the stage 6 vectors and native test literals. Rechecked the electrical rows and the unchanged sibling source revisions listed above. |
+
+Phase c reviews these artifacts against the pinned sources and contracts.
+Physical qualification and the first remote checkpoint remain with stages
+40–41 and 43. This phase has no software blocker.

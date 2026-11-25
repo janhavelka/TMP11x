@@ -15,6 +15,10 @@ bool targetAddress(std::uint8_t address) {
   return address >= 0x48 && address <= 0x4B;
 }
 
+std::int32_t signedCounts(std::uint16_t word) {
+  return word < 0x8000u ? word : static_cast<std::int32_t>(word) - 65536;
+}
+
 void consumeFlags(FakeTmp11xDevice& device, std::uint8_t pointer) {
   auto& config = device.words[0x01];
   if (pointer == 0x00 || pointer == 0x01) {
@@ -61,12 +65,18 @@ Status writeWord(FakeTmp11xDevice& device, const std::uint8_t* tx,
         const auto comparatorMask = (value & 0x0010) != 0 ? 0x8000 : 0xC000;
         status = (status & 0x3000) | (outcome.comparatorFlagsOnModeChange & comparatorMask);
       }
-      device.words[pointer] = static_cast<std::uint16_t>(status | value);
+      const auto applied = device.applyConfigWord(static_cast<std::uint16_t>(status | value));
+      if (!applied.ok()) return applied;
     } else {
       device.words[pointer] = value;
     }
   } else if (outcome.failedWriteWord) {
-    device.words[pointer] = *outcome.failedWriteWord;
+    if (pointer == 0x01) {
+      const auto applied = device.applyConfigWord(*outcome.failedWriteWord);
+      if (!applied.ok()) return applied;
+    } else {
+      device.words[pointer] = *outcome.failedWriteWord;
+    }
   }
   return outcome.status;
 }
@@ -88,6 +98,41 @@ Status exchange(FakeTmp11xDevice* device, TransferTrace& frame, const std::uint8
 }
 
 }  // namespace
+
+Status FakeTmp11xDevice::applyConfigWord(std::uint16_t word) {
+  if ((word & 0x0C00u) == 0x0400u) {
+    _sum = 0;
+    _count = 0;
+  } else if (_count != 0) {
+    return Status::Error(Err::I2C_ERROR, "Unspecified mid-block CONFIG write in fixture");
+  }
+  words[0x01] = word;
+  return Status::Ok();
+}
+
+bool FakeTmp11xDevice::addContinuousConversion(std::int16_t counts) {
+  auto& config = words[0x01];
+  if ((config & 0x0410u) != 0) return false;  // Accept CC (either encoding) in ALERT mode.
+  constexpr unsigned lengths[] = {1, 8, 32, 64};
+  const auto length = lengths[(config >> 5) & 3u];
+  const auto sum = _sum + counts;
+  if (_count + 1 < length) {
+    _sum = sum;
+    ++_count;
+    return true;
+  }
+  const auto divisor = static_cast<std::int32_t>(length);
+  if (sum % divisor != 0) return false;  // Fractional rounding is unspecified.
+  const auto mean = sum / divisor;
+  words[0x00] = static_cast<std::uint16_t>(mean);
+  config |= 0x2000u;
+  // Block-end comparison is inferred for TMP116/N and explicit for TMP117/M/N and TMP119.
+  if (mean > signedCounts(words[0x02])) config |= 0x8000u;
+  if (mean < signedCounts(words[0x03])) config |= 0x4000u;
+  _sum = 0;
+  _count = 0;
+  return true;
+}
 
 bool FakeTmp11xBus::attach(std::uint8_t address, FakeTmp11xDevice& device) {
   if (!targetAddress(address) ||

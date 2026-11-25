@@ -172,6 +172,24 @@ class TMP11x {
   /// or rollback. A known unlocked device requires external correction and invalidation.
   Status recover();
 
+  /// Select continuous conversion or shutdown on an initialized, verified device.
+  /// All three conversion setters use the binding's operation deadline and tracked
+  /// transfers to check identity, EEPROM lock/busy and the current profile, enter
+  /// shutdown, verify settings and restore the requested mode. Shutdown aborts a
+  /// partial block. CONFIG reads acknowledge flags and retain alert evidence.
+  /// A timely final read establishes a new generation. After an attempted write,
+  /// a failure retains the requested profile for recover(). Invalid selectors and
+  /// known dirty profiles are rejected locally.
+  Status setMode(Mode mode);
+
+  /// Set the continuous CONV code through the same guarded sequence as setMode().
+  /// Retains the desired mode and averaging. CONV has no effect on one-shot duration.
+  Status setCycle(Cycle cycle);
+
+  /// Select 1, 8, 32 or 64 conversions per result through the guarded setMode()
+  /// sequence. Retains the desired mode and cycle. TEMP updates at block completion.
+  Status setAveraging(Averaging averaging);
+
   /// Report loss of stable power or exclusive access. Drops initialization, startup proof
   /// and live observations without calling any hooks. Keeps the target, health, last
   /// verification and historical samples/events. After external correction of an EEPROM
@@ -281,6 +299,7 @@ class TMP11x {
   void clearObservations() noexcept;
   void clearLiveState() noexcept;
   Status requireInitialized() const noexcept;
+  Status applySettings(const SensorSettings& candidate);
 
   Config _config{};
   IdentityInfo _identity{};

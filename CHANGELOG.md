@@ -31,3 +31,6 @@
   memory-only settings snapshot with per-register evidence and dirty causes.
   Applications can report external changes through `invalidateDeviceState()`
   and recover the desired profile under restored ownership.
+- Added guarded mode, cycle and averaging setters and a bus-silent timing
+  query for continuous cadence, standby, active block estimates and
+  conversion-window budgets on all six model selections.

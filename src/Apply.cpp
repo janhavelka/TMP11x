@@ -42,6 +42,12 @@ Status Apply::start() {
   return _status = pending;
 }
 
+Status Apply::run() {
+  auto status = start();
+  while (status.inProgress()) status = step();
+  return status;
+}
+
 void Apply::advanceClock(std::uint32_t now) noexcept {
   const std::uint32_t elapsed = now - _previousMs;
   _previousMs = now;

@@ -71,6 +71,19 @@ current and thermal conditions of the exact BOM part still apply.
 [TMP117 p.6](reference/source/TMP117-Digital-Temperature-Sensor-Datasheet-SNOSD82D.pdf#page=6),
 [TMP119 p.7](reference/source/TMP119-Digital-Temperature-Sensor-Datasheet-SNIS236.pdf#page=7).
 
+`getConversionTiming` reports the table period, nominal standby, reciprocal
+update rate and active estimates for a proposed configuration. With cycle
+code 4, increasing AVG from 8 to 64 keeps the nominal rate at 1 Hz while
+reducing the standby budget from 875 ms to zero. Averaging more conversions
+can reduce random noise, but it integrates changes in temperature over a
+longer interval and can raise average current as active time replaces
+standby. A longer cycle at fixed AVG can lower average current at the cost
+of less frequent updates. Accuracy and current specifications apply under
+the selected grade's documented conditions.
+[TMP116 averaging and cycles](reference/source/TMP116-Digital-Temperature-Sensor-Datasheet-SBOS740A.pdf#page=12),
+[TMP117 averaging and cycles](reference/source/TMP117-Digital-Temperature-Sensor-Datasheet-SNOSD82D.pdf#page=12),
+[TMP119 averaging and cycles](reference/source/TMP119-Digital-Temperature-Sensor-Datasheet-SNIS236.pdf#page=14).
+
 ## Polling and deadlines
 
 Use the owner's authoritative monotonic clock. For a wait measured from
