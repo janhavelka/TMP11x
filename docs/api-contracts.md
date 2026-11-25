@@ -101,7 +101,11 @@ for the stable selectors. CONV codes 0–3 have AVG-dependent periods.
 replace one selector. They require initialized, verified settings. Invalid
 selectors on a verified instance return `INVALID_CONFIG` before a callback.
 Known drift returns `CONFIG_DIRTY`. Drift first discovered during preflight
-returns `CONFIG_MISMATCH` and retains the previous target. At the first
+returns `CONFIG_MISMATCH` and retains the previous target. If preflight
+reads matching CONFIG in a verified continuous generation with an established
+baseline and BUSY clear, a timely READY observation stays eligible even if
+a later limit read fails before the first write. A late CONFIG read still
+records its flags and grants no new readiness. At the first
 attempted write, the candidate becomes the recovery target and the previous
 readiness baseline expires. Even a request for the current selector goes
 through guarded shutdown, field verification and restoration of the desired

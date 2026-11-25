@@ -137,3 +137,39 @@ the existing candidate seam. Stage 22 owns their public setters.
 Phase c reviews these artifacts against the pinned sources and contracts.
 Physical qualification and the first remote checkpoint remain with stages
 40–41 and 43. This phase has no software blocker.
+
+## Phase c review
+
+**PARTIAL, 2026-11-25.** The review began on clean `main` at
+`c41a1c119384e48ba07b6ae128ebb1c52eb6bf1f`. Its parent, subject and all
+20 paths matched the phase-b request. The wrapper recorded upstream equality
+at 01:04:09 Prague time. Both local refs matched on entry. The review covered
+the phase-b diff, the shared apply and observation paths, all three new test
+suites and the seven prerequisite artifacts recorded above.
+
+| Finding | Correction and regression evidence |
+| --- | --- |
+| A setter could observe HIGH and READY in a verified continuous profile, then time out reading TLOW before its first write. CONFIG had acknowledged both flags. The previous profile and its baseline were still valid, but the driver had dropped READY. | `readinessAfterPreflightFailure` reproduced the loss at `R0F R04 R01=A220 R03(timeout)`. Preflight now retains eligible, timely readiness for that generation. A subsequent latest read consumes it. A separate late preflight returning `6220` kept the raw flags and LOW event, with zero writes and zero new ready credit. [Observation logic](../../src/DeviceEvidence.cpp), [setter tests](../../test/test_conversion_settings.cpp). |
+| A scripted failure of the first shutdown write during an averaging block could return the fixture's generic error and ignore the specified post-error CONFIG word. | `ambiguousShutdownDuringBlock` reproduced the status mismatch. The fake now preserves the adapter's `I2C_TIMEOUT`, detail −31 and scripted word `0120`. It declines synthetic conversions while partial accumulation is unknown. The driver retains the dirty candidate, and explicit guarded recovery establishes CC at `0320`. The eighth new input publishes the first result. [Register fake](../../test/support/FakeTmp11xDevice.cpp), [setter tests](../../test/test_conversion_settings.cpp). |
+| The original abort trace inspected TEMP after the setter returned. A spurious READY from the abort could already have been acknowledged. | On each of the six selections, `resetAndTwoAveragingBlocks` now checks `W01=0620 R01=0620` at entry to shutdown after three partial inputs. READY was clear in the first post-write observation and TEMP retained `001B`. [Averaging tests](../../test/test_averaging_blocks.cpp). |
+
+Two read-only reviews ran in parallel. The timing review compared the 96 TI
+period cells to the stage 6 vectors and native literals, all 32 TMP116 standby
+footnotes to the standby literals, and the 12 count-scaled triples to the three
+electrical rows. The block review checked the two completed means, partial
+abort and comparator evidence against TMP116 pp.12–14, TMP117 pp.12, 14–15
+and TMP119 pp.14, 17. TMP116/N block-end comparison remains an inference.
+The sibling setter implementations still match the phase-a pins.
+[Timing sources and conditions](../device-behavior.md#conversion-modes-and-intervals),
+[stage 6 vectors](../registers/behavior-vectors.json).
+
+| Final review check | Result |
+| --- | --- |
+| `cmake --build build/host --config Release --parallel 4` and `cmake -E chdir build/host ctest -C Release --output-on-failure` | PASS, all 19 suites with GCC 15.1.0 and CMake/CTest 4.0.1. The settings suite exercised all 384 steady profiles, and timing covered all 192 model/cycle/averaging selections. |
+| `cmake --build build/consumer --config Release --parallel 4` and `build/consumer/tmp11x_native_consumer.exe` | PASS, source consumer printed `0.1.0`. |
+| `doxygen -` with public headers, XML and `WARN_AS_ERROR=YES` | PASS, Doxygen 1.13.2. The index contains the three setters and the timing query. |
+| `python -B scripts/check_references.py`, `python -B scripts/check_promptset.py`, local Markdown targets and `git diff --check` | PASS with Python 3.12.10. The 14 pinned PDFs and the 55-stage manifest verified. |
+
+Phase d owns final acceptance of the wrapper commit, the report index and
+the progress row. Physical qualification belongs to stages 40–41 and the
+first remote CI checkpoint belongs to stage 43.

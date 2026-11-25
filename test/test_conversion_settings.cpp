@@ -4,6 +4,7 @@
 
 #include <cstdio>
 #include <cstdlib>
+#include <optional>
 #include <vector>
 
 namespace {
@@ -29,7 +30,8 @@ struct Fixture {
   Device device;
   std::uint32_t tick = 0;
   bool injectFinalFlags = false;
-  Err finalFault = Err::OK;
+  bool changeFinalRouting = false;
+  std::optional<std::size_t> expireOnRead;
 
   explicit Fixture(Model model = Model::TMP117) : chip(model) {
     config.model = model;
@@ -48,9 +50,9 @@ struct Fixture {
       if (f.injectFinalFlags && f.bus.trace.size() == 13) {
         CHECK(n == 1 && *tx == 0x01);
         f.chip.words[1] |= 0xA000;  // HIGH and READY published after returning to CC.
-        if (f.finalFault == Err::CONFIG_MISMATCH) f.chip.words[1] ^= 0x0004;
-        if (f.finalFault == Err::OPERATION_TIMEOUT) f.tick += f.config.operationTimeoutMs;
+        if (f.changeFinalRouting) f.chip.words[1] ^= 0x0004;
       }
+      if (f.expireOnRead == f.bus.trace.size()) f.tick += f.config.operationTimeoutMs;
       return FakeTmp11xBus::writeRead(address, tx, n, rx, m, ms, &f.bus);
     };
     config.settings.limits = {-320, 960};
@@ -113,6 +115,41 @@ void checkRefused(Fixture& f, Err error) {
   CHECK(f.device.setCycle(Cycle::CODE_0).is(error));
   CHECK(f.device.setAveraging(Averaging::SAMPLES_64).is(error));
   CHECK(f.tick == tick && f.bus.trace.size() == frames);
+}
+
+void readinessAfterPreflightFailure() {
+  Fixture f;
+  CHECK(f.device.begin(f.config).ok());
+  const auto before = f.device.getSettingsSnapshot();
+  const Apply evidence{f.device};
+  const auto baseline = evidence.baselineMs();
+  CHECK(baseline && !evidence.readyPending());
+  f.chip.words[1] |= 0xA000;  // A continuous result and HIGH before any mutation.
+  f.bus.trace.clear();
+  f.bus.script.resize(3);  // ID, EEPROM guard and matching CONFIG complete.
+  f.bus.script.push_back({Status::Error(Err::I2C_TIMEOUT, "TLOW timed out")});
+  CHECK(f.device.setCycle(Cycle::CODE_6).is(Err::I2C_TIMEOUT));
+  CHECK(f.bus.trace.size() == 4 && f.bus.trace.back().tx[0] == 0x03);
+  for (const auto& frame : f.bus.trace) CHECK(frame.combinedRead);
+  const auto after = f.device.getSettingsSnapshot();
+  CHECK(after.trust == ConfigTrust::VERIFIED && after.verifiedGeneration == before.verifiedGeneration);
+  CHECK(after.desired.cycle == before.desired.cycle && after.config && after.config->raw == 0xA220);
+  CHECK(f.chip.words[1] == 0x0220 && evidence.alerts().pendingHigh);
+  CHECK(evidence.baselineMs() == baseline && evidence.readyPending());
+  Sample latest;
+  CHECK(f.device.readLatest(latest).ok() && !latest.freshConversion && !evidence.readyPending());
+
+  // A late matching preflight retains its flags but supplies no new ready credit.
+  f.bus.trace.clear();
+  f.chip.words[1] |= 0x6000;  // LOW and READY
+  f.expireOnRead = 2;
+  CHECK(f.device.setCycle(Cycle::CODE_6).is(Err::OPERATION_TIMEOUT));
+  const auto late = f.device.getSettingsSnapshot();
+  CHECK(f.bus.trace.size() == 3 && late.config && late.config->raw == 0x6220);
+  CHECK(late.verifiedGeneration == before.verifiedGeneration && late.trust == ConfigTrust::VERIFIED);
+  CHECK(late.desired.cycle == before.desired.cycle && f.chip.words[1] == 0x0220);
+  CHECK(evidence.alerts().pendingHigh && evidence.alerts().pendingLow);
+  CHECK(evidence.baselineMs() == baseline && !evidence.readyPending());
 }
 
 void localRefusalsAndPreflightDrift() {
@@ -235,7 +272,8 @@ void incompleteChangesKeepIntent() {
       f.bus.script.push_back(lostAck);
     } else {
       f.injectFinalFlags = true;
-      f.finalFault = fault;
+      f.changeFinalRouting = fault == Err::CONFIG_MISMATCH;
+      if (fault == Err::OPERATION_TIMEOUT) f.expireOnRead = 13;
     }
     CHECK(f.device.setAveraging(Averaging::SAMPLES_64).is(fault));
     const auto failed = f.device.getSettingsSnapshot();
@@ -252,9 +290,35 @@ void incompleteChangesKeepIntent() {
     }
     checkRefused(f, Err::CONFIG_DIRTY);
     f.injectFinalFlags = false;
+    f.expireOnRead.reset();
     CHECK(f.device.recover().ok() && f.chip.words[1] == 0x0260);
     CHECK(f.device.getSettingsSnapshot().verifiedGeneration == verified.verifiedGeneration + 1);
   }
+}
+
+void ambiguousShutdownDuringBlock() {
+  Fixture f;
+  CHECK(f.device.begin(f.config).ok());
+  CHECK(f.chip.addContinuousConversion(80));
+  const auto previousTemp = f.chip.words[0];
+  f.bus.trace.clear();
+  f.bus.script.resize(5);  // Stop at the first mutating callback.
+  TransferOutcome partial;
+  partial.status = Status::Error(Err::I2C_TIMEOUT, "shutdown write timed out", -31);
+  partial.failedWriteWord = 0x0120;  // Script a changed cycle with the device still in CC.
+  f.bus.script.push_back(partial);
+  const auto status = f.device.setCycle(Cycle::CODE_6);
+  CHECK(status.is(Err::I2C_TIMEOUT) && status.detail == -31);
+  CHECK(f.bus.trace.size() == 6 && f.chip.words[1] == 0x0120);
+  CHECK(f.device.configTrust() == ConfigTrust::DIRTY && f.device.desiredSettings().cycle == Cycle::CODE_6);
+  CHECK(!f.chip.addContinuousConversion(8));  // Unspecified accumulator after a mid-block CONFIG write.
+  CHECK(f.device.recover().ok() && f.chip.words[1] == 0x0320);
+  for (unsigned i = 1; i < 8; ++i) {
+    CHECK(f.chip.addContinuousConversion(8));
+    CHECK(f.chip.words[0] == previousTemp && !(f.chip.words[1] & 0x2000));
+  }
+  CHECK(f.chip.addContinuousConversion(8));
+  CHECK(f.chip.words[0] == 8 && (f.chip.words[1] & 0x2000));
 }
 
 }  // namespace
@@ -262,6 +326,8 @@ void incompleteChangesKeepIntent() {
 int main() {
   allPublicProfiles();
   localRefusalsAndPreflightDrift();
+  readinessAfterPreflightFailure();
+  ambiguousShutdownDuringBlock();
   generationChanges();
   incompleteChangesKeepIntent();
   return EXIT_SUCCESS;

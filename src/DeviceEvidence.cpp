@@ -49,15 +49,16 @@ void DeviceEvidence::observeTemperature(const TransferResult& transfer) noexcept
 }
 
 void DeviceEvidence::captureConfig(std::uint16_t raw, std::optional<std::uint32_t> tick,
-                                   ConfigReadSource source) noexcept {
+                                   ConfigReadSource source, bool timely) noexcept {
   auto& live = device._live;
   auto& alerts = device._alerts;
   auto config = decodeConfiguration(raw);
   config.timestampValid = tick.has_value();
   config.observedAtMs = tick.value_or(0);
   live.config = config;
+  // A matching preflight still observes the current generation until the first write.
   if (config.eepromBusy) live.readyPending = false;
-  else if (source != ConfigReadSource::APPLY && live.trust == ConfigTrust::VERIFIED &&
+  else if (timely && live.trust == ConfigTrust::VERIFIED &&
            config.mode == ObservedMode::CONTINUOUS) {
     if (live.baselineMs) live.readyPending |= config.dataReady;
     else live.baselineMs = tick;  // The first observation only establishes a boundary.
@@ -87,7 +88,7 @@ void DeviceEvidence::captureConfig(std::uint16_t raw, std::optional<std::uint32_
 
 Status DeviceEvidence::observeRegister(std::uint8_t pointer, std::uint16_t raw,
                                        const TransferResult& transfer, const SensorSettings* expected,
-                                       ConfigReadSource source) noexcept {
+                                       ConfigReadSource source, bool timely) noexcept {
   if (!transfer.status.ok()) {
     if (transfer.attempted && pointer == command::config) {
       loseReadiness();
@@ -103,7 +104,7 @@ Status DeviceEvidence::observeRegister(std::uint8_t pointer, std::uint16_t raw,
                               : Status::Ok();
   if (match.is(Err::CONFIG_MISMATCH)) markDirty(DirtyReason::READBACK_MISMATCH, *field);
   if (pointer == command::config) {
-    captureConfig(raw, transfer.completedMs, source);
+    captureConfig(raw, transfer.completedMs, source, timely);
   } else {
     auto& limit = pointer == command::lowLimit ? live.low : live.high;
     limit = LimitObservation{raw, temperature::decodeCounts(raw), transfer.completedMs};

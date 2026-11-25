@@ -3,6 +3,7 @@
 
 #include <cstdio>
 #include <cstdlib>
+#include <vector>
 
 namespace {
 
@@ -93,7 +94,12 @@ void resetAndTwoAveragingBlocks(Model model) {
     CHECK(chip.addContinuousConversion(120));
     CHECK(chip.words[0x00] == 0x001B && (chip.words[0x01] & 0xE000u) == 0);
   }
+  bus.trace.clear();
   CHECK(device.setMode(Mode::SHUTDOWN).ok());
+  // The first CONFIG read after SD would acknowledge any spurious READY from the abort.
+  CHECK(bus.trace.size() >= 7 && bus.trace[5].tx == std::vector<std::uint8_t>({0x01, 0x06, 0x20}));
+  CHECK(bus.trace[6].combinedRead && bus.trace[6].tx == std::vector<std::uint8_t>({0x01}));
+  CHECK(bus.trace[6].rx == std::vector<std::uint8_t>({0x06, 0x20}));
   checkLatest(0x001B);
   // A full new block after resuming exposes any carry-over from the aborted three inputs.
   CHECK(device.setMode(Mode::CONTINUOUS).ok());

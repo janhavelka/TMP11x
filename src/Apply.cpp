@@ -134,7 +134,7 @@ Status Apply::readConfig() {
   else if (_phase != Phase::CURRENT_CONFIG) expected = &_shutdown;
   else if (live.initialized) expected = &_device._config.settings;
   const auto match = DeviceEvidence{_device}.observeRegister(command::config, raw, result, expected,
-                                                            ConfigReadSource::APPLY);
+                                                            ConfigReadSource::APPLY, status.ok());
   if (result.status.ok() && (raw & command::configBusy)) _lockedIdle = false;
   if (!status.ok()) return status;
   // Explicit begin/recover repairs the existing target in this operation.

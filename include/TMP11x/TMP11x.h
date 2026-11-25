@@ -177,6 +177,8 @@ class TMP11x {
   /// transfers to check identity, EEPROM lock/busy and the current profile, enter
   /// shutdown, verify settings and restore the requested mode. Shutdown aborts a
   /// partial block. CONFIG reads acknowledge flags and retain alert evidence.
+  /// Before the first write, a timely matching preflight can retain readiness
+  /// for the current continuous generation.
   /// A timely final read establishes a new generation. After an attempted write,
   /// a failure retains the requested profile for recover(). Invalid selectors and
   /// known dirty profiles are rejected locally.

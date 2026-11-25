@@ -65,15 +65,13 @@ Status writeWord(FakeTmp11xDevice& device, const std::uint8_t* tx,
         const auto comparatorMask = (value & 0x0010) != 0 ? 0x8000 : 0xC000;
         status = (status & 0x3000) | (outcome.comparatorFlagsOnModeChange & comparatorMask);
       }
-      const auto applied = device.applyConfigWord(static_cast<std::uint16_t>(status | value));
-      if (!applied.ok()) return applied;
+      device.applyConfigWord(static_cast<std::uint16_t>(status | value));
     } else {
       device.words[pointer] = value;
     }
   } else if (outcome.failedWriteWord) {
     if (pointer == 0x01) {
-      const auto applied = device.applyConfigWord(*outcome.failedWriteWord);
-      if (!applied.ok()) return applied;
+      device.applyConfigWord(*outcome.failedWriteWord);
     } else {
       device.words[pointer] = *outcome.failedWriteWord;
     }
@@ -99,20 +97,20 @@ Status exchange(FakeTmp11xDevice* device, TransferTrace& frame, const std::uint8
 
 }  // namespace
 
-Status FakeTmp11xDevice::applyConfigWord(std::uint16_t word) {
+void FakeTmp11xDevice::applyConfigWord(std::uint16_t word) {
   if ((word & 0x0C00u) == 0x0400u) {
     _sum = 0;
     _count = 0;
+    _blockUncertain = false;
   } else if (_count != 0) {
-    return Status::Error(Err::I2C_ERROR, "Unspecified mid-block CONFIG write in fixture");
+    _blockUncertain = true;
   }
   words[0x01] = word;
-  return Status::Ok();
 }
 
 bool FakeTmp11xDevice::addContinuousConversion(std::int16_t counts) {
   auto& config = words[0x01];
-  if ((config & 0x0410u) != 0) return false;  // Accept CC (either encoding) in ALERT mode.
+  if (_blockUncertain || (config & 0x0410u) != 0) return false;  // Known block, CC and ALERT mode.
   constexpr unsigned lengths[] = {1, 8, 32, 64};
   const auto length = lengths[(config >> 5) & 3u];
   const auto sum = _sum + counts;

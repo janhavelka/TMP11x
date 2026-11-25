@@ -23,13 +23,15 @@ struct FakeTmp11xDevice {
   // Test inputs must give exactly representable block means.
   bool addContinuousConversion(std::int16_t counts);
 
-  // The bus supplies the complete post-write word. A successful SD write
-  // discards a partial block. Other mid-block CONFIG writes are unspecified.
-  Status applyConfigWord(std::uint16_t word);
+  // The bus supplies the complete post-write word, including scripted failure effects.
+  // SD discards a partial block. After another mid-block write, synthetic
+  // conversions are unavailable until SD establishes a known accumulator.
+  void applyConfigWord(std::uint16_t word);
 
  private:
   std::int32_t _sum = 0;
   unsigned _count = 0;
+  bool _blockUncertain = false;
 };
 
 struct TransferOutcome {
