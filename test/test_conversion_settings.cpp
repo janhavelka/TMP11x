@@ -299,8 +299,10 @@ void incompleteChangesKeepIntent() {
 void ambiguousShutdownDuringBlock() {
   Fixture f;
   CHECK(f.device.begin(f.config).ok());
+  for (unsigned i = 0; i < 8; ++i) CHECK(f.chip.addContinuousConversion(8));
+  Sample previous;
+  CHECK(f.device.tryReadFresh(previous).ok() && previous.freshConversion && previous.raw == 8);
   CHECK(f.chip.addContinuousConversion(80));
-  const auto previousTemp = f.chip.words[0];
   f.bus.trace.clear();
   f.bus.script.resize(5);  // Stop at the first mutating callback.
   TransferOutcome partial;
@@ -312,13 +314,28 @@ void ambiguousShutdownDuringBlock() {
   CHECK(f.bus.trace.size() == 6 && f.chip.words[1] == 0x0120);
   CHECK(f.device.configTrust() == ConfigTrust::DIRTY && f.device.desiredSettings().cycle == Cycle::CODE_6);
   CHECK(!f.chip.addContinuousConversion(8));  // Unspecified accumulator after a mid-block CONFIG write.
+  Sample next = previous;
+  CHECK(f.device.tryReadFresh(next).is(Err::CONFIG_DIRTY) && f.bus.trace.size() == 6);
+
+  f.bus.trace.clear();
+  f.injectFinalFlags = true;
   CHECK(f.device.recover().ok() && f.chip.words[1] == 0x0320);
+  checkBoundary(f, 0x0320, 0xFEC0);
+  const auto recovered = f.device.getSettingsSnapshot();
+  CHECK(recovered.config && recovered.config->dataReady && recovered.config->high);
+  CHECK(recovered.verifiedGeneration == previous.profileGeneration + 1);
+  CHECK(Apply{f.device}.alerts().pendingHigh);
+  CHECK(f.device.tryReadFresh(next).is(Err::MEASUREMENT_NOT_READY));
   for (unsigned i = 1; i < 8; ++i) {
     CHECK(f.chip.addContinuousConversion(8));
-    CHECK(f.chip.words[0] == previousTemp && !(f.chip.words[1] & 0x2000));
+    CHECK(f.chip.words[0] == previous.raw && !(f.chip.words[1] & 0x2000));
   }
+  CHECK(f.device.tryReadFresh(next).is(Err::MEASUREMENT_NOT_READY));
+  CHECK(next.raw == previous.raw && next.profileGeneration == previous.profileGeneration);
   CHECK(f.chip.addContinuousConversion(8));
-  CHECK(f.chip.words[0] == 8 && (f.chip.words[1] & 0x2000));
+  CHECK(f.device.tryReadFresh(next).ok() && next.freshConversion && next.raw == previous.raw);
+  CHECK(next.profileGeneration == recovered.verifiedGeneration);
+  CHECK(f.device.tryReadFresh(next).is(Err::MEASUREMENT_NOT_READY));
 }
 
 }  // namespace

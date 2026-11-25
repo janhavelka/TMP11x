@@ -51,3 +51,55 @@ settings, timing and averaging, the other covering acquisition, read effects
 and deadlines. Full producer verification remains due at acceptance. Physical
 MOD readback, the read-clear race and continuous TEMP byte latching remain
 open for stages 40–41. Stage 43 owns the first remote CI checkpoint.
+
+## Phase b — Timing and the first fresh result after recovery
+
+The slice started on clean `main` at `b9029de60b44c92e16fbf55c7037fcf50ac51cda`.
+The phase-a commit matched its requested subject, parent and single report path.
+The wrapper recorded equality with `origin/main` at 02:44:30 Prague time.
+
+All 96 published continuous-period cells matched the stage 6 vectors and the
+literal C++ test matrix. Each family has 32 CONV × AVG selections. Subtracting
+the table's rounded active budget from each cell reproduced all 32 standby
+expectations, including every zero marked by TMP116 footnote 1. At CONV 100,
+AVG 01 gives 875 ms standby and AVG 11 gives zero. [TMP116 Table 7](../reference/source/TMP116-Digital-Temperature-Sensor-Datasheet-SBOS740A.pdf#page=27),
+[TMP117 Table 7-7](../reference/source/TMP117-Digital-Temperature-Sensor-Datasheet-SNOSD82D.pdf#page=28),
+[TMP119 Table 8-6](../reference/source/TMP119-Digital-Temperature-Sensor-Datasheet-SNIS236.pdf#page=35).
+
+Multiplying each electrical row by 1, 8, 32 and 64 reproduced all four
+min/typ/max triples per family. For 64 conversions TMP116/N gives
+864/992/1088 ms, and TMP117/M/N and TMP119 give 832/992/1120 ms, assuming
+no extra block overhead. TMP117 specifies one-shot mode, so continuous use
+of its row is an extrapolation. TMP119 specifies no internal averaging.
+Across all six BOM selections the one-shot budget stayed at the derived
+active maximum plus 10 ms for every CONV code. The margin is library policy.
+[Electrical conditions](../device-behavior.md), [vectors](../registers/behavior-vectors.json),
+[timing tests](../../test/test_timing.cpp).
+
+The interrupted-block test previously ended at the fake device's READY bit.
+It now follows the same raw TEMP value through the public API on both sides
+of a failed cycle change. The TMP117 fixture published 8 counts, then took
+one input of 80 counts toward the next eight-input block. A scripted timeout
+on the shutdown write left the device in continuous mode with CONFIG
+`0x0120`. The driver retained the requested cycle, marked the profile dirty
+and refused `tryReadFresh` without a bus callback. The fixture leaves the
+partially accumulated result unknown. [Regression test](../../test/test_conversion_settings.cpp).
+
+Explicit recovery performed the 14 expected transfers, including the EEPROM
+guard, shutdown, verified limit writes, CONFIG baseline, continuous-mode
+write and final CONFIG read. That last read captured HIGH and READY with
+stable fields `0x0320`. It retained HIGH and advanced the verified generation
+once. The public fresh read returned `MEASUREMENT_NOT_READY` immediately
+after recovery and again after seven inputs. The eighth input published the
+same 8 counts under the new generation. A second read found no fresh result.
+[Apply sequence](../../src/Apply.cpp), [read effects](../../src/DeviceEvidence.cpp),
+[acquisition](../../src/Acquisition.cpp).
+
+Python 3.12.10 with `pypdf` compared the three pinned tables and electrical
+rows directly with the vectors and C++ literals. `python -B scripts/check_references.py`
+verified all 14 PDF hashes. `cmake --build build/host --config Release --parallel 4`
+and `cmake -E chdir build/host ctest -C Release --output-on-failure -R "^(conversion_settings|timing|averaging_blocks|acquisition)_cpp$"`
+passed all four suites with CMake/CTest 4.0.1.
+
+Item 1 is checked. Phase b resumes at item 2 with owned one-shot provenance,
+stale or lost READY and guard renewal. Item 3 covers deadlines and clock wrap.
