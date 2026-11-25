@@ -1,5 +1,8 @@
 # Prompt 20 — Conversion settings and timing
 
+**COMPLETE, 2026-11-25.** The guarded mode, cycle and averaging setters and the
+timing query passed [phase d acceptance](#phase-d-acceptance) for all six BOM selections.
+
 ## Phase a — Requirements and baseline, 2026-11-25
 
 **PARTIAL.** All seven inputs are available for phase b. The clean baseline was
@@ -173,3 +176,35 @@ The sibling setter implementations still match the phase-a pins.
 Phase d owns final acceptance of the wrapper commit, the report index and
 the progress row. Physical qualification belongs to stages 40–41 and the
 first remote CI checkpoint belongs to stage 43.
+
+## Phase d acceptance
+
+The clean acceptance revision was `f27c82a293538cd886d8b8bbf953ad2c1b554547`.
+Its parent, subject and ten paths matched the phase-c commit request. The wrapper
+recorded equality with `origin/main` at 01:17:50 Prague time on November 25.
+Both local refs matched on entry. The sibling setter sources matched the phase-a pins.
+
+Across TMP116, TMP116N, TMP117, TMP117M, TMP117N and TMP119, the public setters
+preserved the requested mode and other fields in all 384 steady profiles.
+Invalid selectors issued zero callbacks. The timing query matched the independent
+period, standby and active-time expectations for all 192 model/CONV/AVG selections.
+The block tests observed READY clear and TEMP still at `0x001B` after shutdown
+interrupted the third block. On resumption, only the eighth new input published
+a result. The settings traces verified that final CONFIG retained alerts and
+established the next generation without crediting READY as a fresh sample.
+[Setter tests](../../test/test_conversion_settings.cpp), [timing tests](../../test/test_timing.cpp),
+[block tests](../../test/test_averaging_blocks.cpp).
+
+| Acceptance check | Result |
+| --- | --- |
+| [Host Release configuration](../testing.md#host-suite) with MinGW Makefiles, `cmake --build build/host --config Release --clean-first --parallel 4`, then `cmake -E chdir build/host ctest -C Release --output-on-failure` | PASS, 19/19 with GCC 15.1.0 and CMake/CTest 4.0.1. |
+| [Tests-off consumer configuration](../testing.md#source-consumer) with MinGW Makefiles, `cmake --build build/consumer --config Release --clean-first --parallel 4`, then `build/consumer/tmp11x_native_consumer.exe` | PASS. The consumer linked this checkout with Python and Git discovery disabled and printed `0.1.0`. |
+| `g++ -std=c++17 -Wall -Wextra -Wpedantic -Werror -Iinclude -fsyntax-only -x c++ -` per public header and `doxygen -` on `include/TMP11x` with XML and `WARN_AS_ERROR=YES` | PASS. All eight headers compiled in isolation. Doxygen 1.13.2 indexed the three setters and the timing query. |
+| `python -B scripts/check_references.py`, `python -B scripts/check_promptset.py`, local Markdown targets and `git diff --check` | PASS. Python 3.12.10 verified 14 pinned PDFs and the 55-stage manifest. |
+
+Stage 21 consumes `conversion-settings` through the verified continuous baseline
+and the timing windows for fresh acquisition and explicit one-shot. Audit 49
+reviews both stages. Same-value and in-flight CONFIG effects on accumulation
+remain unknown. TMP116/N block-end comparison remains an inference. MCU links
+(34–36), hardware qualification (40–41) and remote CI (43) retain their own
+evidence gates. [Apply engine](../../src/Apply.cpp), [timing API](../../include/TMP11x/Timing.h).
