@@ -206,3 +206,36 @@ on the public headers with `WARN_AS_ERROR=YES`. Its XML entry for
 verified all 14 PDFs and the 55-stage promptset. Phase d owns final
 acceptance on the wrapper commit. Physical MOD readback, flag-clear races
 and continuous TEMP byte latching remain open for stages 40–41.
+
+## Phase d acceptance
+
+**COMPLETE.** The acceptance checks ran on clean `main` at
+`0da112d474ea0583889e882e73226ab06b70ffaa`. Its parent `2a01041`,
+subject and three paths matched the phase-c request. The wrapper verified
+equality with `origin/main` at 00:16:42 Prague time on November 26.
+The selected sibling source files still matched the phase-a pins.
+
+Across all six BOM selections, the native suites passed 384 steady settings
+profiles, 192 continuous acquisition profiles and 384 one-shot combinations
+of model, CONV, AVG and MOD readback. The audit added three TMP117 regressions.
+They verified that recovery requires a new completed block even when its
+TEMP value repeats, that an unlocked EEPROM guard after a BUSY baseline
+prevents the trigger, and that a trigger completing at the deadline across
+clock wrap retains ownership while preserving caller output and the cached sample.
+The phase-c documentation fix distinguishes alert-mode acknowledgement from
+the therm HIGH level that persists across a CONFIG read.
+[Settings tests](../../test/test_conversion_settings.cpp),
+[acquisition tests](../../test/test_acquisition.cpp), [block tests](../../test/test_averaging_blocks.cpp).
+
+| Acceptance check | Result |
+| --- | --- |
+| [MinGW Release host configuration](../testing.md#host-suite), `cmake --build build/host --config Release --clean-first --parallel 4`, then `cmake -E chdir build/host ctest -C Release --output-on-failure` | PASS, 20/20 suites with GCC 15.1.0 and CMake/CTest 4.0.1. |
+| [Tests-off consumer configuration](../testing.md#source-consumer) in fresh `build/p49d-consumer` with this checkout as the source and Python and Git discovery disabled, then `cmake --build build/p49d-consumer --config Release --clean-first --parallel 4` and `build/p49d-consumer/tmp11x_native_consumer.exe` | PASS. The linked consumer printed `0.1.0` and exited successfully. |
+| `g++ -std=c++17 -Wall -Wextra -Wpedantic -Werror -Iinclude -fsyntax-only -x c++ -` per public header, then `doxygen -` on `include/TMP11x` with XML and `WARN_AS_ERROR=YES` | PASS. All eight headers compiled independently. Doxygen 1.13.2 documented all three setters, the timing query and all three acquisition calls. The XML for `tryReadFresh` contains the corrected behavior in both comparator modes. |
+| `python -B scripts/check_references.py`, `python -B scripts/check_promptset.py`, local Markdown targets and `git diff --check` | PASS. Python 3.12.10 verified all 14 pinned PDFs and the 55-stage manifest. |
+
+This report supplies `audit-20-21` to stages 22–24. Stage 22 consumes the
+retained alert evidence, and stage 23 integrates offset provenance. Physical
+MOD readback, flag-clear races and TEMP byte latching during continuous
+updates remain open for stages 40–41. MCU links and remote CI retain their
+checkpoints at stages 34–36 and 43.

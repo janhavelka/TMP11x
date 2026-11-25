@@ -50,6 +50,11 @@ tests cover an unlocked guard at expiry, THERM limits crossing zero, recovery
 after reported reset and ALERT events spanning verified generations.
 [Audit traces and acceptance](reports/prompt_48.md#phase-d-acceptance).
 
+Audit 49 extended the TMP117 host tests for conversion settings and fresh
+acquisition. They trace an equal-valued sample after recovery, an unlocked
+EEPROM guard before a one-shot trigger, and a trigger completing at the
+deadline across clock wrap. [Audit traces and acceptance](reports/prompt_49.md#phase-d-acceptance).
+
 When evidence differs by row or model, record its implementation path, test
 registration/result, linked target, exact CI revision and fixture identity in
 separate entries. The [stage 10 report](reports/prompt_10.md) records the F20

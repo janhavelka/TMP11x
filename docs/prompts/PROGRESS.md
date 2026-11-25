@@ -5,8 +5,8 @@
 **Repository:** `main`, tracking `origin/main` at `https://github.com/janhavelka/TMP11x.git`.
 **Preparation input HEAD:** `6c5e4496d5c896af689228d4bee4382a53c20626` (clean and synchronized at entry).
 **Hardware:** Physical TMP11x board and test wiring NOT CONFIRMED.
-**Last completed stage:** 21 (fresh-conversion acquisition and explicit one-shot).
-**Last update:** 2026-11-25. Next eligible stage is [49](49_audit-20-21.md), the audit of conversion settings and freshness.
+**Last completed stage:** 49 (audit of conversion settings and fresh acquisition).
+**Last update:** 2026-11-26. Next eligible stage is [22](22_limits-alert.md), temperature limits and alert handling.
 
 Preparation evidence includes the [6b173cc second follow-up](../reports/audit-followup-6b173cc.md),
 the [cb73740 follow-up](../reports/audit-followup-cb73740.md#response--2026-11-17),
@@ -43,7 +43,7 @@ every planned deliverable a producer and checks consumer dependencies.
 | [48](48_audit-18-19.md) | Audit prompts 18–19 before adding settings and acquisition | COMPLETE — [acceptance report](../reports/prompt_48.md#phase-d-acceptance). All 16 Release tests passed, including renewed startup and EEPROM guards, partial verification and alert provenance across recovery. |
 | [20](20_conversion-settings.md) | Conversion settings and timing | COMPLETE — [acceptance report](../reports/prompt_20.md#phase-d-acceptance). All 19 Release tests passed, including 384 steady profiles, 192 timing selections and shutdown during averaging. |
 | [21](21_fresh-one-shot.md) | Fresh-conversion acquisition and explicit one-shot | COMPLETE — [acceptance report](../reports/prompt_21.md#phase-d-acceptance). All 20 Release tests passed, including guarded one-shot writes, single-use readiness and preservation of outputs on timeout. |
-| [49](49_audit-20-21.md) | Audit prompts 20–21 before extending synchronous features | NOT_STARTED |
+| [49](49_audit-20-21.md) | Audit prompts 20–21 before extending synchronous features | COMPLETE — [acceptance report](../reports/prompt_49.md#phase-d-acceptance). All 20 Release suites passed, including fresh reads after recovery, one-shot guard renewal and deadline clipping across clock wrap. |
 | 22–27 | Limits, offset, EEPROM reads, reset, diagnostics and synchronous API | NOT_STARTED |
 | [50](50_audit-22-27.md) | Audit prompts 22–27 before cooperative work | NOT_STARTED |
 | 28–33 | Cooperative owner operations and adversarial native tests | NOT_STARTED |
