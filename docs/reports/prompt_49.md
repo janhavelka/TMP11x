@@ -103,3 +103,29 @@ passed all four suites with CMake/CTest 4.0.1.
 
 Item 1 is checked. Phase b resumes at item 2 with owned one-shot provenance,
 stale or lost READY and guard renewal. Item 3 covers deadlines and clock wrap.
+
+## Phase b — One-shot ownership and guard renewal
+
+Item 2 started on clean `main` at `86753aff4f7b056cf40ef9a286f330b262800255`.
+The preceding commit matched its request in subject, parent and both paths.
+The wrapper verified upstream equality at 02:59:43 Prague time.
+
+| TMP117 host fixture | Observed transfers and result |
+| --- | --- |
+| Stale READY and HIGH at the shutdown baseline | After a safe read of `0x04` and a matching CONFIG preflight, the driver wrote `0x0620` to CONFIG. The baseline read returned `0xA620`. HIGH stayed pending. The driver wrote `0x0E20` once. Without another READY it polled CONFIG until timeout. A completed eight-input block allowed one fresh TEMP read even when TEMP still equaled the reset word `0x8000`. |
+| Owned and unowned MOD | The wire tests accepted MOD=01 and 11 after a successful trigger. Fresh publication required READY and carried the verified settings generation. At preflight, unowned `0x0E20` returned `CONFIG_MISMATCH` and marked the profile dirty after just two reads. After an abandoned shot or a physically successful late trigger, the next explicit shot accepted the residual `0x0E20`, wrote shutdown, read its baseline and issued one new trigger. |
+| BUSY and EUN | A BUSY preflight delayed the shutdown write until another safe `0x04` read and CONFIG comparison. EUN on the initial guard refused all writes. The new regression makes BUSY appear later, at the shutdown baseline (`0xB620`). The renewed guard returned `0xC000` (EUN and BUSY). Shutdown was the only write. The driver returned `EEPROM_UNSAFE`, retained HIGH with its original generation and published no sample. A subsequent shot was refused without I/O. |
+| Diagnostic reads during a shot | A CONFIG diagnostic captured READY and HIGH in `0xAE20`. The subsequent poll returned `0x0E20` and the pending event allowed one fresh TEMP read. HIGH survived that read. In a separate trace a latest-TEMP diagnostic consumed the polled event before publication. The shot returned `MEASUREMENT_NOT_READY` with caller output intact. Ambiguous diagnostic reads returned the transport failure and recorded uncertain readiness. None of these losses issued another trigger. |
+
+The pinned CONFIG, one-shot and EEPROM sections support the register fields
+and read effects. The two MOD readbacks remain fixture alternatives pending
+physical observation. [TMP116 pp. 14, 26, 29](../reference/source/TMP116-Digital-Temperature-Sensor-Datasheet-SBOS740A.pdf#page=14),
+[TMP117 pp. 15, 27, 30](../reference/source/TMP117-Digital-Temperature-Sensor-Datasheet-SNOSD82D.pdf#page=15),
+[TMP119 pp. 17, 34, 37](../reference/source/TMP119-Digital-Temperature-Sensor-Datasheet-SNIS236.pdf#page=17),
+[acquisition tests](../../test/test_acquisition.cpp), [evidence bookkeeping](../../src/DeviceEvidence.cpp).
+
+`cmake --build build/host --config Release --parallel 4` and
+`cmake -E chdir build/host ctest -C Release --output-on-failure -R "^(acquisition|conversion_settings|configuration|trust)_cpp$"`
+passed all four suites with CMake/CTest 4.0.1. Python 3.12.10 passed
+`python -B scripts/check_references.py` (14 PDFs) and
+`python -B scripts/check_promptset.py` (55 stages). Item 3 remains in phase b.

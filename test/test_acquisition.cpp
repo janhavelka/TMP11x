@@ -387,6 +387,29 @@ void renewedGuards() {
   checkFresh(f, out, ReadKind::ONE_SHOT);
 }
 
+void unlockedDuringOneShotGuardRenewal() {
+  Fixture f{Mode::SHUTDOWN};
+  f.begin();
+  const auto generation = f.device.getSettingsSnapshot().verifiedGeneration;
+  f.beforeIo = [&](std::size_t index) {
+    if (index == 3) f.chip.words[1] = 0xB620;  // HIGH, stale READY and BUSY at the SD baseline.
+    if (index == 4) f.chip.words[4] = 0xC000;  // EUN and BUSY together on renewal.
+  };
+  auto out = sentinel;
+  CHECK(f.device.readOneShotBlocking(out, 500).is(Err::EEPROM_UNSAFE));
+  f.checkTrace({4, 1, -1, 1, 4});
+  CHECK(f.bus.trace[2].tx == std::vector<std::uint8_t>({1, 0x06, 0x20}));
+  CHECK(f.dispatchTicks[4] - f.dispatchTicks[3] >= 2);
+  const Apply evidence{f.device};
+  CHECK(evidence.alerts().pendingHigh && evidence.alerts().profileGeneration == generation);
+  CHECK(!evidence.readyPending() && out.raw == sentinel.raw && !LatestRead{f.device}.cache);
+
+  f.chip.words[4] = 0;
+  f.clearTrace();
+  CHECK(f.device.readOneShotBlocking(out, 500).is(Err::EEPROM_UNSAFE));
+  f.checkTrace({});
+}
+
 void lateContinuousTransfers() {
   for (const unsigned lateIndex : {1u, 2u}) {
     Fixture f;
@@ -732,6 +755,7 @@ int main() {
   oneShotConfigFailures();
   staleReadyAtShutdownBaseline();
   renewedGuards();
+  unlockedDuringOneShotGuardRenewal();
   lateContinuousTransfers();
   continuousPollingAcrossWrap();
   shortOneShotBudget();
