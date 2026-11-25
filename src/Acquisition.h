@@ -26,13 +26,13 @@ struct Acquisition {
   Status readConfig();
   Status writeConfig();
   Status preparePoll();
-  Status renewGuard(Phase resume);
+  Status renewGuard();
   Status finish(const TransferResult& result) noexcept;
 
   TMP11x& _device;
   ReadKind _kind;
   Phase _phase = Phase::GUARD;
-  Phase _afterGuard = Phase::POLL;
+  Phase _afterGuard = Phase::POLL;  // CONFIG comparison to resume after a safe guard.
   Status _status = Status::Error(Err::INVALID_PARAM, "Acquisition has not started");
   OperationBudget _budget;
   ConversionTiming _timing{};

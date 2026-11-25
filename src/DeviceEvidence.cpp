@@ -43,6 +43,7 @@ void DeviceEvidence::markDirty(DirtyReason reason, SettingsField field) noexcept
 void DeviceEvidence::observeTemperature(const TransferResult& transfer) noexcept {
   if (!transfer.attempted) return;
   if (!transfer.status.ok()) {
+    device._live.guardInterruption = transfer.status;
     loseReadiness();
     return;
   }
@@ -64,8 +65,13 @@ void DeviceEvidence::captureConfig(std::uint16_t raw, std::optional<std::uint32_
   config.observedAtMs = tick.value_or(0);
   live.config = config;
   // A matching preflight still observes the current generation until the first write.
-  if (config.eepromBusy) live.readyPending = false;
-  else if (timely && live.trust == ConfigTrust::VERIFIED) {
+  if (config.eepromBusy) {
+    if (live.guardInterruption.ok()) {
+      live.guardInterruption = Status::Error(Err::MEASUREMENT_NOT_READY, "EEPROM busy");
+    }
+    live.guardBusyMs = tick;
+    live.readyPending = false;
+  } else if (timely && live.trust == ConfigTrust::VERIFIED) {
     if (config.mode == ObservedMode::CONTINUOUS) {
       if (live.baselineMs) live.readyPending |= config.dataReady;
       else live.baselineMs = tick;  // The first observation only establishes a boundary.
@@ -105,6 +111,7 @@ Status DeviceEvidence::observeRegister(std::uint8_t pointer, std::uint16_t raw,
                                        const TransferResult& transfer, const SensorSettings* expected,
                                        ConfigReadSource source, bool timely) noexcept {
   if (!transfer.status.ok()) {
+    if (transfer.attempted) device._live.guardInterruption = transfer.status;
     if (transfer.attempted && pointer == command::config) {
       loseReadiness();
       device._alerts.possibleLoss = true;

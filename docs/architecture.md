@@ -59,6 +59,11 @@ of a guarded result. [Latest-read engine](../src/LatestRead.cpp).
 
 `detail::Acquisition` drives latest reads, guarded continuous readiness and
 the explicit one-shot sequence. Each step can issue one physical callback.
+If a diagnostic CONFIG read observes BUSY between steps, the acquisition
+keeps its completion tick even after a later clear CONFIG. Timed acquisition
+renews the EEPROM guard before proceeding and repeats the applicable CONFIG
+comparison before either one-shot write. An ambiguous diagnostic transfer
+ends acquisition with its transport status.
 Apply and acquisition share the floor-clock deadline, paced waits, callback
 budget and finite work limits. Under exclusive ownership a completed
 one-shot has a stable shutdown result. During a continuous update, the

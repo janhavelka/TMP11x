@@ -125,3 +125,46 @@ Phase c owns fresh review of these changes. Audit 49 follows stage 21
 acceptance. Physical qualification of MOD readback, read-clear races and
 continuous byte coherence remains open for stages 40–41. The first remote
 CI checkpoint is stage 43.
+
+## Phase c review
+
+Reviewed `e67f388c953ce1c478913835d0d017cd8795c91f` on clean `main`.
+Its parent, subject and 25 changed paths matched the phase-b request.
+The wrapper verified equality with `origin/main` at 02:05:47 Prague time.
+Two independent, read-only reviews traced acquisition evidence, deadlines,
+Apply, write permissions and the fake. The six acceptance cases above were
+checked against the implementation, tests and pinned mode, CONFIG and EEPROM
+tables. The sibling checkouts still matched their recorded HEADs.
+
+Both reviewers found that a diagnostic CONFIG read between private acquisition
+steps could observe BUSY while the acquisition still held its earlier guard.
+The regression failed on the first transfer following a diagnostic `0xB620`
+and a subsequent clear `0x0620`. The driver wrote shutdown immediately.
+The same gap existed before the trigger. The acquisition now retains the BUSY
+tick across clear diagnostics, paces a new EEPROM_UL read and rechecks the
+appropriate CONFIG boundary before writing. An ambiguous diagnostic failure
+stops the pending acquisition and preserves the transport detail. The public
+blocking calls still require exclusive ownership.
+[Guard policy](../eeprom-and-reset-policy.md#startup-and-operation-guard),
+[acquisition engine](../../src/Acquisition.cpp).
+
+| Regression | Observed result |
+| --- | --- |
+| `diagnosticInterruptsGuard` | Before shutdown and before trigger, diagnostic BUSY followed by clear produced `R04 R01 W01`. The guard renewal met the minimum wait from the BUSY callback. A failed diagnostic followed by clear ended the operation with its original timeout detail and zero further transfers. |
+| `diagnosticBusyBeforeContinuousTemp` | BUSY between a ready poll and TEMP ended the untimed attempt without another transfer. The timed attempt renewed the guard, observed a new block and published its 25 °C result. |
+| `staleReadyAtShutdownBaseline` | HIGH and READY survived the SD write into the baseline read. HIGH remained captured. Without a new block the operation timed out before TEMP. A completed synthetic block with the same bits as the reset word legitimately published `0x8000` as fresh. |
+
+The [native regressions](../../test/test_acquisition.cpp) also verify the
+ambiguous CONFIG/TEMP outcomes after an owned ready poll. Release passed
+all 20 suites with `cmake --build build/host --config Release --parallel 4`
+and `cmake -E chdir build/host ctest -C Release --output-on-failure`
+(CMake/CTest 4.0.1, GCC 15.1.0). The tests-off source consumer rebuilt with
+`cmake --build build/consumer --config Release --parallel 4` and printed
+`0.1.0`. Public-header XML from `doxygen -` with `WARN_AS_ERROR=YES`
+included all three acquisition calls. `python -B scripts/check_references.py`
+verified 14 pinned PDFs. `python -B scripts/check_promptset.py` verified all
+55 stages. The working diff passed `git diff --check`.
+
+Phase d owns final acceptance and the progress and index updates. Continuous
+byte latching, silicon flag-clear races and physical MOD readback remain open
+for stages 40–41. Stage 43 owns the first remote CI checkpoint.

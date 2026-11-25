@@ -163,6 +163,9 @@ Status TMP11x::unbind() noexcept {
 Status TMP11x::probe() {
   if (!isBound()) return Status::Error(Err::NOT_BOUND, "No sensor binding");
   const auto result = detail::readIdentity(_config, _identity, _config.i2cTimeoutMs);
+  if (result.transfer.attempted && !result.transfer.status.ok()) {
+    _live.guardInterruption = result.transfer.status;
+  }
   if (result.status.is(Err::IDENTITY_MISMATCH)) clearLiveState();
   return result.status;
 }

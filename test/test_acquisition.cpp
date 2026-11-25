@@ -338,6 +338,33 @@ void oneShotConfigFailures() {
   }
 }
 
+void staleReadyAtShutdownBaseline() {
+  for (const bool completes : {false, true}) {
+    Fixture f{Mode::SHUTDOWN};
+    f.begin();
+    f.beforeIo = [&](std::size_t index) {
+      if (index == 2) f.chip.words[1] |= 0xA000;  // Old READY and HIGH survive the SD write.
+      if (index == 5 && completes) {
+        // A synthetic completed block can have the same bits as the reset word.
+        for (unsigned i = 0; i < 8; ++i) CHECK(f.chip.addOneShotConversion(-32768));
+      }
+    };
+    auto out = sentinel;
+    const auto result = f.device.readOneShotBlocking(out, 150);
+    CHECK(f.bus.trace.size() >= 6 && f.bus.trace[3].rx == std::vector<std::uint8_t>({0xA6, 0x20}));
+    CHECK(Apply{f.device}.alerts().pendingHigh);
+    if (completes) {
+      f.checkTrace({4, 1, -1, 1, -1, 1, 0});
+      CHECK(result.ok() && out.raw == 0x8000 && out.freshConversion);
+    } else {
+      CHECK(result.is(Err::OPERATION_TIMEOUT) && out.raw == sentinel.raw && !LatestRead{f.device}.cache);
+      for (std::size_t i = 5; i < f.bus.trace.size(); ++i) {
+        CHECK(f.bus.trace[i].combinedRead && f.bus.trace[i].tx[0] == 1);
+      }
+    }
+  }
+}
+
 void renewedGuards() {
   Fixture f{Mode::SHUTDOWN};
   f.begin();
@@ -443,6 +470,74 @@ Status stepOnce(Fixture& f, Acquisition& acquisition, Sample& out) {
   return status;
 }
 
+void diagnosticInterruptsGuard() {
+  // Interpose a serialized diagnostic just before the SD write or the OS trigger.
+  for (const unsigned beforeWrite : {2u, 4u}) {
+    for (const bool ambiguous : {false, true}) {
+      Fixture f{Mode::SHUTDOWN};
+      f.begin();
+      auto out = sentinel;
+      Acquisition shot{f.device, ReadKind::ONE_SHOT};
+      CHECK(shot.start(500).inProgress());
+      while (f.bus.trace.size() < beforeWrite) CHECK(stepOnce(f, shot, out).inProgress());
+      ConfigurationObservation config;
+      if (ambiguous) f.failAt(0, true);
+      f.chip.words[1] = 0xB620;
+      const auto diagnostic = f.device.readConfiguration(config);
+      CHECK(ambiguous ? diagnostic.is(Err::I2C_TIMEOUT) : diagnostic.ok() && config.eepromBusy);
+      const auto observedBusyAt = config.observedAtMs;
+      f.chip.words[1] = 0x0620;
+      CHECK(f.device.readConfiguration(config).ok() && !config.eepromBusy);
+      f.clearTrace();
+      if (ambiguous) {
+        const auto terminal = stepOnce(f, shot, out);
+        CHECK(terminal.is(Err::I2C_TIMEOUT) && terminal.detail == -7);
+        f.checkTrace({});
+        CHECK(out.raw == sentinel.raw);
+      } else {
+        while (f.bus.trace.size() < 3) CHECK(stepOnce(f, shot, out).inProgress());
+        f.checkTrace({4, 1, -1});
+        CHECK(f.dispatchTicks.front() - observedBusyAt >= 2);
+        CHECK(f.bus.trace.back().tx[1] == (beforeWrite == 2 ? 0x06 : 0x0E));
+        CHECK(Apply{f.device}.alerts().pendingHigh);
+      }
+    }
+  }
+}
+
+void diagnosticBusyBeforeContinuousTemp() {
+  for (const bool timed : {false, true}) {
+    Fixture f;
+    f.config.settings.cycle = Cycle::CODE_0;
+    f.config.settings.averaging = Averaging::SAMPLES_1;
+    f.begin();
+    CHECK(f.chip.addContinuousConversion(100));
+    auto out = sentinel;
+    Acquisition read{f.device, ReadKind::CONTINUOUS_FRESH};
+    CHECK(read.start(timed ? std::optional<std::uint32_t>{100} : std::nullopt).inProgress());
+    while (f.bus.trace.size() < 2) CHECK(stepOnce(f, read, out).inProgress());
+    ConfigurationObservation config;
+    f.chip.words[1] |= 0x1000;
+    CHECK(f.device.readConfiguration(config).ok() && config.eepromBusy);
+    f.chip.words[1] &= 0xEFFF;
+    f.clearTrace();
+    if (timed) {
+      f.beforeIo = [&](std::size_t index) {
+        if (index == 1) CHECK(f.chip.addContinuousConversion(3200));
+      };
+      Status status;
+      do { status = stepOnce(f, read, out); } while (status.inProgress());
+      CHECK(status.ok());
+      f.checkTrace({4, 1, 0});
+      checkFresh(f, out, ReadKind::CONTINUOUS_FRESH);
+    } else {
+      CHECK(stepOnce(f, read, out).is(Err::MEASUREMENT_NOT_READY));
+      f.checkTrace({});
+      CHECK(out.raw == sentinel.raw && !LatestRead{f.device}.cache);
+    }
+  }
+}
+
 void residualOwnedOneShot() {
   for (const bool lateTrigger : {false, true}) {
     Fixture f{Mode::SHUTDOWN};
@@ -509,7 +604,8 @@ void destructiveReadDuringShot() {
     const auto diagnosticEnd = f.bus.trace.size();
     Status status;
     do { status = stepOnce(f, shot, out); } while (status.inProgress());
-    CHECK(status.is(Err::MEASUREMENT_NOT_READY) || status.is(Err::OPERATION_TIMEOUT));
+    if (diagnostic == 0) CHECK(status.is(Err::MEASUREMENT_NOT_READY));
+    else CHECK(status.is(Err::I2C_TIMEOUT) && status.detail == -7);
     for (auto i = diagnosticEnd; i < f.bus.trace.size(); ++i) {
       CHECK(f.bus.trace[i].combinedRead && f.bus.trace[i].tx[0] != 0);
     }
@@ -634,10 +730,13 @@ int main() {
   guardDenialsAndLimits();
   oneShotWireAndTiming();
   oneShotConfigFailures();
+  staleReadyAtShutdownBaseline();
   renewedGuards();
   lateContinuousTransfers();
   continuousPollingAcrossWrap();
   shortOneShotBudget();
+  diagnosticInterruptsGuard();
+  diagnosticBusyBeforeContinuousTemp();
   residualOwnedOneShot();
   destructiveReadDuringShot();
   missingReadyAndThermLevel();

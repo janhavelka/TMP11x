@@ -305,6 +305,10 @@ class TMP11x {
     std::optional<LimitObservation> low;
     std::optional<LimitObservation> high;
     std::optional<std::uint32_t> baselineMs;
+    // Negative observations since the acquisition's guard. A later clear
+    // CONFIG cannot undo BUSY or an ambiguous diagnostic transfer.
+    std::optional<std::uint32_t> guardBusyMs;
+    Status guardInterruption{};
     bool readyPending = false;
     bool readyHistoryUncertain = false;
     OwnedTrigger trigger = OwnedTrigger::NONE;

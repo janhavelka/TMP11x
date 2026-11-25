@@ -60,6 +60,10 @@ Status Acquisition::admit(std::optional<std::uint32_t> timeoutMs) {
       const auto status = getConversionTiming(binding.model, settings.cycle, settings.averaging, _timing);
       if (!status.ok()) return status;
     }
+    // This owner will acquire its own guard. Interruptions from an earlier
+    // operation cannot grant or revoke that guard.
+    _device._live.guardInterruption = {};
+    _device._live.guardBusyMs.reset();
   }
   if (timeoutMs) _budget.start(binding, *timeoutMs);
   else _budget.remainingMs = binding.i2cTimeoutMs;
@@ -88,12 +92,15 @@ Status Acquisition::finish(const TransferResult& result) noexcept {
   return _timed ? _budget.finishTransfer(result) : result.status;
 }
 
-Status Acquisition::renewGuard(Phase resume) {
+Status Acquisition::renewGuard() {
   _lockedIdle = false;
   if (!_timed) return notReady;
-  _afterGuard = resume;
+  auto& busyMs = _device._live.guardBusyMs;
+  const auto elapsed = busyMs ? _budget.previousMs - *busyMs : 0;
+  busyMs.reset();
+  _device._live.guardInterruption = {};
   _phase = Phase::GUARD;
-  return _budget.waitForUs(1000);
+  return _budget.waitForUs(1000, elapsed);
 }
 
 Status Acquisition::preparePoll() {
@@ -117,7 +124,7 @@ Status Acquisition::readGuard() {
   const auto guard = result.status.ok() ? DeviceEvidence{_device}.observeGuard(raw) : result.status;
   const auto status = finish(result);
   if (!status.ok()) return status;
-  if (guard.is(Err::MEASUREMENT_NOT_READY)) return renewGuard(_afterGuard);
+  if (guard.is(Err::MEASUREMENT_NOT_READY)) return renewGuard();
   if (!guard.ok()) return guard;
   _lockedIdle = true;
   _phase = _afterGuard;
@@ -133,7 +140,7 @@ Status Acquisition::readConfig() {
   if (!status.ok()) return status;
   if (!match.ok()) return match;
   if (_phase == Phase::POLL) _lastPollMs = result.completedMs;
-  if (raw & command::configBusy) return renewGuard(_phase);
+  if (raw & command::configBusy) return renewGuard();
   switch (_phase) {
     case Phase::PREFLIGHT: _phase = Phase::SHUTDOWN; return pending;
     case Phase::BASELINE: _phase = Phase::TRIGGER; return pending;
@@ -153,13 +160,19 @@ Status Acquisition::writeConfig() {
   const auto status = finish(result);
   if (!status.ok()) return status;
   _phase = trigger ? Phase::POLL : Phase::BASELINE;
+  _afterGuard = _phase;
   return trigger ? _budget.waitForUs(_timing.activeEstimate.maxUs) : pending;
 }
 
 Status Acquisition::dispatch(Sample& out) {
   const auto& live = _device._live;
-  if (_kind != ReadKind::LATEST && (live.trust != ConfigTrust::VERIFIED || live.profileGeneration != _generation)) {
-    return Status::Error(Err::CONFIG_DIRTY, "Acquisition profile is no longer current");
+  if (_kind != ReadKind::LATEST) {
+    if (live.trust != ConfigTrust::VERIFIED || live.profileGeneration != _generation) {
+      return Status::Error(Err::CONFIG_DIRTY, "Acquisition profile is no longer current");
+    }
+    if (_device._eepromUnsafe) return Status::Error(Err::EEPROM_UNSAFE, "Observed unlocked EEPROM");
+    if (live.guardInterruption.is(Err::MEASUREMENT_NOT_READY)) return renewGuard();
+    if (!live.guardInterruption.ok()) return live.guardInterruption;
   }
   switch (_phase) {
     case Phase::GUARD: return readGuard();
