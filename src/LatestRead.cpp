@@ -10,7 +10,7 @@ LatestRead::LatestRead(TMP11x& device) noexcept
     : trust(device._live.trust), generation(device._live.profileGeneration),
       cache(device._lastSample), _device(device) {}
 
-LatestReadResult LatestRead::read(Sample& out, std::optional<ReadBudget> budget) const {
+LatestReadResult LatestRead::read(Sample& out, std::optional<ReadBudget> budget, ReadKind kind) const {
   const auto transport = RegisterTransport::tracked(_device);
   const auto& binding = transport.binding;
   auto remaining = binding.i2cTimeoutMs;
@@ -39,6 +39,8 @@ LatestReadResult LatestRead::read(Sample& out, std::optional<ReadBudget> budget)
   if (!result.status.ok()) return result;
 
   Sample sample{};
+  sample.acquisitionKind = kind;
+  sample.freshConversion = kind != ReadKind::LATEST;
   sample.raw = raw;
   sample.counts = temperature::decodeCounts(raw);
   sample.celsius = temperature::toCelsius(sample.counts);

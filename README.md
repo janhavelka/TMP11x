@@ -10,7 +10,7 @@ without accessing hardware. `<TMP11x/CommandTable.h>` exposes the register
 pointers, field masks and per-model access classes. The private transport
 has native tests for one-word reads and guarded writes. The public device
 class supports bus-silent binding, explicit family checks, verified volatile
-initialization and recovery, latest temperature reads and passive transport
+initialization and recovery, latest and fresh temperature reads and passive transport
 health. Physical qualification is pending.
 `<TMP11x/Version.h>` exposes `TMP11x::version()` for the linked library.
 [Value and binding contracts](docs/api-contracts.md).
@@ -86,6 +86,22 @@ hardware calibration and leaves offset provenance unknown. The final CONFIG
 read consumes DATA_READY. A subsequent `readLatest` reports the stored word
 with `freshConversion == false`, including immediately after initialization.
 [Startup, read effects and recovery](docs/api-contracts.md#startup-apply-and-reset).
+
+## Read a new conversion
+
+In verified continuous mode, `tryReadFresh(sample)` checks once and returns
+`MEASUREMENT_NOT_READY` if a full new block is unavailable. Two successive
+blocks may have the same temperature. `readFreshBlocking(sample, timeoutMs)`
+paces its CONFIG polls at the configured block period. Reading CONFIG
+acknowledges comparator alerts and can release the ALERT pin.
+
+In verified shutdown, `readOneShotBlocking(sample, timeoutMs)` establishes
+a shutdown boundary, triggers one block and waits for new DATA_READY. On a
+TMP117 averaging eight conversions, allow 150 ms for the conversion window,
+plus time for setup, clock quantization and bus transfers. Both blocking calls
+use one whole-operation deadline. Each successful fresh read records the
+verified settings generation. Failed reads preserve the previous sample.
+[Polling, deadlines and precision](docs/device-behavior.md#polling-and-deadlines).
 
 ## Set conversion timing
 

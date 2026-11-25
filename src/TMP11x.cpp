@@ -1,9 +1,9 @@
 #include "TMP11x/TMP11x.h"
 
+#include "Acquisition.h"
 #include "Apply.h"
 #include "DeviceEvidence.h"
 #include "Identity.h"
-#include "LatestRead.h"
 #include "TMP11x/CommandTable.h"
 
 namespace TMP11x {
@@ -174,9 +174,19 @@ Status TMP11x::readIdentity(IdentityInfo& out) {
 }
 
 Status TMP11x::readLatest(Sample& out) {
-  const auto admission = requireInitialized();
-  if (!admission.ok()) return admission;
-  return detail::LatestRead{*this}.read(out).status;
+  return detail::Acquisition{*this, ReadKind::LATEST}.run(out);
+}
+
+Status TMP11x::tryReadFresh(Sample& out) {
+  return detail::Acquisition{*this, ReadKind::CONTINUOUS_FRESH}.run(out);
+}
+
+Status TMP11x::readFreshBlocking(Sample& out, std::uint32_t timeoutMs) {
+  return detail::Acquisition{*this, ReadKind::CONTINUOUS_FRESH}.run(out, timeoutMs);
+}
+
+Status TMP11x::readOneShotBlocking(Sample& out, std::uint32_t timeoutMs) {
+  return detail::Acquisition{*this, ReadKind::ONE_SHOT}.run(out, timeoutMs);
 }
 
 Status TMP11x::readTemperature(double& out) {

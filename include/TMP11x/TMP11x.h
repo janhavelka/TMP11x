@@ -10,6 +10,7 @@
 namespace TMP11x {
 
 namespace detail {
+struct Acquisition;
 struct Apply;
 struct DeviceEvidence;
 struct RegisterTransport;
@@ -20,6 +21,7 @@ enum class ConfigReadSource : std::uint8_t {
   APPLY,         ///< Guarded profile apply or replay.
   OBSERVATION,   ///< A single managed CONFIG query.
   VERIFICATION,  ///< Read-only profile verification.
+  ACQUISITION,   ///< Freshness preflight, shutdown baseline or readiness poll.
 };
 }
 
@@ -234,6 +236,29 @@ class TMP11x {
   /// copies. An attempted TEMP read can consume DATA_READY even if it fails.
   Status readLatest(Sample& out);
 
+  /// Try once for a fresh continuous result under the verified CONFIG and limits.
+  /// Check EEPROM lock/busy, consume same-generation ready evidence and read TEMP
+  /// in one combined transfer. At most three callbacks, zero writes or waits.
+  /// MEASUREMENT_NOT_READY leaves @p out and the last good sample intact.
+  /// Polling CONFIG acknowledges comparator alerts and can release ALERT.
+  /// Continuous-update byte latching is undocumented. Offset provenance is UNKNOWN.
+  Status tryReadFresh(Sample& out);
+
+  /// Wait for a fresh continuous result, pacing CONFIG reads at the nominal block
+  /// period. Requires verified continuous mode and a monotonic clock. @p timeoutMs
+  /// covers all callbacks and waits and must span at least one clock tick.
+  /// WORK_LIMIT reports exhaustion of the finite work allowance. Each callback
+  /// releases the bus. All failures preserve @p out and the previous sample.
+  Status readFreshBlocking(Sample& out, std::uint32_t timeoutMs);
+
+  /// Acquire one conversion block in verified shutdown. Guard and compare CONFIG,
+  /// write explicit shutdown, consume stale readiness, then trigger exactly once.
+  /// Poll after the model's upper active estimate and require new DATA_READY.
+  /// Completion returns the sensor to physical shutdown with a stable TEMP word
+  /// under exclusive ownership. Desired mode remains shutdown. The clock, budget
+  /// and output rules follow readFreshBlocking(). A timeout can leave a shot active.
+  Status readOneShotBlocking(Sample& out, std::uint32_t timeoutMs);
+
   /// Read once through readLatest and return its Celsius value in @p out on success.
   /// Use readLatest to inspect freshness, timestamp validity and profile provenance.
   /// A failed read can consume DATA_READY and leaves @p out untouched.
@@ -259,6 +284,7 @@ class TMP11x {
   SettingsSnapshot getSettingsSnapshot() const noexcept;
 
  private:
+  friend struct detail::Acquisition;
   friend struct detail::Apply;
   friend struct detail::DeviceEvidence;
   friend struct detail::RegisterTransport;

@@ -83,7 +83,12 @@ Status checkWrite(command::Access policy, std::uint16_t value, WriteAccess acces
     case command::Access::PROTECTED_WORD:
       return Status::Error(Err::UNSUPPORTED, "Register writes are prohibited");
     case command::Access::STABLE_CONFIG:
-      if (access.purpose != WritePurpose::STABLE_CONFIG || (value & ~command::stableConfigMask) != 0) {
+      if (access.purpose == WritePurpose::ONE_SHOT) {
+        if ((value & command::modeMask) != command::modeMask ||
+            (value & ~(command::stableConfigMask | command::modeMask)) != 0) {
+          return Status::Error(Err::INVALID_PARAM, "Expected one-shot CONFIG command");
+        }
+      } else if (access.purpose != WritePurpose::STABLE_CONFIG || (value & ~command::stableConfigMask) != 0) {
         return Status::Error(Err::INVALID_PARAM, "Expected canonical stable CONFIG fields");
       }
       break;

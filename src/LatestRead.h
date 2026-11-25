@@ -28,7 +28,8 @@ struct LatestRead {
   std::uint32_t generation;
   std::optional<Sample>& cache;
 
-  LatestReadResult read(Sample& out, std::optional<ReadBudget> budget = std::nullopt) const;
+  LatestReadResult read(Sample& out, std::optional<ReadBudget> budget = std::nullopt,
+                        ReadKind kind = ReadKind::LATEST) const;
 
  private:
   TMP11x& _device;

@@ -37,6 +37,69 @@ void allBlockLengths(Model model) {
   }
 }
 
+void oneShotBlocks(Model model) {
+  constexpr unsigned lengths[] = {1, 8, 32, 64};
+  for (unsigned avg = 0; avg < 4; ++avg) {
+    for (unsigned cycle = 0; cycle < 8; ++cycle) {
+      for (bool reportShutdown : {false, true}) {
+        FakeTmp11xDevice chip{model};
+        FakeTmp11xBus bus;
+        CHECK(bus.attach(0x48, chip));
+        chip.reportShutdownForOneShot = reportShutdown;
+        chip.words[0] = 0x8000;
+        chip.words[2] = 0x7FFF;
+        chip.words[3] = 0x8000;
+        const auto fields = static_cast<std::uint16_t>((cycle << 7) | (avg << 5));
+        const auto writeConfig = [&](std::uint16_t word) {
+          const std::uint8_t tx[] = {1, static_cast<std::uint8_t>(word >> 8),
+                                     static_cast<std::uint8_t>(word)};
+          CHECK(bus.write(0x48, tx, 3, 1, &bus).ok());
+        };
+        const auto readConfig = [&]() {
+          const std::uint8_t pointer = 1;
+          std::uint8_t rx[2]{};
+          CHECK(bus.writeRead(0x48, &pointer, 1, rx, 2, 1, &bus).ok());
+          return (rx[0] << 8) | rx[1];
+        };
+        writeConfig(0x0400 | fields);
+        CHECK(!chip.addOneShotConversion(-8));
+        writeConfig(0x0C00 | fields);
+        const auto observed = (reportShutdown ? 0x0400 : 0x0C00) | fields;
+        for (unsigned i = 1; i < lengths[avg]; ++i) {
+          CHECK(chip.addOneShotConversion(-8));
+          CHECK(chip.words[0] == 0x8000 && readConfig() == observed);
+        }
+        CHECK(chip.addOneShotConversion(-8));
+        CHECK(readConfig() == (0x2000 | observed));
+        CHECK(!chip.addOneShotConversion(32) && !chip.addContinuousConversion(32));
+        CHECK(chip.words[0] == 0xFFF8 && readConfig() == observed);
+        // A MOD readback of 01 cannot arm the simulator's next shot. Repeat
+        // triggers without an explicit shutdown have no modeled silicon result.
+        writeConfig(0x0C00 | fields);
+        CHECK(!chip.addOneShotConversion(32));
+
+        // Abort immediately before the last constituent and change the cycle.
+        // All following constituents belong to the new block.
+        writeConfig(0x0400 | fields);
+        writeConfig(0x0C00 | fields);
+        for (unsigned i = 1; i < lengths[avg]; ++i) CHECK(chip.addOneShotConversion(32));
+        writeConfig(0x0400 | fields);
+        CHECK(!chip.addOneShotConversion(32) && chip.words[0] == 0xFFF8);
+        CHECK(readConfig() == (0x0400 | fields));
+        const auto newFields = fields ^ 0x0080;
+        writeConfig(0x0400 | newFields);
+        writeConfig(0x0C00 | newFields);
+        for (unsigned i = 1; i < lengths[avg]; ++i) {
+          CHECK(chip.addOneShotConversion(8));
+          CHECK(chip.words[0] == 0xFFF8 && (readConfig() & 0x2000) == 0);
+        }
+        CHECK(chip.addOneShotConversion(8));
+        CHECK(chip.words[0] == 8 && (readConfig() & 0x2000) != 0);
+      }
+    }
+  }
+}
+
 void resetAndTwoAveragingBlocks(Model model) {
   FakeTmp11xDevice chip{model};
   FakeTmp11xBus bus;
@@ -121,6 +184,7 @@ int main() {
   for (const auto model : {Model::TMP116, Model::TMP116N, Model::TMP117,
                            Model::TMP117M, Model::TMP117N, Model::TMP119}) {
     allBlockLengths(model);
+    oneShotBlocks(model);
     resetAndTwoAveragingBlocks(model);
   }
   return EXIT_SUCCESS;

@@ -23,15 +23,23 @@ struct FakeTmp11xDevice {
   // Test inputs must give exactly representable block means.
   bool addContinuousConversion(std::int16_t counts);
 
+  // OS ignores CONV and stops after one complete AVG block. TI leaves MOD
+  // readback unspecified; select 01 or 11 independently of physical completion.
+  bool reportShutdownForOneShot = false;
+  bool addOneShotConversion(std::int16_t counts);
+
   // The bus supplies the complete post-write word, including scripted failure effects.
   // SD discards a partial block. After another mid-block write, synthetic
   // conversions are unavailable until SD establishes a known accumulator.
   void applyConfigWord(std::uint16_t word);
 
  private:
+  bool addConversion(std::int16_t counts);
   std::int32_t _sum = 0;
   unsigned _count = 0;
   bool _blockUncertain = false;
+  bool _explicitShutdown = false;
+  bool _oneShotActive = false;
 };
 
 struct TransferOutcome {

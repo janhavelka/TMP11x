@@ -8,6 +8,9 @@ namespace TMP11x::detail {
 struct DeviceEvidence {
   TMP11x& device;
 
+  // Record a complete EEPROM_UL word, including when its callback was late.
+  Status observeGuard(std::uint16_t raw) noexcept;
+
   // CONFIG, TLOW and THIGH are the owned registers at this stage.
   Status observeRegister(std::uint8_t pointer, std::uint16_t raw, const TransferResult& transfer,
                          const SensorSettings* expected, ConfigReadSource source, bool timely = true) noexcept;

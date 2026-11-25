@@ -38,6 +38,7 @@ Config configFor(FakeTmp11xBus& bus, Model model = Model::TMP117, std::uint8_t a
 constexpr WriteAccess limit{WritePurpose::LIMIT, true, true};
 constexpr WriteAccess stable{WritePurpose::STABLE_CONFIG, true, true};
 constexpr WriteAccess offset{WritePurpose::MANAGED_OFFSET, true, true};
+constexpr WriteAccess oneShot{WritePurpose::ONE_SHOT, true, true};
 
 // A rejected transfer cannot account for a physical success or failure.
 void checkRefused(TransferResult result, const FakeTmp11xBus& bus, std::size_t before) {
@@ -66,16 +67,18 @@ void registerAccessByModel() {
         checkRefused(read, bus, before);
         CHECK(read.status.is(Err::INVALID_PARAM) && out == 0x5AC3);
       }
-      for (const auto access : {stable, limit, offset}) {
+      for (const auto access : {stable, limit, offset, oneShot}) {
         before = bus.trace.size();
-        // 0x0420 is valid as a stable CONFIG word as well as a limit or offset.
-        const auto write = writeWord(config, ptr, 0x0420, access, 50);
+        const std::uint16_t value = access.purpose == WritePurpose::ONE_SHOT ? 0x0C20 : 0x0420;
+        const auto write = writeWord(config, ptr, value, access, 50);
         const bool allowed = (ptr == 0x01 && access.purpose == WritePurpose::STABLE_CONFIG)
+            || (ptr == 0x01 && access.purpose == WritePurpose::ONE_SHOT)
             || ((ptr == 0x02 || ptr == 0x03) && access.purpose == WritePurpose::LIMIT)
             || (hasOffset && ptr == 0x07 && access.purpose == WritePurpose::MANAGED_OFFSET);
         if (allowed) {
           CHECK(write.attempted && write.status.ok() && bus.trace.size() == before + 1);
-          CHECK((bus.trace.back().tx == std::vector<std::uint8_t>{ptr, 0x04, 0x20}));
+          CHECK((bus.trace.back().tx ==
+                 std::vector<std::uint8_t>{ptr, static_cast<std::uint8_t>(value >> 8), 0x20}));
         } else {
           checkRefused(write, bus, before);
         }
@@ -90,6 +93,14 @@ void registerAccessByModel() {
       checkRefused(writeWord(config, 1, value, stable, 50), bus, before);
     }
     CHECK(writeWord(config, 1, 0x07FC, stable, 50).status.ok());
+    const auto beforeShot = bus.trace.size();
+    for (const auto rejected : {0x0020, 0x0420, 0x0820, 0x8C20, 0x4C20, 0x2C20,
+                                0x1C20, 0x0C22, 0x0C21}) {
+      checkRefused(writeWord(config, 1, rejected, oneShot, 50), bus, beforeShot);
+    }
+    checkRefused(writeWord(config, 1, 0x0FFC, {WritePurpose::ONE_SHOT, false, true}, 50), bus, beforeShot);
+    checkRefused(writeWord(config, 1, 0x0FFC, {WritePurpose::ONE_SHOT, true, false}, 50), bus, beforeShot);
+    CHECK(writeWord(config, 1, 0x0FFC, oneShot, 50).status.ok());
     for (const auto access : {stable, limit, offset}) {
       std::uint8_t ptr = 2;
       if (access.purpose == WritePurpose::STABLE_CONFIG) ptr = 1;
@@ -356,6 +367,34 @@ void ambiguousEffects() {
   }
 }
 
+void ambiguousOneShotCommands() {
+  FakeTmp11xDevice chip{Model::TMP117};
+  FakeTmp11xBus bus;
+  CHECK(bus.attach(0x48, chip));
+  const auto config = configFor(bus);
+  chip.words[0] = 0x8000;
+  TransferOutcome failure{};
+  failure.status = Status::Error(Err::I2C_TIMEOUT, "Unknown command effect");
+  for (bool applied : {false, true}) {
+    CHECK(writeWord(config, 1, 0x0620, stable, 50).status.ok());
+    failure.failedWriteWord = applied ? std::optional<std::uint16_t>{0x0E20} : std::nullopt;
+    bus.script.push_back(failure);
+    CHECK(writeWord(config, 1, 0x0E20, oneShot, 50).status.is(Err::I2C_TIMEOUT));
+    CHECK(chip.addOneShotConversion(8) == applied);
+    CHECK(chip.words[0] == 0x8000 && (chip.words[1] & 0x2000) == 0);
+
+    // Fail SD during the first partial block of a new shot.
+    CHECK(writeWord(config, 1, 0x0620, stable, 50).status.ok());
+    CHECK(writeWord(config, 1, 0x0E20, oneShot, 50).status.ok());
+    CHECK(chip.addOneShotConversion(8));
+    failure.failedWriteWord = applied ? std::optional<std::uint16_t>{0x0620} : std::nullopt;
+    bus.script.push_back(failure);
+    CHECK(writeWord(config, 1, 0x0620, stable, 50).status.is(Err::I2C_TIMEOUT));
+    CHECK(chip.addOneShotConversion(8) == !applied);
+    CHECK(chip.words[0] == 0x8000 && (chip.words[1] & 0x2000) == 0);
+  }
+}
+
 }  // namespace
 
 int main() {
@@ -367,5 +406,6 @@ int main() {
   terminalStatusesAndReadPublication();
   comparatorModeChange();
   ambiguousEffects();
+  ambiguousOneShotCommands();
   return EXIT_SUCCESS;
 }

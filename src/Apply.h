@@ -1,6 +1,6 @@
 #pragma once
 
-#include "RegisterTransport.h"
+#include "OperationBudget.h"
 
 namespace TMP11x::detail {
 
@@ -33,8 +33,6 @@ struct Apply {
     WRITE_SECOND_LIMIT, VERIFY_SECOND_LIMIT, ENABLE_THERM, BASELINE, WRITE_MODE, FINAL_CONFIG
   };
 
-  void advanceClock(std::uint32_t now) noexcept;
-  Status waitFor(std::uint32_t minimumMs) noexcept;
   Status dispatch();
   Status readIdentityStep();
   Status readGuard();
@@ -42,7 +40,6 @@ struct Apply {
   Status readLimit(std::uint8_t pointer);
   Status writeConfig(const SensorSettings& settings, Phase next);
   Status writeLimit(std::uint8_t pointer, Phase next);
-  Status finishTransfer(const TransferResult& result) noexcept;
 
   TMP11x& _device;
   SensorSettings _candidate;
@@ -50,11 +47,7 @@ struct Apply {
   Phase _phase = Phase::IDENTITY;
   Phase _afterGuard = Phase::CURRENT_CONFIG;
   Status _status = Status::Error(Err::INVALID_PARAM, "Apply has not started");
-  std::uint32_t _previousMs = 0;
-  std::uint32_t _remainingMs = 0;
-  std::uint32_t _waitMs = 0;
-  std::uint32_t _sameTickChecks = 0;
-  unsigned _dispatches = 0;
+  OperationBudget _budget;
   bool _started = false;
   bool _replayingTarget = false;
   bool _lockedIdle = false;

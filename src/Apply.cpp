@@ -10,8 +10,6 @@ namespace TMP11x::detail {
 namespace {
 
 constexpr auto pending = Status::Error(Err::IN_PROGRESS, "Apply pending");
-constexpr auto timeout = Status::Error(Err::OPERATION_TIMEOUT, "Apply deadline reached");
-constexpr auto workLimit = Status::Error(Err::WORK_LIMIT, "Apply work allowance exhausted");
 constexpr auto unsafe = Status::Error(Err::EEPROM_UNSAFE, "Observed unlocked EEPROM");
 
 }  // namespace
@@ -37,8 +35,7 @@ Status Apply::start() {
   if (_device._eepromUnsafe) return _status = unsafe;
 
   _shutdown.mode = Mode::SHUTDOWN;
-  _remainingMs = (binding.operationTimeoutMs / binding.clockResolutionMs) * binding.clockResolutionMs;
-  _previousMs = binding.nowMs(binding.timeUser);
+  _budget.start(binding, binding.operationTimeoutMs);
   return _status = pending;
 }
 
@@ -48,40 +45,11 @@ Status Apply::run() {
   return status;
 }
 
-void Apply::advanceClock(std::uint32_t now) noexcept {
-  const std::uint32_t elapsed = now - _previousMs;
-  _previousMs = now;
-  _remainingMs = elapsed < _remainingMs ? _remainingMs - elapsed : 0;
-  _waitMs = elapsed < _waitMs ? _waitMs - elapsed : 0;
-  if (elapsed != 0) _sameTickChecks = 0;
-}
-
-Status Apply::waitFor(std::uint32_t minimumMs) noexcept {
-  // Completion may have been just before the next floor tick. Compare in
-  // wide arithmetic before narrowing the relative interval.
-  const std::uint64_t q = _device._config.clockResolutionMs;
-  const auto delay = q + ((minimumMs + q - 1) / q) * q;
-  if (delay >= _remainingMs) return timeout;
-  _waitMs = static_cast<std::uint32_t>(delay);
-  return pending;
-}
-
 Status Apply::step() {
   if (!_status.inProgress()) return _status;
   const auto& binding = _device._config;
-  const auto now = binding.nowMs(binding.timeUser);
-  const bool sameTick = now == _previousMs;
-  advanceClock(now);
-  if (_remainingMs == 0) {
-    _status = timeout;
-  } else if (_waitMs != 0) {
-    if (sameTick && ++_sameTickChecks > 1000000u) _status = workLimit;
-  } else {
-    _sameTickChecks = 0;
-    ++_dispatches;
-    _status = dispatch();
-    if (_status.inProgress() && _dispatches == 256) _status = workLimit;
-  }
+  _status = _budget.beforeDispatch(binding.nowMs(binding.timeUser));
+  if (_status.ok()) _status = _budget.afterDispatch(dispatch());
   auto& live = _device._live;
   if (!_status.inProgress() && live.trust == ConfigTrust::DIRTY && live.dirtyReason == DirtyReason::NONE) {
     live.dirtyReason = DirtyReason::INCOMPLETE_APPLY;
@@ -89,34 +57,28 @@ Status Apply::step() {
   return _status;
 }
 
-Status Apply::finishTransfer(const TransferResult& result) noexcept {
-  // Tracked transport timestamps every actual callback at its return.
-  if (result.completedMs) advanceClock(*result.completedMs);
-  return _remainingMs == 0 ? timeout : result.status;
-}
-
 Status Apply::readIdentityStep() {
   const auto result = detail::readIdentity(RegisterTransport::tracked(_device), _device._identity,
-                                            _remainingMs);
+                                            _budget.remainingMs);
   if (result.status.is(Err::IDENTITY_MISMATCH)) _device.clearLiveState();
-  const auto status = finishTransfer(result.transfer);
+  const auto status = _budget.finishTransfer(result.transfer);
   if (!status.ok()) return status;
   if (!result.status.ok()) return result.status;
 
   _phase = Phase::GUARD;
   // Until the operation-local wait elapses, the instance holds no proof.
-  return _device._live.startupReady ? pending : waitFor(3);
+  return _device._live.startupReady ? pending : _budget.waitForUs(3000);
 }
 
 Status Apply::readGuard() {
   _device._live.startupReady = true;  // step() has completed any required FIRST_ACK wait.
   std::uint16_t raw = 0;
-  const auto result = readWord(RegisterTransport::tracked(_device), command::eepromUnlock, raw, _remainingMs);
-  if (result.status.ok() && (raw & command::unlock)) _device._eepromUnsafe = true;
-  const auto status = finishTransfer(result);
+  const auto result = readWord(RegisterTransport::tracked(_device), command::eepromUnlock, raw, _budget.remainingMs);
+  const auto guard = result.status.ok() ? DeviceEvidence{_device}.observeGuard(raw) : result.status;
+  const auto status = _budget.finishTransfer(result);
   if (!status.ok()) return status;
-  if (_device._eepromUnsafe) return unsafe;
-  if (raw & command::unlockBusy) return waitFor(1);
+  if (guard.is(Err::MEASUREMENT_NOT_READY)) return _budget.waitForUs(1000);
+  if (!guard.ok()) return guard;
   _lockedIdle = true;
   _phase = _afterGuard;
   return pending;
@@ -124,8 +86,8 @@ Status Apply::readGuard() {
 
 Status Apply::readConfig() {
   std::uint16_t raw = 0;
-  const auto result = readWord(RegisterTransport::tracked(_device), command::config, raw, _remainingMs);
-  const auto status = finishTransfer(result);
+  const auto result = readWord(RegisterTransport::tracked(_device), command::config, raw, _budget.remainingMs);
+  const auto status = _budget.finishTransfer(result);
   auto& live = _device._live;
   // Preflight can observe any startup profile. Once an owned write was
   // attempted, every CONFIG read compares against that phase's target.
@@ -143,7 +105,7 @@ Status Apply::readConfig() {
   if (!_lockedIdle) {
     _afterGuard = _phase;
     _phase = Phase::GUARD;
-    return waitFor(1);
+    return _budget.waitForUs(1000);
   }
 
   switch (_phase) {
@@ -168,8 +130,8 @@ Status Apply::readConfig() {
 
 Status Apply::readLimit(std::uint8_t pointer) {
   std::uint16_t raw = 0;
-  const auto result = readWord(RegisterTransport::tracked(_device), pointer, raw, _remainingMs);
-  const auto status = finishTransfer(result);
+  const auto result = readWord(RegisterTransport::tracked(_device), pointer, raw, _budget.remainingMs);
+  const auto status = _budget.finishTransfer(result);
   auto& live = _device._live;
   const bool verifying = _phase == Phase::VERIFY_FIRST_LIMIT || _phase == Phase::VERIFY_SECOND_LIMIT;
   const SensorSettings* expected = verifying ? &_candidate : nullptr;
@@ -224,9 +186,9 @@ Status Apply::writeConfig(const SensorSettings& settings, Phase next) {
     live.verificationReads = 0;
   }
   const auto result = writeWord(transport, command::config, raw,
-                                {WritePurpose::STABLE_CONFIG, live.startupReady, _lockedIdle}, _remainingMs);
+                                {WritePurpose::STABLE_CONFIG, live.startupReady, _lockedIdle}, _budget.remainingMs);
   DeviceEvidence{_device}.observeWrite(command::config, raw, result);
-  const auto status = finishTransfer(result);
+  const auto status = _budget.finishTransfer(result);
   if (!status.ok()) return status;
   _phase = next;
   return pending;
@@ -237,9 +199,9 @@ Status Apply::writeLimit(std::uint8_t pointer, Phase next) {
   const auto counts = low ? _candidate.limits.lowCounts : _candidate.limits.highCounts;
   auto& live = _device._live;
   const auto result = writeWord(RegisterTransport::tracked(_device), pointer, static_cast<std::uint16_t>(counts),
-                                {WritePurpose::LIMIT, live.startupReady, _lockedIdle}, _remainingMs);
+                                {WritePurpose::LIMIT, live.startupReady, _lockedIdle}, _budget.remainingMs);
   DeviceEvidence{_device}.observeWrite(pointer, static_cast<std::uint16_t>(counts), result);
-  const auto status = finishTransfer(result);
+  const auto status = _budget.finishTransfer(result);
   if (!status.ok()) return status;
   _phase = next;
   return pending;

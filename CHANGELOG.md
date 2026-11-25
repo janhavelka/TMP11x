@@ -34,3 +34,6 @@
 - Added guarded mode, cycle and averaging setters and a bus-silent timing
   query for continuous cadence, standby, active block estimates and
   conversion-window budgets on all six model selections.
+- Added continuous try-fresh and blocking reads and an explicit blocking
+  one-shot from verified shutdown. Fresh samples require a guarded DATA_READY
+  observation for the current profile and a timely combined TEMP read.

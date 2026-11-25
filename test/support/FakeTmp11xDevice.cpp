@@ -48,9 +48,11 @@ Status writeWord(FakeTmp11xDevice& device, const std::uint8_t* tx,
                  const TransferOutcome& outcome) {
   const auto pointer = tx[0];
   const auto value = static_cast<std::uint16_t>((tx[1] << 8) | tx[2]);
-  // Reject calls outside the fixture's volatile stable-profile scope. This
-  // diagnostic does not prescribe a silicon NACK for a policy violation.
-  const bool allowed = (pointer == 0x01 && (value & 0xF803) == 0) ||
+  // The fixture accepts canonical settings or the explicit MOD=11 command.
+  // Rejection here does not prescribe a silicon NACK for a policy violation.
+  const bool stable = (value & 0xF803) == 0;
+  const bool oneShot = (value & 0xFC03) == 0x0C00;
+  const bool allowed = (pointer == 0x01 && (stable || oneShot)) ||
                        pointer == 0x02 || pointer == 0x03 ||
                        (pointer == 0x07 && hasOffset(device.model));
   if (!allowed) {
@@ -66,6 +68,7 @@ Status writeWord(FakeTmp11xDevice& device, const std::uint8_t* tx,
         status = (status & 0x3000) | (outcome.comparatorFlagsOnModeChange & comparatorMask);
       }
       device.applyConfigWord(static_cast<std::uint16_t>(status | value));
+      if (oneShot && device.reportShutdownForOneShot) device.words[pointer] &= 0xF7FF;
     } else {
       device.words[pointer] = value;
     }
@@ -98,7 +101,11 @@ Status exchange(FakeTmp11xDevice* device, TransferTrace& frame, const std::uint8
 }  // namespace
 
 void FakeTmp11xDevice::applyConfigWord(std::uint16_t word) {
-  if ((word & 0x0C00u) == 0x0400u) {
+  const auto mode = word & 0x0C00u;
+  // Synthetic OS results require an explicit SD boundary before the trigger.
+  _oneShotActive = mode == 0x0C00u && _explicitShutdown;
+  _explicitShutdown = mode == 0x0400u;
+  if (mode == 0x0400u) {
     _sum = 0;
     _count = 0;
     _blockUncertain = false;
@@ -109,8 +116,18 @@ void FakeTmp11xDevice::applyConfigWord(std::uint16_t word) {
 }
 
 bool FakeTmp11xDevice::addContinuousConversion(std::int16_t counts) {
+  if ((words[0x01] & 0x0400u) != 0) return false;
+  return addConversion(counts);
+}
+
+bool FakeTmp11xDevice::addOneShotConversion(std::int16_t counts) {
+  if (!_oneShotActive) return false;
+  return addConversion(counts);
+}
+
+bool FakeTmp11xDevice::addConversion(std::int16_t counts) {
   auto& config = words[0x01];
-  if (_blockUncertain || (config & 0x0410u) != 0) return false;  // Known block, CC and ALERT mode.
+  if (_blockUncertain || (config & 0x0010u) != 0) return false;  // Known block and ALERT mode.
   constexpr unsigned lengths[] = {1, 8, 32, 64};
   const auto length = lengths[(config >> 5) & 3u];
   const auto sum = _sum + counts;
@@ -129,6 +146,7 @@ bool FakeTmp11xDevice::addContinuousConversion(std::int16_t counts) {
   if (mean < signedCounts(words[0x03])) config |= 0x4000u;
   _sum = 0;
   _count = 0;
+  _oneShotActive = false;
   return true;
 }
 

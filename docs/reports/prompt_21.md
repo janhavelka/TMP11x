@@ -83,3 +83,45 @@ diagnostics, 27 owns cache inspection and 30 wraps these steps for jobs.
 Two read-only reviews covered pinned silicon/sibling sources and the driver,
 fixture and test seams. Physical acquisition remains unverified (stages
 40–41). The first remote CI checkpoint belongs to stage 43.
+
+## Phase b implementation
+
+Started on clean `main` at `6a3c01e7335948b4aa8c81a16a44daa73a84d9e2`.
+Its parent, subject and single report path matched the phase-a request. The
+wrapper recorded equality with `origin/main` at 01:45:57 Prague time. The
+six prerequisite stages had individual COMPLETE rows. The pinned mode and
+CONFIG pages and both sibling API sources listed above were rechecked.
+
+The three [public fresh-read APIs](../../include/TMP11x/TMP11x.h) now use
+the [resumable acquisition engine](../../src/Acquisition.cpp). A safe
+EEPROM_UL admits the next phase. CONFIG drift stops the sequence, and
+CONFIG BUSY revokes the guard. One-shot writes explicit shutdown, reads its
+baseline and issues the typed MOD=11 command once. A physically successful
+trigger retains its readback provenance through timeout or abandonment.
+Only new ready evidence after the current boundary can reach the
+[TEMP publication path](../../src/LatestRead.cpp). Failed destructive
+reads still update the [instance evidence](../../src/DeviceEvidence.cpp).
+Apply and acquisition share the [deadline and work limits](../../src/OperationBudget.h).
+
+| Native cases | Observed result |
+| --- | --- |
+| `allContinuousProfiles`, `continuousGuardAndReadEffects`, `continuousUpdateBetweenReads` | All 192 model/CONV/AVG selections required a complete block. Equal temperatures required distinct ready events. A diagnostic CONFIG supplied single-use readiness. At an update between CONFIG and TEMP the driver returned the word from one combined transfer. |
+| `oneShotWireAndTiming`, `oneShotConfigFailures`, `renewedGuards`, `busyOneShotPoll` | The seven-callback trace returned 25 °C with either MOD=01 or 11 and retained HIGH. Preflight drift caused zero writes. Post-trigger AVG drift stopped before TEMP. After BUSY, the driver renewed the guard and required a new eligible observation. |
+| `shortOneShotBudget`, `continuousPollingAcrossWrap`, `guardDenialsAndLimits`, `lateContinuousTransfers` | TMP119 AVG 64 issued zero polls when its first due time exceeded the deadline. TMP117 AVG 8 first polled at tick 245 from floor tick 104. The tests observed the 256-dispatch cap, frozen-clock termination, clipped callbacks and output/cache preservation at expiry. |
+| `residualOwnedOneShot`, `destructiveReadDuringShot`, `diagnosticCapturesOwnedShot`, `missingReadyAndThermLevel` | The next explicit request aborted an unfinished block after a late trigger or abandonment. Diagnostic CONFIG captured an eligible ready event, and diagnostic TEMP could consume it. A missed event produced no fresh sample or retrigger. THERM HIGH followed the observed level. |
+| `oneShotBlocks` and register transport | All 384 model/CONV/AVG/MOD-readback combinations terminated after one complete synthetic block. Explicit SD aborted partial accumulation and preserved the previous TEMP. Ordinary CONFIG writes still reject the OS command and the new typed command requires both guards. |
+
+[Acquisition tests](../../test/test_acquisition.cpp), [block tests](../../test/test_averaging_blocks.cpp),
+[register transport tests](../../test/test_register_transport.cpp).
+
+| Local verification | Result |
+| --- | --- |
+| `cmake --build build/host --config Release --parallel 4` and `cmake -E chdir build/host ctest -C Release --output-on-failure` | PASS, all 20 suites including acquisition, transport, apply, latest, timing, ledger and generator checks. GCC 15.1.0, CMake/CTest 4.0.1. |
+| `cmake --build build/consumer --config Release --parallel 4` and `build/consumer/tmp11x_native_consumer.exe` | PASS, the tests-off source consumer linked and printed `0.1.0`. |
+| `doxygen -` on public headers with XML and `WARN_AS_ERROR=YES` | PASS, Doxygen 1.13.2 indexed all three entry points. |
+| `python -B scripts/check_references.py`, `python -B scripts/check_promptset.py`, local Markdown targets and `git diff --check` | PASS, 14 pinned PDFs, 55 stages and local change checks. |
+
+Phase c owns fresh review of these changes. Audit 49 follows stage 21
+acceptance. Physical qualification of MOD readback, read-clear races and
+continuous byte coherence remains open for stages 40–41. The first remote
+CI checkpoint is stage 43.

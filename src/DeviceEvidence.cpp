@@ -17,6 +17,13 @@ std::optional<SettingsField> fieldFor(std::uint8_t pointer) noexcept {
 
 }  // namespace
 
+Status DeviceEvidence::observeGuard(std::uint16_t raw) noexcept {
+  if (raw & command::unlock) device._eepromUnsafe = true;
+  if (device._eepromUnsafe) return Status::Error(Err::EEPROM_UNSAFE, "Observed unlocked EEPROM");
+  if (raw & command::unlockBusy) return Status::Error(Err::MEASUREMENT_NOT_READY, "EEPROM busy");
+  return Status::Ok();
+}
+
 void DeviceEvidence::loseReadiness() noexcept {
   auto& live = device._live;
   live.readyPending = false;
@@ -58,10 +65,18 @@ void DeviceEvidence::captureConfig(std::uint16_t raw, std::optional<std::uint32_
   live.config = config;
   // A matching preflight still observes the current generation until the first write.
   if (config.eepromBusy) live.readyPending = false;
-  else if (timely && live.trust == ConfigTrust::VERIFIED &&
-           config.mode == ObservedMode::CONTINUOUS) {
-    if (live.baselineMs) live.readyPending |= config.dataReady;
-    else live.baselineMs = tick;  // The first observation only establishes a boundary.
+  else if (timely && live.trust == ConfigTrust::VERIFIED) {
+    if (config.mode == ObservedMode::CONTINUOUS) {
+      if (live.baselineMs) live.readyPending |= config.dataReady;
+      else live.baselineMs = tick;  // The first observation only establishes a boundary.
+    } else if (live.trigger == OwnedTrigger::CONFIRMED) {
+      // A new explicit shot always clears residual evidence at its SD boundary.
+      live.readyPending |= config.dataReady;
+    }
+  }
+  if (source == ConfigReadSource::ACQUISITION && live.baselineMs &&
+      config.mode == ObservedMode::CONTINUOUS) {
+    live.baselineMs = tick;  // Pace subsequent continuous polls from this callback.
   }
 
   if (config.alertMode == AlertMode::THERM) {
