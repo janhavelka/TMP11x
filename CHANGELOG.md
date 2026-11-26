@@ -42,4 +42,7 @@
   comparator events with their original source, separately from therm HIGH.
 - Added signed hardware-offset readback on TMP117/M/N and TMP119 during
   guarded settings replay, explicit verification and typed reads. An
-  unexplained calibration change invalidates initialization and pending readiness.
+  unexplained change to unmanaged calibration invalidates initialization and pending readiness.
+- Added opt-in volatile offset management through `managedOffsetCounts` and
+  `setTemperatureOffset(celsius)`. Guarded replay writes and verifies the
+  signed target, including zero. TMP116/N rejects management before I2C.

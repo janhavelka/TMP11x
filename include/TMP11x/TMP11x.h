@@ -194,7 +194,8 @@ class TMP11x {
   /// Requires nowMs and at least one clock tick of operationTimeoutMs. Checks identity,
   /// waits for startup, reads EEPROM_UL for locked/idle and verifies CONFIG and both limits
   /// through guarded shutdown and restoration of the desired mode. CONFIG reads consume flags.
-  /// Reads the unmanaged hardware offset in shutdown on capable models. A successful call admits readLatest().
+  /// In shutdown, verifies an explicitly managed offset or observes existing calibration on capable models.
+  /// A successful call admits readLatest().
   Status begin();
 
   /// Replay and verify the retained target with the same deadline and guards as begin().
@@ -228,6 +229,12 @@ class TMP11x {
   /// change inspect getSettingsSnapshot() and use recover() to replay the retained target.
   Status setLimits(Limits limits);
 
+  /// Apply a volatile offset on TMP117/M/N or TMP119 through guarded shutdown and readback.
+  /// Accepts finite Celsius in [-256, 255.9921875], rounding half counts away from zero.
+  /// Zero explicitly manages zero. Recovery replays the requested counts after an attempted write.
+  /// TMP116/N returns UNSUPPORTED without I2C. EEPROM contents are preserved.
+  Status setTemperatureOffset(double celsius);
+
   /// Set comparator mode, open-drain polarity and pin routing through the guarded setMode()
   /// sequence. Entering THERM requires ordered limits. DATA_READY routes conversion readiness
   /// to the pin. ACTIVE_HIGH asserts by releasing the line to the board pullup.
@@ -251,8 +258,8 @@ class TMP11x {
 
   /// Read the live hardware calibration in signed counts of 1/128 degree Celsius.
   /// Requires initialization on TMP117/M/N and TMP119. TMP116/N returns UNSUPPORTED
-  /// without I2C. A complete read publishes the word even if an unexplained change
-  /// invalidates initialization and readiness. A failed read preserves @p out.
+  /// without I2C. A complete read publishes the word. Managed mismatch marks the profile DIRTY.
+  /// Unexplained unmanaged drift invalidates initialization and readiness. A failed read preserves @p out.
   Status readTemperatureOffset(std::int16_t& out);
 
   /// Sample the physical line once through the bound GPIO hook in owner context outside an ISR.

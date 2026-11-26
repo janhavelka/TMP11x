@@ -40,6 +40,7 @@ struct ConfigurationObservation {
 
 /// Check an exact BOM selection, the six replayable selectors and signed limits.
 /// THERM requires lowCounts <= highCounts. ALERT accepts independent limits.
+/// An engaged managed offset on TMP116/N returns UNSUPPORTED.
 Status validateSettings(Model model, const SensorSettings& settings) noexcept;
 
 /// Encode the validated profile's CONFIG fields. Emits MOD=00 for continuous or 01 for
@@ -50,12 +51,13 @@ Status encodeConfiguration(Model model, const SensorSettings& settings, std::uin
 /// This pure conversion describes the effects of the original read and supplies no timestamp.
 ConfigurationObservation decodeConfiguration(std::uint16_t raw) noexcept;
 
-/// Compare a complete CONFIG, THIGH or TLOW read with the desired profile.
+/// Compare a complete CONFIG, THIGH, TLOW or explicitly managed OFFSET read with the desired profile.
 /// CONFIG ignores status and bits 1:0. Only a confirmed owned trigger permits observed
 /// MOD=11 for desired shutdown. Retain that evidence through completion, cancellation or
 /// timeout until successful explicit SD or invalidation. An ambiguous write cannot confirm
 /// a trigger or shutdown. The caller owns trust, provenance and each new guarded SD baseline.
-/// Both limit comparisons use the full signed word. Returns CONFIG_MISMATCH for drift,
+/// Limits and managed OFFSET use the full signed word. An unmanaged OFFSET has no comparison target.
+/// Returns CONFIG_MISMATCH for drift, UNSUPPORTED for an unsupported managed offset,
 /// INVALID_CONFIG for an invalid profile/model, or INVALID_PARAM for an invalid pointer or trigger value.
 Status compareExpectedRegister(Model model, const SensorSettings& settings, std::uint8_t pointer,
                                std::uint16_t observed, OwnedTrigger trigger = OwnedTrigger::NONE) noexcept;

@@ -31,8 +31,9 @@ startup evidence and profile trust. A complete incompatible ID clears that
 evidence and retains the desired settings. `begin(config)` requires a clock
 and an operation budget of at least one tick before replacing the binding.
 `begin()` and `recover()` establish startup timing from their own compatible
-ID read when proof is missing. They verify CONFIG and both limits and observe
-unmanaged OFFSET on capable models in shutdown. `end()` clears observations while retaining
+ID read when proof is missing. They verify CONFIG and both limits. In shutdown
+on capable models they write and verify managed OFFSET, or read the existing
+calibration when unmanaged. `end()` clears observations while retaining
 the binding and desired settings. `unbind()` also drops the binding.
 Both operations succeed on an empty instance and invoke zero callbacks.
 Stage 28 adds the active-job and pending-result guards described in the
@@ -157,7 +158,7 @@ has no clock. The read owner may attach its completion tick and validity.
 An EEPROM lock check needs a separate EEPROM_UL observation at `0x04`.
 
 `compareExpectedRegister(model, settings, pointer, word)` reports
-`CONFIG_MISMATCH` for drift in CONFIG or either complete limit word. It
+`CONFIG_MISMATCH` for drift in CONFIG, either limit word or an explicitly managed OFFSET. It
 accepts MOD=10 for continuous. For shutdown, observed MOD=11 requires the
 explicit fifth argument `OwnedTrigger::CONFIRMED`. Supply it only for a
 physically successful trigger with retained ownership. Successful explicit

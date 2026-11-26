@@ -5,6 +5,7 @@
 #include "DeviceEvidence.h"
 #include "Identity.h"
 #include "TMP11x/CommandTable.h"
+#include "TMP11x/Temperature.h"
 
 namespace TMP11x {
 
@@ -71,6 +72,19 @@ Status TMP11x::setAveraging(Averaging averaging) {
 Status TMP11x::setLimits(Limits limits) {
   auto candidate = _config.settings;
   candidate.limits = limits;
+  return applySettings(candidate);
+}
+
+Status TMP11x::setTemperatureOffset(double celsius) {
+  if (!isBound()) return Status::Error(Err::NOT_BOUND, "No sensor binding");
+  if (command::accessFor(_config.model, command::offset) != command::Access::GUARDED_OFFSET) {
+    return Status::Error(Err::UNSUPPORTED, "Selected model has no temperature offset");
+  }
+  std::uint16_t raw = 0;
+  const auto encoded = temperature::encodeCelsius(celsius, raw);
+  if (!encoded.ok()) return encoded;
+  auto candidate = _config.settings;
+  candidate.managedOffsetCounts = temperature::decodeCounts(raw);
   return applySettings(candidate);
 }
 

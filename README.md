@@ -82,17 +82,26 @@ and partially applied. Use the returned status to decide when to recover.
 An observed EEPROM unlock requires external correction.
 
 Initialization and recovery verify CONFIG and both limits. On TMP117/M/N and
-TMP119 they also read and preserve the live calibration in shutdown. The final CONFIG
+TMP119 they also read the live calibration in shutdown and preserve it by default. The final CONFIG
 read consumes DATA_READY. A subsequent `readLatest` reports the stored word
 with `freshConversion == false`, including immediately after initialization.
 [Startup, read effects and recovery](docs/api-contracts.md#startup-apply-and-reset).
 
 After initialization, `readTemperatureOffset(counts)` reads the hardware
 calibration on TMP117/M/N and TMP119 in units of 1/128 °C. A complete read
-updates `getSettingsSnapshot().offset`. If the calibration changes between
+updates `getSettingsSnapshot().offset`. If unmanaged calibration changes between
 reads, the call returns the new value and invalidates initialization and
 pending readiness. Restore exclusive access and stable power before calling
 `recover()`. On TMP116/N the call returns `UNSUPPORTED` without a transfer.
+
+Set `config.settings.managedOffsetCounts` before initialization to own the
+volatile calibration, or call `setTemperatureOffset(celsius)` on a verified
+device. The setter rounds to the nearest 1/128 °C, with ties away from zero.
+An explicit zero clears the live offset and makes zero the recovery target.
+Guarded replay writes and checks the selected value in shutdown. If readback
+differs, the snapshot retains the observed word and marks the profile dirty.
+The write leaves EEPROM intact. Accuracy qualification requires an independent
+temperature reference.
 
 ## Read a new conversion
 

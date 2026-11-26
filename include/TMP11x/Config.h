@@ -4,6 +4,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <optional>
 
 #include "TMP11x/Status.h"
 
@@ -86,6 +87,9 @@ struct SensorSettings {
   Polarity polarity = Polarity::ACTIVE_LOW;          ///< Pin assertion polarity.
   PinFunction pinFunction = PinFunction::THRESHOLD;  ///< Pin signal source.
   Limits limits{};                                   ///< Both limit words. THERM requires lowCounts <= highCounts.
+  /// Volatile hardware offset in 1/128 degree Celsius counts. Disengaged preserves the live calibration.
+  /// An engaged value, including zero, requires TMP117/M/N or TMP119 and is replayed on recovery.
+  std::optional<std::int16_t> managedOffsetCounts{};
 };
 
 /// Complete one synchronous write to a seven-bit address within the supplied ms budget.

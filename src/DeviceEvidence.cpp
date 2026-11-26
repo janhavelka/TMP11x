@@ -11,6 +11,7 @@ std::optional<SettingsField> fieldFor(std::uint8_t pointer) noexcept {
     case command::config: return SettingsField::CONFIG;
     case command::lowLimit: return SettingsField::LOW_LIMIT;
     case command::highLimit: return SettingsField::HIGH_LIMIT;
+    case command::offset: return SettingsField::OFFSET;
     default: return std::nullopt;
   }
 }
@@ -124,7 +125,8 @@ Status DeviceEvidence::observeRegister(std::uint8_t pointer, std::uint16_t raw,
     if (command::accessFor(device._config.model, pointer) != command::Access::GUARDED_OFFSET) {
       return Status::Error(Err::UNSUPPORTED, "Selected model has no temperature offset");
     }
-    const bool drift = live.offset && !live.offsetContinuityLost && live.offset->raw != raw;
+    const bool managed = expected && expected->managedOffsetCounts.has_value();
+    const bool drift = !managed && live.offset && !live.offsetContinuityLost && live.offset->raw != raw;
     // An unexplained calibration change also breaks continuity of the profile
     // and its ready evidence. Keep the word that exposed the change.
     if (drift) {
@@ -138,6 +140,11 @@ Status DeviceEvidence::observeRegister(std::uint8_t pointer, std::uint16_t raw,
       live.verificationReads |= static_cast<std::uint8_t>(SettingsField::OFFSET);
     }
     if (drift) return Status::Error(Err::CONFIG_MISMATCH, "Unmanaged temperature offset changed", pointer);
+    if (managed) {
+      const auto match = compareExpectedRegister(device._config.model, *expected, pointer, raw);
+      if (match.is(Err::CONFIG_MISMATCH)) markDirty(DirtyReason::READBACK_MISMATCH, SettingsField::OFFSET);
+      return match;
+    }
     return Status::Ok();
   }
   const auto field = fieldFor(pointer);
@@ -172,6 +179,8 @@ void DeviceEvidence::observeWrite(std::uint8_t pointer, std::uint16_t raw,
       if (mod == command::modeMask) live.trigger = OwnedTrigger::CONFIRMED;
       else if (mod == 0x0400) live.trigger = OwnedTrigger::NONE;
     }
+  } else if (pointer == command::offset) {
+    live.offset.reset();
   } else {
     (pointer == command::lowLimit ? live.low : live.high).reset();
   }

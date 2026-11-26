@@ -166,3 +166,41 @@ and `python scripts/check_promptset.py` passed all 55 stages. `git diff --check`
 Next phase-b slice connects the optional desired count and typed setter to
 guarded volatile write/readback and recovery, including explicit zero and
 TMP116/N refusal. Sample attribution and saturation vectors follow.
+
+## Phase b — Managed offset writes and recovery
+
+**PARTIAL.** Clean input `44367d1028dcf0334063fd162a8ff90bc764eb51`
+matches the prior 15-path request. The wrapper recorded upstream equality at
+02:15:57 Prague time. The source check reconfirmed TMP116 EEPROM3 at SBOS740A
+p. 30 and signed OFFSET at SNOSD82D p. 31 and SNIS236 p. 38. The clean
+TMP1x2 sibling codec at `0791429f` still matches its pin for that file.
+
+`SensorSettings::managedOffsetCounts` defaults to disengaged. An engaged
+value or a successful `setTemperatureOffset(celsius)` opts into management.
+After the shared startup and EEPROM checks, replay verifies shutdown and both
+limits, writes the selected counts to OFFSET and reads them back before the
+CONFIG baseline. A managed mismatch retains the observed word and marks the
+target dirty. An ambiguous write discards the previous OFFSET observation.
+Recovery retains the desired counts, including zero. Releasing ownership in
+the settings engine preserves the live word. [Apply](../../src/Apply.cpp),
+[register evidence](../../src/DeviceEvidence.cpp).
+
+The [apply tests](../../test/test_apply.cpp) exercise all six model selections.
+`managedOffsetApplyRecoverRelease` traces busy-to-clear, explicit zero over
+nonfactory calibration, recovery after reload, negative half-count rounding,
+managed drift and release. `managedOffsetWriteFailures` injects a write that
+took effect despite a NACK, an ignored ACK and a short readback. Each stops
+in shutdown and recovers the retained value. `managedOffsetRefusals` and
+`busyAndUnlockedGuards` check invalid Celsius, zero-transfer model refusal
+and startup, unlock and persistent-busy guards.
+
+- CMake 4.0.1: `cmake --build build/host --config Release --parallel` passed.
+- `cmake -E chdir build/host ctest -C Release --output-on-failure` passed all 22 suites.
+- Python 3.12.10: `python scripts/check_references.py` verified 14 PDFs and `python scripts/check_promptset.py` passed 55 stages. `git diff --check` passed.
+
+Next phase-b slice connects offset provenance to sample publication. Check a
+latest read before a new conversion, a confirmed conversion after a managed
+change or unmanaged drift/recovery, and outputs/cache after late success.
+Exercise the ordinary and both saturated TEMP vectors from the phase-a brief.
+Stage 27 owns the public full-profile configure entry point. Physical trials
+and remote CI retain their stage 41 and 43 gates.

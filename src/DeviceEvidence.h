@@ -11,7 +11,7 @@ struct DeviceEvidence {
   // Record a complete EEPROM_UL word, including when its callback was late.
   Status observeGuard(std::uint16_t raw) noexcept;
 
-  // Compare owned registers and track continuity of the unmanaged hardware offset.
+  // Compare owned registers, including managed OFFSET, and check unmanaged calibration continuity.
   Status observeRegister(std::uint8_t pointer, std::uint16_t raw, const TransferResult& transfer,
                          const SensorSettings* expected, ConfigReadSource source, bool timely = true) noexcept;
   void observeTemperature(const TransferResult& transfer) noexcept;

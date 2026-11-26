@@ -6,6 +6,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <functional>
+#include <limits>
 #include <string>
 #include <vector>
 
@@ -57,7 +58,8 @@ struct Fixture {
                          std::uint32_t ms, void* user) {
       auto& f = *static_cast<Fixture*>(user);
       CHECK(address == f.config.i2cAddress && n == 3 && ms != 0);
-      CHECK(*tx >= 0x01 && *tx <= 0x03);
+      CHECK((*tx >= 0x01 && *tx <= 0x03) ||
+            (*tx == 0x07 && f.config.model != Model::TMP116 && f.config.model != Model::TMP116N));
       if (*tx == 0x01) CHECK((tx[1] & 0xF8) == 0 && (tx[2] & 0x03) == 0);
       if (f.beforeTransfer) f.beforeTransfer(false, *tx);
       return FakeTmp11xBus::write(address, tx, n, ms, &f.bus);
@@ -220,6 +222,7 @@ void busyAndUnlockedGuards() {
   for (const auto word : {0x8000u, 0xC000u}) {
     Fixture f;
     f.config.settings.mode = Mode::SHUTDOWN;
+    f.config.settings.managedOffsetCounts = 0;
     f.chip.words[4] = static_cast<std::uint16_t>(word);
     CHECK(f.device.begin(f.config).is(Err::EEPROM_UNSAFE));
     CHECK(transcript(f) == "R0F R04");
@@ -231,6 +234,7 @@ void busyAndUnlockedGuards() {
     for (const auto& frame : f.bus.trace) CHECK(frame.combinedRead);
   }
   Fixture f;
+  f.config.settings.managedOffsetCounts = -1;
   f.chip.words[4] = 0x4000;
   f.config.operationTimeoutMs = 45;
   CHECK(f.device.begin(f.config).is(Err::OPERATION_TIMEOUT));
@@ -357,6 +361,129 @@ void interruptedOffsetObservationInShutdown() {
     CHECK(f.chip.words[1] == 0x0620 && f.chip.words[0x07] == 0x0040);
     if (shortRead) CHECK(f.device.configTrust() == ConfigTrust::DIRTY);
     else CHECK(!f.device.isInitialized());
+  }
+}
+
+void managedOffsetApplyRecoverRelease() {
+  for (const auto model : {Model::TMP117, Model::TMP117M, Model::TMP117N, Model::TMP119}) {
+    Fixture f{model};
+    f.config.settings.managedOffsetCounts = 0;
+    unsigned guards = 0;
+    f.beforeTransfer = [&](bool read, std::uint8_t ptr) {
+      if (read && ptr == 4) f.chip.words[4] = ++guards == 1 ? 0x4000 : 0;
+    };
+    CHECK(f.device.begin(f.config).ok() && guards == 2);
+    CHECK(transcript(f).find("R0F R04 R04") == 0);
+    CHECK(transcript(f).find("W07=0000 R07 R01 W01=0220 R01") != std::string::npos);
+    CHECK(f.chip.words[7] == 0 && f.device.desiredSettings().managedOffsetCounts == 0);
+    auto snapshot = f.device.getSettingsSnapshot();
+    CHECK(snapshot.trust == ConfigTrust::VERIFIED && snapshot.offset && snapshot.offset->counts == 0);
+
+    f.beforeTransfer = {};
+    CHECK(f.device.invalidateDeviceState().ok());
+    f.chip.words[7] = 0x1234;  // A power cycle reloads the programmed calibration.
+    f.bus.trace.clear();
+    CHECK(f.device.recover().ok() && f.chip.words[7] == 0);
+    CHECK(transcript(f).find("W07=0000 R07") != std::string::npos);
+    f.bus.trace.clear();
+    CHECK(f.device.setTemperatureOffset(-1.0 / 256.0).ok());
+    CHECK(transcript(f).find("W07=FFFF R07 R01 W01=0220 R01") != std::string::npos);
+    snapshot = f.device.getSettingsSnapshot();
+    CHECK(snapshot.trust == ConfigTrust::VERIFIED && snapshot.offset && snapshot.offset->counts == -1);
+    CHECK(snapshot.desired.managedOffsetCounts == -1);
+    f.chip.words[7] = 0x0040;
+    f.bus.trace.clear();
+    CHECK(f.device.verifyConfiguration().is(Err::CONFIG_MISMATCH));
+    CHECK(transcript(f) == "R01 R03 R02 R07");
+    snapshot = f.device.getSettingsSnapshot();
+    CHECK(snapshot.trust == ConfigTrust::DIRTY && snapshot.desired.managedOffsetCounts == -1);
+    CHECK(snapshot.offset && snapshot.offset->counts == 64 && snapshot.verificationReads == 15);
+    CHECK(f.device.recover().ok() && f.chip.words[7] == 0xFFFF);
+
+    auto unmanaged = snapshot.desired;
+    unmanaged.managedOffsetCounts.reset();
+    f.bus.trace.clear();
+    CHECK((Apply{f.device, unmanaged}.run().ok()));
+    CHECK(transcript(f).find("W07=") == std::string::npos);
+    snapshot = f.device.getSettingsSnapshot();
+    CHECK(!snapshot.desired.managedOffsetCounts && snapshot.offset && snapshot.offset->raw == 0xFFFF);
+    CHECK(f.chip.words[7] == 0xFFFF && snapshot.trust == ConfigTrust::VERIFIED);
+  }
+}
+
+void managedOffsetRefusals() {
+  for (const auto model : {Model::TMP116, Model::TMP116N}) {
+    Fixture f{model};
+    CHECK(f.device.begin(f.config).ok());
+    f.bus.trace.clear();
+    f.config.settings.managedOffsetCounts = 0;
+    CHECK(f.device.bind(f.config).is(Err::UNSUPPORTED));
+    CHECK(f.device.begin(f.config).is(Err::UNSUPPORTED));
+    CHECK(f.device.setTemperatureOffset(0.0).is(Err::UNSUPPORTED));
+    CHECK(f.device.isInitialized() && !f.device.desiredSettings().managedOffsetCounts);
+    CHECK(f.bus.trace.empty() && f.chip.words[7] == 0xA35C);
+  }
+  Fixture f;
+  CHECK(f.device.begin(f.config).ok());
+  f.bus.trace.clear();
+  for (const auto invalid : {-256.001, 256.0, std::numeric_limits<double>::quiet_NaN(),
+                             std::numeric_limits<double>::infinity()}) {
+    CHECK(f.device.setTemperatureOffset(invalid).is(Err::INVALID_PARAM));
+  }
+  CHECK(f.bus.trace.empty() && !f.device.desiredSettings().managedOffsetCounts);
+
+  Fixture frozen;
+  frozen.tickIncrement = 0;
+  frozen.config.settings.managedOffsetCounts = 32;
+  CHECK(frozen.device.bind(frozen.config).ok());
+  Apply waiting{frozen.device};
+  CHECK(waiting.start().inProgress() && nextTransfer(waiting, frozen).inProgress());
+  frozen.now = frozen.config.operationTimeoutMs;
+  CHECK(oneStep(waiting, frozen).is(Err::OPERATION_TIMEOUT) && transcript(frozen) == "R0F");
+}
+
+void managedOffsetWriteFailures() {
+  for (const auto failure : {Err::I2C_NACK_DATA, Err::CONFIG_MISMATCH, Err::I2C_SHORT_TRANSFER}) {
+    Fixture f;
+    CHECK(f.device.begin(f.config).ok());
+    f.bus.trace.clear();
+    bool wrote = false;
+    f.beforeTransfer = [&](bool read, std::uint8_t pointer) {
+      if (pointer != 7) return;
+      TransferOutcome outcome;
+      if (!read) {
+        CHECK(f.chip.words[1] == 0x0620);
+        wrote = true;
+        if (failure == Err::I2C_NACK_DATA) {
+          outcome.status = Status::Error(failure, "ambiguous OFFSET write");
+          outcome.failedWriteWord = 128;
+        } else if (failure == Err::CONFIG_MISMATCH) {
+          outcome.ignoreSuccessfulWrite = true;
+        }
+      } else if (wrote && failure == Err::I2C_SHORT_TRANSFER) {
+        outcome.status = Status::Error(failure, "short OFFSET readback");
+        outcome.failedReadBytes = 1;
+      }
+      f.bus.script.push_back(outcome);
+    };
+    CHECK(f.device.setTemperatureOffset(1.0).is(failure) && wrote);
+    const auto snapshot = f.device.getSettingsSnapshot();
+    CHECK(snapshot.trust == ConfigTrust::DIRTY && snapshot.desired.managedOffsetCounts == 128);
+    CHECK((snapshot.affectedFields & static_cast<unsigned>(SettingsField::OFFSET)) != 0);
+    CHECK(f.chip.words[1] == 0x0620);
+    if (failure == Err::CONFIG_MISMATCH) {
+      CHECK(snapshot.offset && snapshot.offset->raw == 0xA35C);
+      CHECK(snapshot.dirtyReason == DirtyReason::READBACK_MISMATCH);
+    } else {
+      CHECK(!snapshot.offset && f.chip.words[7] == 128);
+      if (failure == Err::I2C_NACK_DATA) CHECK(snapshot.dirtyReason == DirtyReason::AMBIGUOUS_WRITE);
+    }
+    f.beforeTransfer = {};
+    f.bus.trace.clear();
+    CHECK(f.device.recover().ok() && f.device.configTrust() == ConfigTrust::VERIFIED);
+    CHECK(transcript(f).find("W07=0080 R07 R01 W01=0220 R01") != std::string::npos);
+    const auto recovered = f.device.getSettingsSnapshot();
+    CHECK(f.chip.words[7] == 128 && recovered.offset && recovered.offset->counts == 128);
   }
 }
 
@@ -1043,6 +1170,9 @@ int main() {
   recoveryStartupProof();
   recoveryAfterReportedReset();
   interruptedOffsetObservationInShutdown();
+  managedOffsetApplyRecoverRelease();
+  managedOffsetRefusals();
+  managedOffsetWriteFailures();
   offsetObservedBeforeIncompleteInitialization();
   busyShutdownReadbackRequiresNewGuard();
   busyAndUnlockedGuards();

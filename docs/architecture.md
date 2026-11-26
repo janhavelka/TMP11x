@@ -11,10 +11,10 @@ conversion or startup interval runs. [Public API and operation gates](api-contra
 | Public header under `include/TMP11x/` | Contents |
 | --- | --- |
 | `Status.h` | SDK-independent errors, static messages, status predicates and passive transport states. |
-| `Config.h` | Value types, model and capability queries, callback types, binding and desired sensor settings. Stage 23 adds the configurable hardware offset. |
+| `Config.h` | Value types, model and capability queries, callback types, binding and desired sensor settings including optional managed offset counts. |
 | `CommandTable.h` | Register pointers, positioned field masks and `command::accessFor(model, pointer)`. The lookup distinguishes a protected shadow from a managed offset at `0x07`. |
 | `Temperature.h` | Pure signed count, Celsius and register-word conversions for TEMP and thresholds. |
-| `Configuration.h` | Bus-silent profile validation, CONFIG encoding and observation, and expected-register comparison for CONFIG, THIGH and TLOW. |
+| `Configuration.h` | Bus-silent profile validation, CONFIG encoding and observation, and expected-register comparison for CONFIG, THIGH, TLOW and managed OFFSET. |
 | `Timing.h` | Bus-silent conversion timing for the selected model, cycle and averaging. |
 | `TMP11x.h` | The device class and its sample, identity, health, settings and alert evidence. Public operations include binding, initialization and recovery, identity checks, guarded settings changes, CONFIG and limit readback, alert event consumption, GPIO sampling and temperature acquisition. |
 | `Version.h` | Checked-in generated package version from `library.json`. Its constants describe the header, and the out-of-line `version()` describes the linked library. |
@@ -70,7 +70,7 @@ one-shot has a stable shutdown result. During a continuous update, the
 datasheets leave byte latching within the combined TEMP read unspecified.
 [Acquisition engine](../src/Acquisition.cpp), [operation budget](../src/OperationBudget.h).
 
-`detail::DeviceEvidence` records each CONFIG, limit and TEMP outcome for
+`detail::DeviceEvidence` records each CONFIG, limit, OFFSET and TEMP outcome for
 apply, managed observation and verification. It captures flags on complete
 CONFIG reads, records possible loss after ambiguous reads and keeps each
 register's observation time. The owner resolves its deadline separately,
@@ -83,8 +83,9 @@ Stable CONFIG accepts only bits in `0x07FC`, including canonical continuous
 and shutdown modes. The private apply engine reads EEPROM_UL before writing,
 renews the guard after an observed BUSY, and verifies the final CONFIG before
 publishing a generation. Acquisition uses a separate typed write permission
-for MOD=11 after explicit shutdown and its CONFIG baseline read. Offset
-management and addressed reset have their own later feature owners.
+for MOD=11 after explicit shutdown and its CONFIG baseline read. Guarded
+replay issues a managed OFFSET write only for an engaged target on a
+capable model, then reads back the full word before the CONFIG baseline.
 
 | Owner | Exclusive decision and callers |
 | --- | --- |

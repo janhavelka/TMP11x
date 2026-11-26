@@ -20,6 +20,9 @@ std::uint16_t packConfiguration(const SensorSettings& settings) noexcept {
 
 Status validateSettings(Model model, const SensorSettings& settings) noexcept {
   if (!isValidModel(model)) return Status::Error(Err::INVALID_CONFIG, "Invalid BOM model");
+  if (settings.managedOffsetCounts && command::accessFor(model, command::offset) != command::Access::GUARDED_OFFSET) {
+    return Status::Error(Err::UNSUPPORTED, "Selected model has no temperature offset");
+  }
   if (!isValidMode(settings.mode) || !isValidCycle(settings.cycle) ||
       !isValidAveraging(settings.averaging) || !isValidAlertMode(settings.alertMode) ||
       !isValidPolarity(settings.polarity) || !isValidPinFunction(settings.pinFunction)) {
@@ -88,7 +91,11 @@ Status compareExpectedRegister(Model model, const SensorSettings& settings, std:
     case command::lowLimit:
       matches = temperature::decodeCounts(observed) == settings.limits.lowCounts;
       break;
-    default: return Status::Error(Err::INVALID_PARAM, "Expected CONFIG, THIGH or TLOW");
+    case command::offset:
+      if (!settings.managedOffsetCounts) return Status::Error(Err::INVALID_PARAM, "No managed offset target");
+      matches = temperature::decodeCounts(observed) == *settings.managedOffsetCounts;
+      break;
+    default: return Status::Error(Err::INVALID_PARAM, "Expected an owned settings register");
   }
   if (!matches) return Status::Error(Err::CONFIG_MISMATCH, "Register differs from desired settings", pointer);
   return Status::Ok();
