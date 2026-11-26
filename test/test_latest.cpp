@@ -122,7 +122,9 @@ void clocklessLatest() {
         CHECK(out.raw == 0x8000 && out.counts == -32768 && out.celsius == -256.0);
         CHECK(!out.timestampValid && !out.freshConversion && out.acquisitionKind == ReadKind::LATEST);
         CHECK(out.configTrust == trust && out.profileGeneration == 7);
-        CHECK(out.offset.state == OffsetState::UNKNOWN && !out.offset.countsValid);
+        const bool hasOffset = model != Model::TMP116 && model != Model::TMP116N;
+        CHECK(out.offset.state == (hasOffset ? OffsetState::UNKNOWN : OffsetState::UNAVAILABLE));
+        CHECK(!out.offset.countsValid);
         CHECK(view.cache.has_value());
         sameSample(*view.cache, out);
         out = callerValue;

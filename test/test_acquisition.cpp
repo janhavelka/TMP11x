@@ -113,7 +113,13 @@ void checkFresh(const Fixture& f, const Sample& out, ReadKind kind) {
   CHECK(out.timestampValid && out.freshConversion && out.acquisitionKind == kind);
   CHECK(out.configTrust == ConfigTrust::VERIFIED);
   CHECK(out.profileGeneration == f.device.getSettingsSnapshot().verifiedGeneration);
-  CHECK(out.offset.state == OffsetState::UNKNOWN && !out.offset.countsValid);
+  if (f.config.model == Model::TMP116 || f.config.model == Model::TMP116N) {
+    CHECK(out.offset.state == OffsetState::UNAVAILABLE && !out.offset.countsValid);
+  } else {
+    const auto managed = f.config.settings.managedOffsetCounts;
+    CHECK(out.offset.state == (managed ? OffsetState::VERIFIED_MANAGED : OffsetState::OBSERVED_UNMANAGED));
+    CHECK(out.offset.countsValid && out.offset.counts == managed.value_or(0));
+  }
 }
 
 void admissions() {
@@ -154,6 +160,9 @@ void allContinuousProfiles() {
         f.begin();
         Sample out;
         CHECK(f.device.readLatest(out).ok() && out.raw == 0x8000 && !out.freshConversion);
+        const bool hasOffset = model != Model::TMP116 && model != Model::TMP116N;
+        CHECK(out.offset.state == (hasOffset ? OffsetState::UNKNOWN : OffsetState::UNAVAILABLE));
+        CHECK(!out.offset.countsValid);
         for (unsigned i = 1; i < lengths[a]; ++i) CHECK(f.chip.addContinuousConversion(3200));
         for (unsigned block = 0; block < 2; ++block) {
           f.clearTrace();
@@ -167,6 +176,60 @@ void allContinuousProfiles() {
           f.checkTrace({4, 1, 0});
         }
       }
+    }
+  }
+}
+
+void offsetResultVectors() {
+  for (const auto model : {Model::TMP117, Model::TMP117M, Model::TMP117N, Model::TMP119}) {
+    Fixture f{Mode::CONTINUOUS, model};
+    f.chip.words[7] = 0xFF80;
+    f.begin();
+    // Script the reported TEMP and READY for 3200 linearized counts plus -128.
+    // These observations leave offset/comparator ordering unspecified.
+    f.chip.words[0] = 0x0C00;
+    f.chip.words[1] |= 0x2000;
+    Sample out;
+    CHECK(f.device.tryReadFresh(out).ok());
+    f.checkTrace({4, 1, 0});
+    CHECK(out.raw == 0x0C00 && out.counts == 3072 && out.celsius == 24.0);
+    CHECK(out.freshConversion && out.offset.state == OffsetState::OBSERVED_UNMANAGED);
+    CHECK(out.offset.countsValid && out.offset.counts == -128);
+
+    struct Vector {
+      double offsetCelsius;
+      std::int16_t offsetCounts;
+      std::uint16_t temp;
+      std::int16_t counts;
+      double resultCelsius;
+    };
+    // Independent reported words for +255 C plus +2 C, and -255 C plus -2 C.
+    constexpr Vector vectors[]{{2.0, 256, 0x7FFF, 32767, 255.9921875},
+                               {-2.0, -256, 0x8000, -32768, -256.0},
+                               // The behavior ledger also uses +/-3200 linearized counts
+                               // with the largest and smallest representable offsets.
+                               {255.9921875, 32767, 0x7FFF, 32767, 255.9921875},
+                               {-256.0, -32768, 0x8000, -32768, -256.0}};
+    for (const auto& v : vectors) {
+      const auto prior = out;
+      CHECK(f.device.setTemperatureOffset(v.offsetCelsius).ok());
+      const auto& cache = LatestRead{f.device}.cache;
+      CHECK(cache && cache->raw == prior.raw && cache->profileGeneration == prior.profileGeneration);
+      CHECK(cache->offset.countsValid && cache->offset.counts == prior.offset.counts);
+      CHECK(cache->offset.state == prior.offset.state);
+      CHECK(f.device.readLatest(out).ok() && out.raw == prior.raw && !out.freshConversion);
+      CHECK(out.offset.state == OffsetState::UNKNOWN && !out.offset.countsValid);
+      CHECK(f.device.tryReadFresh(out).is(Err::MEASUREMENT_NOT_READY));
+
+      f.chip.words[0] = v.temp;
+      f.chip.words[1] |= 0x2000;
+      f.clearTrace();
+      CHECK(f.device.tryReadFresh(out).ok());
+      f.checkTrace({4, 1, 0});
+      CHECK(out.raw == v.temp && out.counts == v.counts && out.celsius == v.resultCelsius);
+      CHECK(out.freshConversion && out.profileGeneration != prior.profileGeneration);
+      CHECK(out.offset.state == OffsetState::VERIFIED_MANAGED);
+      CHECK(out.offset.countsValid && out.offset.counts == v.offsetCounts);
     }
   }
 }
@@ -274,6 +337,7 @@ void oneShotWireAndTiming() {
         f.config.settings.cycle = c;
         f.config.settings.averaging = static_cast<Averaging>(a);
         f.config.settings.limits.highCounts = 3199;
+        f.config.settings.managedOffsetCounts = 0;
         f.begin();
         f.chip.reportShutdownForOneShot = reportShutdown;
         f.chip.words[1] |= 0x2000;  // Stale READY, before the owned SD boundary.
@@ -460,9 +524,14 @@ void unlockedDuringOneShotGuardRenewal() {
 void lateContinuousTransfers() {
   for (const unsigned lateIndex : {1u, 2u}) {
     Fixture f;
+    f.chip.words[7] = 0xFF80;
     f.begin();
     Sample prior;
-    CHECK(f.device.readLatest(prior).ok() && prior.raw == 0x8000);
+    f.chip.words[1] |= 0x2000;
+    f.chip.words[0] = 0x0C00;
+    CHECK(f.device.tryReadFresh(prior).ok() && prior.raw == 0x0C00);
+    CHECK(prior.offset.state == OffsetState::OBSERVED_UNMANAGED && prior.offset.counts == -128);
+    CHECK(f.device.setTemperatureOffset(0.0).ok());
     f.clearTrace();
     f.readsPerTick = 0;
     f.tick = 2000;  // The first continuous poll is already overdue.
@@ -482,7 +551,10 @@ void lateContinuousTransfers() {
     CHECK(f.device.healthSnapshot().lastSuccessMs == 2004 && f.chip.words[1] == 0x0220);
     CHECK(Apply{f.device}.alerts().pendingHigh && !Apply{f.device}.readyPending());
     CHECK(out.raw == sentinel.raw && LatestRead{f.device}.cache->raw == prior.raw);
-    CHECK(LatestRead{f.device}.cache->observedAtMs == prior.observedAtMs);
+    const auto& cache = LatestRead{f.device}.cache;
+    CHECK(out.offset.state == sentinel.offset.state && !out.offset.countsValid);
+    CHECK(cache->observedAtMs == prior.observedAtMs && cache->profileGeneration == prior.profileGeneration);
+    CHECK(cache->offset.state == prior.offset.state && cache->offset.countsValid && cache->offset.counts == -128);
   }
 }
 
@@ -810,6 +882,7 @@ void continuousUpdateBetweenReads() {
 int main() {
   admissions();
   allContinuousProfiles();
+  offsetResultVectors();
   continuousGuardAndReadEffects();
   guardDenialsAndLimits();
   oneShotWireAndTiming();

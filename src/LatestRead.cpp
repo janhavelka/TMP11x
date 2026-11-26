@@ -48,6 +48,13 @@ LatestReadResult LatestRead::read(Sample& out, std::optional<ReadBudget> budget,
   sample.observedAtMs = transfer.completedMs.value_or(0);
   sample.configTrust = trust;
   sample.profileGeneration = generation;
+  if (command::accessFor(binding.model, command::offset) != command::Access::GUARDED_OFFSET) {
+    sample.offset.state = OffsetState::UNAVAILABLE;
+  } else if (sample.freshConversion && _device._live.offset) {
+    const auto state = binding.settings.managedOffsetCounts ? OffsetState::VERIFIED_MANAGED
+                                                           : OffsetState::OBSERVED_UNMANAGED;
+    sample.offset = {state, _device._live.offset->counts, true};
+  }
   cache = sample;
   out = sample;
   return result;

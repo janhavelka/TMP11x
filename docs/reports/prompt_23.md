@@ -204,3 +204,34 @@ change or unmanaged drift/recovery, and outputs/cache after late success.
 Exercise the ordinary and both saturated TEMP vectors from the phase-a brief.
 Stage 27 owns the public full-profile configure entry point. Physical trials
 and remote CI retain their stage 41 and 43 gates.
+
+## Phase b — Sample offset attribution
+
+Clean baseline `ae906178adef69078c3fd25ca768a8690cad1dcb` matches the prior
+request's subject and 17 paths. The wrapper recorded upstream equality at
+02:31:23 Prague time. The pinned TMP117 p. 31 and TMP119 p. 38 specify
+saturation after adding the offset. TMP116 p. 30 assigns this address to EEPROM3.
+
+[Sample publication](../../src/LatestRead.cpp) uses the offset observed during
+profile verification and the existing fresh-conversion evidence. It adds no bus
+transactions. A timely continuous or one-shot read publishes the signed counts
+with their ownership. A latest read on a capable model leaves calibration
+unknown. TMP116/N reports unavailable on every successful sample.
+
+- [Acquisition tests](../../test/test_acquisition.cpp): `offsetResultVectors`
+  injects the ordinary 24 °C TEMP result, both saturated endpoints for ±255 °C
+  with ±2 °C offset, and both extreme-offset ledger vectors on all four
+  capable selections. `oneShotWireAndTiming` checks verified managed zero.
+  `lateContinuousTransfers` keeps the historical sample and caller output
+  across late CONFIG and TEMP success after an offset change.
+- [Trust tests](../../test/test_trust.cpp): `unexplainedOffsetDriftInvalidatesReadiness`
+  verifies stale readiness is consumed on recovery. The same TEMP word carries
+  +64 or −128 counts of unmanaged calibration only after a new ready event.
+- CMake 4.0.1: `cmake --build build/host --config Release --parallel` passed.
+  `cmake -E chdir build/host ctest -C Release --output-on-failure` passed all 22 suites.
+- Python 3.12.10: `python scripts/check_references.py` verified 14 pinned PDFs.
+  `python scripts/check_promptset.py` and `git diff --check` passed.
+
+Phase b ends here. Phase c reviews the full stage diff from `5169ad6` and
+its tests against the source and model gates. Physical arithmetic and
+offset/comparator ordering remain open for stage 41. Stage 43 owns remote CI.

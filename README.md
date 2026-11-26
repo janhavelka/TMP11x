@@ -103,6 +103,13 @@ differs, the snapshot retains the observed word and marks the profile dirty.
 The write leaves EEPROM intact. Accuracy qualification requires an independent
 temperature reference.
 
+On a confirmed fresh conversion, `sample.offset` records the calibration in
+effect and whether the driver manages it. TMP116/N reports `UNAVAILABLE`.
+On offset-capable parts, `readLatest` reports `UNKNOWN` because a stored
+TEMP word can predate the current calibration. Use `sample.celsius` directly.
+The sensor has already applied its offset and saturated the result at the
+register limits.
+
 ## Read a new conversion
 
 In verified continuous mode, `tryReadFresh(sample)` checks once and returns

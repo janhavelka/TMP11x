@@ -196,7 +196,7 @@ zero physical outcomes.
 | `HealthSnapshot` | `DriverState`, initialized flag, saturating total successes/failures and consecutive failures, last physical fault/status, observation time and validity. Start at `UNINIT` on accepted bind or teardown. Each tracked terminal success sets `READY` and clears the streak. Each tracked failure increments it and sets `DEGRADED` below the threshold or `OFFLINE` at/above it. Preserve the last fault across success. |
 | `SettingsSnapshot` | Desired settings, observed raw/decoded fields with per-field validity and times, last verified generation/time, current trust (`UNKNOWN`, `DIRTY` or `VERIFIED`), first unresolved dirty reason and affected fields. Partial observations stay partial. A detected stable mismatch leaves the target intact. |
 | `ConfigurationObservation` | One complete CONFIG word with decoded stable fields, observed MOD, BUSY, DATA_READY and mode-specific HIGH/LOW, observation time/validity and read effects. Preserve the raw MOD even when accepting a continuous alias or an owned one-shot. |
-| `Sample` | `uint16_t raw`, `int16_t counts`, `double celsius`, `uint32_t observedAtMs`, `bool timestampValid`, `ReadKind acquisitionKind`, `bool freshConversion`, `uint32_t profileGeneration`, `ConfigTrust configTrust` and `OffsetProvenance offset`. The latter distinguishes unknown, unavailable on this model, observed unmanaged counts and verified managed counts, with validity for the recorded counts. Unknown is the only populated offset state before stage 23. |
+| `Sample` | `uint16_t raw`, `int16_t counts`, `double celsius`, `uint32_t observedAtMs`, `bool timestampValid`, `ReadKind acquisitionKind`, `bool freshConversion`, `uint32_t profileGeneration`, `ConfigTrust configTrust` and `OffsetProvenance offset`. TMP116/N reports `UNAVAILABLE`. On offset-capable parts, latest reads report `UNKNOWN` and confirmed fresh conversions carry `OBSERVED_UNMANAGED` or `VERIFIED_MANAGED` with valid signed counts. |
 | `AlertStatus` | Pending alert-mode HIGH/LOW events, separately observed therm HIGH level and validity, source of CONFIG read, generation/mode, observation time/validity and possible history loss. A mixed/unknown marker bounds the record when events span profiles, modes or uncertain observations. |
 | `RegisterObservation`, `RegisterSnapshot`, `EepromSnapshot` | Selected model, identity evidence, ordered pointers and complete raw words, time validity, read effects and uncertainty per observation. Preserve completed prefix and first unsuccessful pointer in a failed composite. Report only available fields. EEPROM snapshot records lock/busy and one-based indexed shadows. |
 | `OperationResult` | Token, kind/read kind, terminal status, last physical status/validity, callback count, read effects and possible writes. If the last callback completed a word read, `lastRead` holds its `RegisterObservation` (pointer, raw word and completion timestamp/validity), even at expiry. A write, a failed/short read or zero callbacks leaves this field empty. Only a timely successful READ supplies a `Sample`. Result copies preserve the instance's alert events. |
@@ -515,8 +515,9 @@ and per-model evidence](eeprom-and-reset-policy.md).
 For example, a cached fresh generation-7 sample at raw `0x0C80` remains
 25 °C with its generation-7 offset and observation time after a verified
 offset change creates generation 8. A latest read of the same bits under
-generation 8 reports `freshConversion=false`. A later generation-8 ready
-observation plus a timely TEMP read can publish a fresh 25 °C again.
+generation 8 reports `freshConversion=false` and unknown offset. A later
+generation-8 ready observation plus a timely TEMP read can publish a fresh
+25 °C with the new calibration.
 
 A ready bit can coalesce conversions. An MSB-first combined read is required,
 but TEMP byte latching during a simultaneous continuous update is unspecified.

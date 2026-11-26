@@ -174,6 +174,12 @@ void unexplainedOffsetDriftInvalidatesReadiness(bool detectDuringVerification) {
   CHECK(f.device.begin(f.config).ok());
   const auto initial = f.device.getSettingsSnapshot();
   CHECK(initial.offset && initial.offset->raw == 0);
+  f.chip.words[0] = 0x0C00;
+  f.chip.words[1] |= 0x2000;
+  Sample sample;
+  CHECK(f.device.tryReadFresh(sample).ok() && sample.raw == 0x0C00);
+  CHECK(sample.offset.state == OffsetState::OBSERVED_UNMANAGED && sample.offset.countsValid);
+  CHECK(sample.offset.counts == 0 && sample.profileGeneration == initial.verifiedGeneration);
   // Capture DATA_READY for this continuous generation before the outside change.
   f.chip.words[1] |= 0x2000;
   ConfigurationObservation config;
@@ -199,14 +205,13 @@ void unexplainedOffsetDriftInvalidatesReadiness(bool detectDuringVerification) {
   CHECK(!invalid.config && !invalid.low && !invalid.high && f.device.getAlertStatus().possibleLoss);
   CHECK(invalid.verifiedGeneration == verified.verifiedGeneration && invalid.verifiedAtMs == verified.verifiedAtMs);
   f.bus.trace.clear();
-  Sample sample;
-  sample.raw = 0x1234;
   CHECK(f.device.tryReadFresh(sample).is(Err::NOT_INITIALIZED));
-  CHECK(f.bus.trace.empty() && sample.raw == 0x1234);
+  CHECK(f.bus.trace.empty() && sample.raw == 0x0C00 && sample.offset.counts == 0);
 
   // Before ownership returns, an outside writer can change calibration again.
   if (detectDuringVerification) f.chip.words[7] = 0xFF80;
   const auto newBaseline = f.chip.words[7];
+  f.chip.words[1] |= 0x2000;  // Stale readiness also exists on the device before replay.
   CHECK(f.device.recover().ok());
   CHECK(f.guardTick - f.idTick >= 4);
   unsigned offsetReads = 0;
@@ -220,7 +225,17 @@ void unexplainedOffsetDriftInvalidatesReadiness(bool detectDuringVerification) {
   const auto recovered = f.device.getSettingsSnapshot();
   CHECK(recovered.trust == ConfigTrust::VERIFIED && recovered.offset && recovered.offset->raw == newBaseline);
   CHECK(recovered.verifiedGeneration == verified.verifiedGeneration + 1);
-  CHECK(f.device.tryReadFresh(sample).is(Err::MEASUREMENT_NOT_READY) && sample.raw == 0x1234);
+  CHECK(f.device.tryReadFresh(sample).is(Err::MEASUREMENT_NOT_READY));
+  CHECK(sample.freshConversion && sample.offset.counts == 0 && sample.profileGeneration == initial.verifiedGeneration);
+  CHECK(f.device.readLatest(sample).ok() && sample.raw == 0x0C00 && !sample.freshConversion);
+  CHECK(sample.offset.state == OffsetState::UNKNOWN && !sample.offset.countsValid);
+
+  // A new block may produce the same TEMP word. Its ready indication establishes attribution.
+  f.chip.words[1] |= 0x2000;
+  CHECK(f.device.tryReadFresh(sample).ok() && sample.raw == 0x0C00 && sample.freshConversion);
+  CHECK(sample.profileGeneration == recovered.verifiedGeneration);
+  CHECK(sample.offset.state == OffsetState::OBSERVED_UNMANAGED && sample.offset.countsValid);
+  CHECK(sample.offset.counts == (detectDuringVerification ? -128 : 64));
 }
 
 void verifyLimitDrift() {

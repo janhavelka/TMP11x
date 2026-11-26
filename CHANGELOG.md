@@ -46,3 +46,6 @@
 - Added opt-in volatile offset management through `managedOffsetCounts` and
   `setTemperatureOffset(celsius)`. Guarded replay writes and verifies the
   signed target, including zero. TMP116/N rejects management before I2C.
+- Fresh samples carry observed unmanaged or verified managed offset counts.
+  Latest reads on offset-capable parts leave attribution unknown. All TMP116/N
+  samples report the hardware offset as unavailable.

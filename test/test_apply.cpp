@@ -112,7 +112,8 @@ void allModelsBeginRecoverLatest() {
     Sample sample;
     CHECK(f.device.readLatest(sample).ok() && sample.raw == 0x0C80);
     CHECK(!sample.freshConversion && sample.acquisitionKind == ReadKind::LATEST);
-    CHECK(sample.offset.state == OffsetState::UNKNOWN && !sample.offset.countsValid);
+    CHECK(sample.offset.state == (hasOffset ? OffsetState::UNKNOWN : OffsetState::UNAVAILABLE));
+    CHECK(!sample.offset.countsValid);
     CHECK(f.device.healthSnapshot().totalSuccess == f.bus.trace.size());
     CHECK(f.bus.trace.back().combinedRead && f.bus.trace.back().tx[0] == 0x00);
     const auto generation = sample.profileGeneration;

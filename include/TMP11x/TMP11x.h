@@ -146,7 +146,7 @@ enum class OffsetState : std::uint8_t {
   VERIFIED_MANAGED,    ///< Counts verified as part of the owned profile.
 };
 
-/// Observed or verified hardware offset, independent of conversion attribution.
+/// Hardware calibration attributable to the conversion that produced a sample.
 struct OffsetProvenance {
   OffsetState state = OffsetState::UNKNOWN;  ///< Origin and trust of the evidence.
   std::int16_t counts = 0;                   ///< Offset in units of 1/128 degree Celsius.
@@ -294,18 +294,20 @@ class TMP11x {
   /// Read the stored TEMP word once in either desired mode, including with dirty settings.
   /// Requires binding and managed initialization. A complete TEMP read acknowledges
   /// DATA_READY. It proves no new conversion, including when the word is 0x8000.
+  /// Offset attribution is UNKNOWN on offset-capable parts and UNAVAILABLE on TMP116/N.
   /// On success, copy the sample to @p out and the cache with current profile evidence
   /// and an optional callback-completion timestamp. Any failure preserves both
   /// copies. An attempted TEMP read can consume DATA_READY even if it fails.
   Status readLatest(Sample& out);
 
-  /// Try once for a fresh continuous result under the verified CONFIG and limits.
+  /// Try once for a fresh continuous result under the verified profile.
   /// Check EEPROM lock/busy, consume same-generation ready evidence and read TEMP
   /// in one combined transfer. At most three callbacks, zero writes or waits.
   /// MEASUREMENT_NOT_READY leaves @p out and the last good sample intact.
   /// In alert mode, a CONFIG poll acknowledges HIGH and LOW and can deassert
   /// a comparator-routed ALERT pin. In therm mode, HIGH persists across the read.
-  /// Continuous-update byte latching is undocumented. Offset provenance is UNKNOWN.
+  /// The sample records observed unmanaged or verified managed offset counts on capable parts.
+  /// Continuous-update byte latching is undocumented.
   Status tryReadFresh(Sample& out);
 
   /// Wait for a fresh continuous result, pacing CONFIG reads at the nominal block
