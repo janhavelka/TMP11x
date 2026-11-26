@@ -266,3 +266,35 @@ at `0791429f` still matches its pinned file.
 Phase d owns final software acceptance. Stage 26 integrates diagnostic
 reads and stage 27 exposes full-profile configuration. Physical saturation
 and comparator ordering remain open for stage 41. Stage 43 owns remote CI.
+
+## Phase d acceptance
+
+**COMPLETE, 2026-11-27.** Accepted `offset-feature` on clean `main` at
+`1cde78c58a522a1aa8e7a1ed978b782d3b8c486c`. Its parent `c85fffe`, subject
+and 11 paths matched the phase-c request. The wrapper verified upstream
+equality at 00:18:08 Prague time, and both local refs matched at entry.
+The TMP1x2 comparison codec at clean `0791429f` still matched its pin.
+The pinned TMP116 register map and EEPROM3 description (pp. 24, 30), TMP117
+offset map and arithmetic (pp. 25, 31), and TMP119 equivalents (pp. 32, 38)
+were rechecked against the phase-a sources.
+
+| Software criterion | Passing Release evidence |
+| --- | --- |
+| Model gate, startup and EEPROM guard | `typedOffsetObservations` and `managedOffsetRefusals` verified zero callbacks on TMP116 and TMP116N, including an explicit zero request. With startup unproven, only the ID read occurred. `busyAndUnlockedGuards` verified zero writes with EUN set or persistent BUSY. On all four capable selections, `managedOffsetApplyRecoverRelease` traced BUSY clearing before the first write. [Trust](../../test/test_trust.cpp), [apply](../../test/test_apply.cpp). |
+| Calibration ownership and recovery | Unmanaged recovery observed the nonfactory word in shutdown. Managed zero was written, read back and restored after reload. `managedOffsetWriteFailures` retained dirty intent after an applied NACK, ignored ACK or short readback. `managedOffsetDriftBeforeSetter` caught a changed live word before the first write and recovered the previous target. [Apply tests](../../test/test_apply.cpp). |
+| Drift and conversion attribution | `unexplainedOffsetDriftInvalidatesReadiness` observed unmanaged drift from zero to +64 counts with DATA_READY retained. The next fresh request made zero transfers. Recovery consumed stale readiness and preserved calibration. Only a new conversion carried the new counts. `lateContinuousTransfers` preserved both caller output and the cached sample after late CONFIG or TEMP success. [Trust](../../test/test_trust.cpp), [acquisition](../../test/test_acquisition.cpp). |
+| Signed input and reported TEMP | The setter rejected nonfinite and out-of-range inputs before I²C and rounded a negative half-count to −1. `offsetResultVectors` verified 25 °C with −1 °C calibration returned 24 °C. The simulated +255 °C with +2 °C and −255 °C with −2 °C returned `0x7FFF` and `0x8000` on all four capable models. The confirmed lower endpoint decoded to −256 °C. [Apply](../../test/test_apply.cpp), [acquisition](../../test/test_acquisition.cpp). |
+
+| Acceptance check | Result |
+| --- | --- |
+| `cmake -S . -B build/host -G "MinGW Makefiles" -DTMP11X_BUILD_TESTS=ON -DCMAKE_BUILD_TYPE=Release`, `cmake --build build/host --config Release --clean-first --parallel 4`, `cmake -E chdir build/host ctest -C Release --output-on-failure` | PASS, 22/22 suites including the register ledger and regressions. GCC 15.1.0 and CMake/CTest 4.0.1. |
+| [Tests-off consumer configuration](../testing.md#source-consumer) with the MinGW generator in fresh `build/p23d-consumer`, then `cmake --build build/p23d-consumer --config Release --parallel 4` and `build/p23d-consumer/tmp11x_native_consumer.exe` | PASS, linked version `0.1.0`. |
+| One include per header with `g++ -std=c++17 -Wall -Wextra -Wpedantic -Werror -Iinclude -fsyntax-only -x c++ -`, then `doxygen -` on `include/TMP11x` with XML and `WARN_AS_ERROR=YES` | PASS, all eight public headers compiled independently. Doxygen 1.13.2 documented both operations, desired and observed offset, and sample provenance. |
+| `python -B scripts/check_references.py`, `python -B scripts/check_promptset.py`, `git diff --check` | PASS, 14 pinned PDFs, 55 stages and the acceptance diff. Python 3.12.10. |
+
+The [public operations and snapshots](../../include/TMP11x/TMP11x.h),
+[guarded replay](../../src/Apply.cpp), [offset observations](../../src/DeviceEvidence.cpp)
+and [sample publication](../../src/LatestRead.cpp) supply stages 25–27, audit
+50 and stages 29, 32 and 38. Stage 41 owns physical saturation and evidence
+for comparator ordering. MCU links, physical measurements and remote CI were
+not run in this software checkpoint. Stage 43 owns remote CI.
