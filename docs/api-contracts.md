@@ -285,8 +285,9 @@ settings. `lastConfigSource`, `lastConfigAtMs` and `readClearMask` describe the
 latest complete CONFIG read, including a late success. Its clear mask is
 `0xE000` for alert and `0x2000` for therm. An engaged `thermHigh` gives the
 level at that read. An attempted CONFIG write, ambiguous CONFIG read or loss
-of live device state invalidates the level. A failed CONFIG read or reported
-outside access can leave a gap in event history (`possibleLoss`).
+of live device state invalidates the level. A failed CONFIG read, reported
+outside access or an incompatible ID after startup can leave a gap in event
+history (`possibleLoss`). Events captured before that gap retain their origin.
 
 `takeAlertEvents(out)` succeeds even with an empty record. It copies the
 status and clears the pending bits, first-event origin, mixed marker and loss

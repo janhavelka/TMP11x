@@ -179,3 +179,40 @@ Physical ALERT levels, TMP116/N averaged comparator timing, offset/comparator
 ordering on supporting parts and concurrent read-clear timing remain open.
 MCU, remote CI and physical fixtures were not run. Phase c owns fresh review
 of this implementation. Phase d owns stage acceptance and the progress row.
+
+## Phase c review
+
+**PARTIAL, 2026-11-26.** Review began on clean `main` at
+`ca6d0912af45eadbd1dae655c9584add897fa40e`. The parent, subject and all
+18 changed paths matched the phase-b commit request. The wrapper recorded
+upstream equality at 01:06:00 Prague time. Both local refs still matched at
+entry. Two independent read-only reviewers examined the limits and alert
+paths in parallel. Both finished before the handoff.
+
+The limit review traced the two setters through guarded shutdown, ordered
+per-word readback and final CONFIG verification. It checked signed
+endpoints, local inversion refusal, partial observations, the three
+SD/alert readback failures and recovery. The shared apply engine satisfied
+these cases. The alert review traced CONFIG and TEMP effects, first-event
+and latest-read attribution, the two takes after a failed one-shot TEMP,
+and the GPIO hook. The pinned TI comparator descriptions and limit tables
+agree with the literal vectors cited in phase a. The two sibling sources
+still matched their recorded pins. [Limit tests](../../test/test_limits.cpp),
+[apply tests](../../test/test_apply.cpp), [acquisition tests](../../test/test_acquisition.cpp).
+
+| Finding | Resolution and regression evidence |
+| --- | --- |
+| An incompatible ID after startup invalidated live state while leaving `possibleLoss` clear. Previously latched but unread alerts on the original sensor could be unreachable. | `identityMismatchBreaksAlertHistory` failed against phase b. The shared invalidation now records the gap before clearing startup proof. Both `probe()` and `recover()` preserve the captured HIGH, generation and timestamp. After a take, checking the same incompatible ID again leaves the loss indication clear. [Implementation](../../src/TMP11x.cpp), [API contract](../api-contracts.md). |
+| The eight pin routes used a fixture pin computed from CONFIG. They did not exercise the external ARA vector where a released pin coexists with a latched LOW. | `externalAlertResponse` supplies an independent GPIO level for the documented active-low, threshold-routed case on all six selections. After reported outside access, the pin reads high. The first addressed CONFIG in recovery still observes LOW. A take delivers LOW and possible loss once. Every driver transfer uses the bound sensor address. [Comparator suite](../../test/test_alert_comparator.cpp), [source and vector](../device-behavior.md#comparator-and-pin-evidence). |
+
+| Local check | Result |
+| --- | --- |
+| `cmake --build build/host --config Release --parallel 4`, then `cmake -E chdir build/host ctest -C Release --output-on-failure` | PASS after the fix, 22/22 suites with GCC 15.1.0 and CMake/CTest 4.0.1. |
+| `cmake --build build/consumer --config Release --parallel 4`, then `build/consumer/tmp11x_native_consumer.exe` | PASS, the tests-off consumer printed `0.1.0`. |
+| Isolated `TMP11x.h` compile with `g++ -std=c++17 -Wall -Wextra -Wpedantic -Werror -Iinclude -fsyntax-only -x c++ -`, then `doxygen -` on the public headers with XML and `WARN_AS_ERROR=YES` | PASS. Doxygen 1.13.2 indexed all six operations and the revised `possibleLoss` documentation. |
+| `python -B scripts/check_references.py`, `python -B scripts/check_promptset.py`, `git diff --check` | PASS, 14 pinned PDFs, 55 stages and working diff. Python 3.12.10. |
+
+Phase d owns final software acceptance. Physical pin behavior, concurrent
+flag-clear timing, TMP116/N block-end comparison and offset/comparator
+ordering retain their existing evidence gates. MCU, CI and fixture checks
+were not run in this phase.

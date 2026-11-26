@@ -219,6 +219,57 @@ void gpioObservationOnly() {
   f.checkAddressedTransfers();
 }
 
+void externalAlertResponse(Model model) {
+  Fixture f{model};
+  bool lineHigh = false;
+  f.config.gpioUser = &lineHigh;
+  f.config.readAlertPin = [](bool& high, void* user) {
+    high = *static_cast<bool*>(user);
+    return Status::Ok();
+  };
+  CHECK(f.device.begin(f.config).ok());
+  CHECK(f.chip.addContinuousConversion(-1345));  // LOW latched, threshold route, active low.
+  f.bus.trace.clear();
+  bool high = true;
+  CHECK(f.device.readAlertPinLevel(high).ok() && !high);
+
+  // The sensor wins arbitration on an outside controller's ARA. LOW stays latched.
+  lineHigh = true;
+  CHECK(f.device.invalidateDeviceState().ok());
+  CHECK(f.device.readAlertPinLevel(high).ok() && high && f.bus.trace.empty());
+  CHECK(f.device.getAlertStatus().possibleLoss && !f.device.getAlertStatus().pendingLow);
+  CHECK(f.device.recover().ok());
+  CHECK(f.bus.trace.at(2).combinedRead && f.bus.trace[2].tx[0] == 0x01);
+  CHECK((f.bus.trace[2].rx[0] & 0xC0u) == 0x40u && (f.chip.words[1] & 0xC000u) == 0);
+  AlertStatus events;
+  CHECK(f.device.takeAlertEvents(events).ok() && events.pendingLow && events.possibleLoss);
+  CHECK(!events.pendingHigh && events.firstEvent && events.firstEvent->source == ConfigReadSource::APPLY);
+  CHECK(f.device.takeAlertEvents(events).ok() && !events.pendingLow && !events.possibleLoss);
+  f.checkAddressedTransfers();
+}
+
+void identityMismatchBreaksAlertHistory() {
+  for (const bool managed : {false, true}) {
+    Fixture f{Model::TMP117};
+    CHECK(f.device.begin(f.config).ok());
+    CHECK(f.chip.addContinuousConversion(-831));
+    f.checkConfig(true, false, true);
+    const auto captured = f.device.getAlertStatus();
+    CHECK(captured.firstEvent && !captured.possibleLoss);
+    f.chip.words[0x0F] = 0x1116;  // Incompatible with the selected TMP117.
+    f.bus.trace.clear();
+    const auto status = managed ? f.device.recover() : f.device.probe();
+    CHECK(status.is(Err::IDENTITY_MISMATCH) && !f.device.isInitialized());
+    CHECK(f.bus.trace.size() == 1 && f.bus.trace[0].tx[0] == 0x0F);
+    AlertStatus events;
+    CHECK(f.device.takeAlertEvents(events).ok() && events.possibleLoss && events.pendingHigh);
+    CHECK(events.firstEvent && events.firstEvent->profileGeneration == captured.firstEvent->profileGeneration);
+    CHECK(events.firstEvent->observedAtMs == captured.firstEvent->observedAtMs);
+    CHECK(f.device.probe().is(Err::IDENTITY_MISMATCH));
+    CHECK(f.device.takeAlertEvents(events).ok() && !events.possibleLoss && !events.pendingHigh);
+  }
+}
+
 }  // namespace
 
 int main() {
@@ -227,7 +278,9 @@ int main() {
     alertWindowAckAndRearm(model);
     thermHysteresisAndShutdown(model);
     eightPinRoutes(model);
+    externalAlertResponse(model);
   }
   gpioObservationOnly();
+  identityMismatchBreaksAlertHistory();
   return EXIT_SUCCESS;
 }

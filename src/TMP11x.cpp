@@ -83,6 +83,8 @@ Status TMP11x::setAlert(AlertMode mode, Polarity polarity, PinFunction pinFuncti
 }
 
 void TMP11x::clearLiveState() noexcept {
+  // An identity change can make unread latches on the previous target unreachable.
+  if (_live.startupReady) _alerts.possibleLoss = true;
   const auto generation = _live.profileGeneration;
   const auto verifiedAt = _live.verifiedAtMs;
   _live = {};
