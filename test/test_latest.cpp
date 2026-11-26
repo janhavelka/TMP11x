@@ -325,7 +325,8 @@ void tempConsumesRetainedReadiness() {
     if (row.shortRead) CHECK(evidence.baselineMs() == 1006);
     const auto& alerts = evidence.alerts();
     CHECK(alerts.pendingHigh && alerts.pendingLow && !alerts.possibleLoss && !alerts.mixedOrUnknown);
-    CHECK(alerts.profileGeneration == firstAlert.profileGeneration && alerts.observedAtMs == firstAlert.observedAtMs);
+    CHECK(alerts.firstEvent.value().profileGeneration == firstAlert.firstEvent.value().profileGeneration);
+    CHECK(alerts.firstEvent->observedAtMs == firstAlert.firstEvent->observedAtMs);
   }
 }
 

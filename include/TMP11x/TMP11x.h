@@ -16,14 +16,36 @@ struct DeviceEvidence;
 struct RegisterTransport;
 struct TransferResult;
 struct LatestRead;
-/// Origin of a destructive CONFIG read that captured an alert.
+}
+
+/// Operation that read CONFIG and observed its flags.
 enum class ConfigReadSource : std::uint8_t {
   APPLY,         ///< Guarded profile apply or replay.
   OBSERVATION,   ///< A single managed CONFIG query.
   VERIFICATION,  ///< Read-only profile verification.
   ACQUISITION,   ///< Freshness preflight, shutdown baseline or readiness poll.
 };
-}
+
+/// Origin of the first pending alert-mode event. Later observations may add either flag.
+struct AlertEventOrigin {
+  ConfigReadSource source{};                   ///< Operation that acknowledged the event.
+  ObservedMode mode{};                         ///< Operating mode decoded from the same CONFIG word.
+  std::uint32_t profileGeneration = 0;         ///< Last verified generation at capture. See AlertStatus::mixedOrUnknown.
+  std::optional<std::uint32_t> observedAtMs;   ///< Callback completion tick when available, including zero.
+};
+
+/// Comparator evidence captured by addressed CONFIG reads. Repeated excursions can coalesce.
+struct AlertStatus {
+  bool pendingHigh = false;    ///< At least one acknowledged above-high event since the previous take.
+  bool pendingLow = false;     ///< At least one acknowledged below-low event since the previous take.
+  bool possibleLoss = false;   ///< A failed CONFIG read or reported loss of device state left a gap in history.
+  bool mixedOrUnknown = false; ///< Captures differed in source, mode or generation, or lacked verified settings.
+  std::optional<AlertEventOrigin> firstEvent; ///< Retained attribution while either event is pending.
+  std::optional<bool> thermHigh;              ///< HIGH at the last applicable therm observation. LOW is always zero.
+  std::optional<ConfigReadSource> lastConfigSource; ///< Source of the most recent complete CONFIG read.
+  std::optional<std::uint32_t> lastConfigAtMs;      ///< Time of that read and of thermHigh when present.
+  std::uint16_t readClearMask = 0; ///< Flags acknowledged by that read: 0xE000 in alert or 0x2000 in therm.
+};
 
 /// Per-instance evidence since the last accepted bind, end or unbind.
 /// Each tracked physical callback contributes one outcome, even before initialization.
@@ -194,16 +216,37 @@ class TMP11x {
   /// sequence. Retains the desired mode and cycle. TEMP updates at block completion.
   Status setAveraging(Averaging averaging);
 
+  /// Apply both signed thresholds in counts of 1/128 degree Celsius. THERM requires low <= high.
+  /// The guarded shutdown sequence verifies each separate write and preserves an initially
+  /// ordered pair for an ordered target. The pin can change between writes. After a partial
+  /// change inspect getSettingsSnapshot() and use recover() to replay the retained target.
+  Status setLimits(Limits limits);
+
+  /// Set comparator mode, open-drain polarity and pin routing through the guarded setMode()
+  /// sequence. Entering THERM requires ordered limits. DATA_READY routes conversion readiness
+  /// to the pin. ACTIVE_HIGH asserts by releasing the line to the board pullup.
+  Status setAlert(AlertMode mode, Polarity polarity, PinFunction pinFunction);
+
   /// Report loss of stable power or exclusive access. Drops initialization, startup proof
   /// and live observations without calling any hooks. Keeps the target, health, last
-  /// verification and historical samples/events. After external correction of an EEPROM
-  /// unlock, this permits a fresh locked/idle check. Requires an existing binding.
+  /// verification and historical samples/events. Marks possible alert history loss. After external
+  /// correction of an EEPROM unlock, this permits a fresh locked/idle check. Requires a binding.
   Status invalidateDeviceState() noexcept;
 
   /// Read CONFIG once after initialization. Publishes a complete observation even on
   /// drift, latching DIRTY. Reading acknowledges DATA_READY and ALERT-mode latches.
   /// A failed transfer preserves @p out and may already have acknowledged hardware.
   Status readConfiguration(ConfigurationObservation& out);
+
+  /// Read TLOW then THIGH in two tracked transfers after initialization. A complete pair is
+  /// published even on drift, which latches DIRTY. A transfer failure preserves @p out and
+  /// retains each completed observation in getSettingsSnapshot(). Neither read acknowledges flags.
+  Status readLimits(Limits& out);
+
+  /// Sample the physical line once through the bound GPIO hook in owner context outside an ISR.
+  /// UNSUPPORTED means the hook is absent. A failed call preserves @p high. Sampling performs
+  /// no pin setup or I2C and supplies no comparator, health or fresh-conversion evidence.
+  Status readAlertPinLevel(bool& high) const;
 
   /// Read CONFIG, TLOW and THIGH after initialization. Each complete read records its
   /// evidence. A transport fault stops the scan. CONFIG_MISMATCH reports observed drift,
@@ -284,6 +327,15 @@ class TMP11x {
   /// Copy the target, observations and trust evidence without calling the bus or clock.
   SettingsSnapshot getSettingsSnapshot() const noexcept;
 
+  /// Inspect retained alert events, their first source and the most recent therm observation.
+  /// Memory only, including before initialization. CONFIG acknowledges alert events and DATA_READY.
+  /// TEMP acknowledges DATA_READY alone. Therm HIGH changes at completed threshold comparisons.
+  AlertStatus getAlertStatus() const noexcept { return _alerts; }
+
+  /// Copy the current status to @p out, then clear pending events, their origin and loss indicators.
+  /// Succeeds even with no pending event. Keeps the therm level and last read effects. Zero callbacks.
+  Status takeAlertEvents(AlertStatus& out) noexcept;
+
  private:
   friend struct detail::Acquisition;
   friend struct detail::Apply;
@@ -315,29 +367,16 @@ class TMP11x {
     OwnedTrigger trigger = OwnedTrigger::NONE;
   };
 
-  // Pending ALERT-mode events captured by CONFIG reads. THERM HIGH is
-  // the level at the last applicable observation and is never latched here.
-  struct AlertEvidence {
-    bool pendingHigh = false;
-    bool pendingLow = false;
-    bool possibleLoss = false;
-    bool mixedOrUnknown = false;
-    std::optional<bool> thermHigh;
-    std::optional<std::uint32_t> observedAtMs;
-    std::uint32_t profileGeneration = 0;
-    detail::ConfigReadSource source{};
-    ObservedMode mode{};
-  };
-
   void clearObservations() noexcept;
   void clearLiveState() noexcept;
   Status requireInitialized() const noexcept;
+  Status readObservedRegister(std::uint8_t pointer);
   Status applySettings(const SensorSettings& candidate);
 
   Config _config{};
   IdentityInfo _identity{};
   LiveState _live{};
-  AlertEvidence _alerts{};
+  AlertStatus _alerts{};
   // Sticky across ordinary begin/recover, teardown and rebind. The owner must
   // correct a known unlocked part before reporting device-state invalidation.
   bool _eepromUnsafe = false;

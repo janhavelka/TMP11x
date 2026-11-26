@@ -129,3 +129,53 @@ and read-clear evidence belongs to stages 40–41.
 Both read-only source reviews finished. Stage 22 feature acceptance remains
 open. Hardware and MCU tests were not run. The first remote CI checkpoint
 belongs to stage 43.
+
+## Phase b implementation and native evidence
+
+**PARTIAL, 2026-11-26.** Phase b began on clean `main` at
+`51619bf012f4fb36b5b85f76bbce584c60905dd3`. Its parent, subject and
+single report path match the preceding wrapper request. The wrapper verified
+upstream equality at 00:45:30 Prague time. Both local refs matched on entry.
+The two delegated test implementations used disjoint files and finished
+before integration closed.
+
+The `limits-alert` implementation adds six public operations. `setLimits` and
+`setAlert` stage a candidate on the existing guarded apply engine. `readLimits`
+observes TLOW then THIGH through the same drift bookkeeping as CONFIG. A
+short THIGH transfer preserves the caller's previous pair and records any
+TLOW drift. Both limit reads are independent of flag acknowledgement.
+[Public declarations](../../include/TMP11x/TMP11x.h), [entry points](../../src/TMP11x.cpp).
+
+`getAlertStatus` returns a copy. `takeAlertEvents` clears pending events and
+their loss/provenance indicators after copying them. The latest complete
+CONFIG read has its own source, timestamp and read-clear mask, so a newer
+therm observation can coexist with an older alert event. A reported loss of
+device state marks a gap in alert history and invalidates the therm level.
+`readAlertPinLevel` samples the bound GPIO hook once, including before
+initialization. Its result is independent of sensor flags, transport health
+and fresh-read evidence. [Read effects](../../src/DeviceEvidence.cpp),
+[API contract](../api-contracts.md), [user guide](../../README.md#set-limits-and-observe-alert).
+
+| Executed host case | Evidence |
+| --- | --- |
+| `signedLimitsAndRouting`, `admissionAndThermOrdering`, `partialReadsAndDrift` | Signed `FAC0/FCC0` readback, both 14-transfer continuous-mode setter traces and local rejection of invalid selectors or inverted therm limits. First- and second-read failures preserve the caller's pair. [Limit suite](../../test/test_limits.cpp) |
+| `interruptedThermPair`, `invertedStartingPairRequiresRecovery`, `comparatorTransitions` | Upward and downward crossings verify the first limit before writing the second. An ambiguous second write leaves a dirty target. A failed, mismatched or late SD/alert readback stops the write that would invert the pair. Recovery verifies both limits before enabling therm. [Limit suite](../../test/test_limits.cpp), [apply suite](../../test/test_apply.cpp) |
+| `alertWindowAckAndRearm`, `thermHysteresisAndShutdown`, `eightPinRoutes`, `gpioObservationOnly` | All six models exercised signed crossings, equality, CONFIG versus TEMP acknowledgement, therm retention through an aborted average, and all eight pin routes. GPIO failures preserved output and added zero transport outcomes. Transfers used only the bound address. [Comparator suite](../../test/test_alert_comparator.cpp), [block fixture](../../test/support/FakeTmp11xDevice.cpp) |
+| `takeOneShotAlertsAfterTempFailure` | On all six models the readiness poll returned `AE00`, acknowledging HIGH and READY. A subsequent TEMP timeout preserved the previous sample. Two bus-silent takes delivered HIGH once. An in-range shot returned `2E00` and produced no threshold event. [Acquisition suite](../../test/test_acquisition.cpp) |
+| `finalThermReadAfterVerifiedAlert`, `retainedAlertsAcrossGenerations` | Earlier LOW retained its original generation and time when a later therm read completed at expiry. An ambiguous CONFIG read marked possible loss. A second take preserved therm HIGH's observed value, time and read effects. [Apply suite](../../test/test_apply.cpp) |
+
+| Local check | Result |
+| --- | --- |
+| `cmake -S . -B build/host -G "MinGW Makefiles" -DTMP11X_BUILD_TESTS=ON -DCMAKE_BUILD_TYPE=Release`, `cmake --build build/host --config Release --parallel 4`, `cmake -E chdir build/host ctest -C Release --output-on-failure` | PASS, 22/22 suites, including both newly registered suites. GCC 15.1.0 and CMake/CTest 4.0.1. |
+| `cmake --build build/consumer --config Release --parallel 4` and `build/consumer/tmp11x_native_consumer.exe` | PASS, tests-off consumer linked and printed `0.1.0`. |
+| Isolated `TMP11x.h` compile with `g++ -std=c++17 -Wall -Wextra -Wpedantic -Werror -Iinclude -fsyntax-only -x c++ -`. Public header XML with `doxygen -` and `WARN_AS_ERROR=YES`. | PASS, Doxygen 1.13.2 indexed all six operations. |
+| `python -B scripts/check_references.py`, `python -B scripts/check_promptset.py`, `git diff --check` | PASS, 14 pinned PDFs, 55 stages and working diff. Python 3.12.10. |
+
+The comparator pages and unchanged sibling revisions in phase a were
+rechecked. The fixture uses exact block means and leaves inverted therm
+comparisons unspecified. The production API contains no fault queue,
+interrupt queue, extended temperature mode or SMBus alert-response command.
+Physical ALERT levels, TMP116/N averaged comparator timing, offset/comparator
+ordering on supporting parts and concurrent read-clear timing remain open.
+MCU, remote CI and physical fixtures were not run. Phase c owns fresh review
+of this implementation. Phase d owns stage acceptance and the progress row.

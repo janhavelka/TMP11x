@@ -19,8 +19,8 @@ struct FakeTmp11xDevice {
   Model model;
   std::array<std::uint16_t, 16> words{};
 
-  // Feed one synthetic ADC result under continuous ALERT-mode settings.
-  // Test inputs must give exactly representable block means.
+  // Feed one synthetic ADC result in continuous mode. Block means must be
+  // exactly representable and THERM limits ordered for a modeled comparison.
   bool addContinuousConversion(std::int16_t counts);
 
   // OS ignores CONV and stops after one complete AVG block. TI leaves MOD

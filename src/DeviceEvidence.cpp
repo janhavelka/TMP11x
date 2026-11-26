@@ -64,6 +64,9 @@ void DeviceEvidence::captureConfig(std::uint16_t raw, std::optional<std::uint32_
   config.timestampValid = tick.has_value();
   config.observedAtMs = tick.value_or(0);
   live.config = config;
+  alerts.lastConfigSource = source;
+  alerts.lastConfigAtMs = tick;
+  alerts.readClearMask = config.readClearMask;
   // A matching preflight still observes the current generation until the first write.
   if (config.eepromBusy) {
     if (live.guardInterruption.ok()) {
@@ -93,13 +96,10 @@ void DeviceEvidence::captureConfig(std::uint16_t raw, std::optional<std::uint32_
   if (!config.high && !config.low) return;
 
   // Keep the first retained event's attribution when merging later events.
-  if (!alerts.pendingHigh && !alerts.pendingLow) {
-    alerts.profileGeneration = live.profileGeneration;
-    alerts.source = source;
-    alerts.mode = config.mode;
-    alerts.observedAtMs = tick;
-  } else if (alerts.profileGeneration != live.profileGeneration || alerts.source != source ||
-             alerts.mode != config.mode) {
+  if (!alerts.firstEvent) {
+    alerts.firstEvent = AlertEventOrigin{source, config.mode, live.profileGeneration, tick};
+  } else if (alerts.firstEvent->profileGeneration != live.profileGeneration ||
+             alerts.firstEvent->source != source || alerts.firstEvent->mode != config.mode) {
     alerts.mixedOrUnknown = true;
   }
   if (live.trust != ConfigTrust::VERIFIED) alerts.mixedOrUnknown = true;

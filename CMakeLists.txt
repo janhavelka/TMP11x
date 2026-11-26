@@ -97,6 +97,18 @@ if(TMP11X_BUILD_TESTS)
   target_link_libraries(tmp11x_averaging_blocks_test PRIVATE TMP11x)
   add_test(NAME averaging_blocks_cpp COMMAND tmp11x_averaging_blocks_test)
 
+  add_executable(tmp11x_limits_test
+    test/test_limits.cpp
+    test/support/FakeTmp11xDevice.cpp)
+  target_link_libraries(tmp11x_limits_test PRIVATE TMP11x)
+  add_test(NAME limits_cpp COMMAND tmp11x_limits_test)
+
+  add_executable(tmp11x_alert_comparator_test
+    test/test_alert_comparator.cpp
+    test/support/FakeTmp11xDevice.cpp)
+  target_link_libraries(tmp11x_alert_comparator_test PRIVATE TMP11x)
+  add_test(NAME alert_comparator_cpp COMMAND tmp11x_alert_comparator_test)
+
   add_executable(tmp11x_latest_test
     test/test_latest.cpp
     test/support/FakeTmp11xDevice.cpp)
@@ -127,7 +139,8 @@ if(TMP11X_BUILD_TESTS)
   foreach(target TMP11x tmp11x_value_types_test tmp11x_register_transport_test tmp11x_identity_test
                  tmp11x_binding_test tmp11x_health_test tmp11x_temperature_test tmp11x_latest_test
                  tmp11x_configuration_test tmp11x_apply_test tmp11x_trust_test tmp11x_timing_test
-                 tmp11x_conversion_settings_test tmp11x_averaging_blocks_test tmp11x_acquisition_test)
+                 tmp11x_conversion_settings_test tmp11x_averaging_blocks_test tmp11x_acquisition_test
+                 tmp11x_limits_test tmp11x_alert_comparator_test)
     set_target_properties(${target} PROPERTIES
       CXX_STANDARD 17 CXX_STANDARD_REQUIRED YES CXX_EXTENSIONS NO)
     if(MSVC)

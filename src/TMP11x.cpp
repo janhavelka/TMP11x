@@ -68,6 +68,20 @@ Status TMP11x::setAveraging(Averaging averaging) {
   return applySettings(candidate);
 }
 
+Status TMP11x::setLimits(Limits limits) {
+  auto candidate = _config.settings;
+  candidate.limits = limits;
+  return applySettings(candidate);
+}
+
+Status TMP11x::setAlert(AlertMode mode, Polarity polarity, PinFunction pinFunction) {
+  auto candidate = _config.settings;
+  candidate.alertMode = mode;
+  candidate.polarity = polarity;
+  candidate.pinFunction = pinFunction;
+  return applySettings(candidate);
+}
+
 void TMP11x::clearLiveState() noexcept {
   const auto generation = _live.profileGeneration;
   const auto verifiedAt = _live.verifiedAtMs;
@@ -80,6 +94,7 @@ void TMP11x::clearLiveState() noexcept {
 Status TMP11x::invalidateDeviceState() noexcept {
   if (!isBound()) return Status::Error(Err::NOT_BOUND, "No sensor binding");
   clearLiveState();
+  _alerts.possibleLoss = true;  // Outside access or loss of power can acknowledge or erase latches.
   _eepromUnsafe = false;  // Recovery must acquire new startup and lock evidence.
   return Status::Ok();
 }
@@ -97,16 +112,54 @@ Status TMP11x::requireInitialized() const noexcept {
   return Status::Ok();
 }
 
+Status TMP11x::readObservedRegister(std::uint8_t pointer) {
+  std::uint16_t raw = 0;
+  const auto transfer = detail::readWord(detail::RegisterTransport::tracked(*this), pointer,
+                                         raw, _config.i2cTimeoutMs);
+  detail::DeviceEvidence{*this}.observeRegister(pointer, raw, transfer, &_config.settings,
+                                                ConfigReadSource::OBSERVATION);
+  return transfer.status;
+}
+
 Status TMP11x::readConfiguration(ConfigurationObservation& out) {
   const auto admission = requireInitialized();
   if (!admission.ok()) return admission;
-  std::uint16_t raw = 0;
-  const auto transfer = detail::readWord(detail::RegisterTransport::tracked(*this), command::config,
-                                         raw, _config.i2cTimeoutMs);
-  detail::DeviceEvidence{*this}.observeRegister(command::config, raw, transfer, &_config.settings,
-                                               detail::ConfigReadSource::OBSERVATION);
-  if (transfer.status.ok()) out = *_live.config;
-  return transfer.status;
+  const auto status = readObservedRegister(command::config);
+  if (status.ok()) out = *_live.config;
+  return status;
+}
+
+Status TMP11x::readLimits(Limits& out) {
+  const auto admission = requireInitialized();
+  if (!admission.ok()) return admission;
+  for (const auto pointer : {command::lowLimit, command::highLimit}) {
+    const auto status = readObservedRegister(pointer);
+    if (!status.ok()) return status;
+  }
+  out = {_live.low->counts, _live.high->counts};
+  return Status::Ok();
+}
+
+Status TMP11x::readAlertPinLevel(bool& high) const {
+  if (!isBound()) return Status::Error(Err::NOT_BOUND, "No sensor binding");
+  if (!_config.readAlertPin) return Status::Error(Err::UNSUPPORTED, "No ALERT pin reader");
+  bool physicalHigh = false;
+  const auto status = _config.readAlertPin(physicalHigh, _config.gpioUser);
+  if (status.inProgress()) {
+    return Status::Error(Err::INVALID_CONFIG, "GPIO reader must finish synchronously", status.detail);
+  }
+  if (status.ok()) high = physicalHigh;
+  return status;
+}
+
+Status TMP11x::takeAlertEvents(AlertStatus& out) noexcept {
+  out = _alerts;
+  _alerts.pendingHigh = false;
+  _alerts.pendingLow = false;
+  _alerts.possibleLoss = false;
+  _alerts.mixedOrUnknown = false;
+  _alerts.firstEvent.reset();
+  return Status::Ok();
 }
 
 Status TMP11x::verifyConfiguration() {
@@ -119,7 +172,7 @@ Status TMP11x::verifyConfiguration() {
     std::uint16_t raw = 0;
     const auto transfer = detail::readWord(transport, pointer, raw, _config.i2cTimeoutMs);
     const auto match = detail::DeviceEvidence{*this}.observeRegister(pointer, raw, transfer, &_config.settings,
-                                                                    detail::ConfigReadSource::VERIFICATION);
+                                                                    ConfigReadSource::VERIFICATION);
     if (!transfer.status.ok()) return transfer.status;
     if (firstMismatch.ok() && !match.ok()) firstMismatch = match;
   }

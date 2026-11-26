@@ -127,7 +127,10 @@ bool FakeTmp11xDevice::addOneShotConversion(std::int16_t counts) {
 
 bool FakeTmp11xDevice::addConversion(std::int16_t counts) {
   auto& config = words[0x01];
-  if (_blockUncertain || (config & 0x0010u) != 0) return false;  // Known block and ALERT mode.
+  const bool therm = (config & 0x0010u) != 0;
+  const auto low = signedCounts(words[0x03]);
+  const auto high = signedCounts(words[0x02]);
+  if (_blockUncertain || (therm && low > high)) return false;
   constexpr unsigned lengths[] = {1, 8, 32, 64};
   const auto length = lengths[(config >> 5) & 3u];
   const auto sum = _sum + counts;
@@ -142,8 +145,13 @@ bool FakeTmp11xDevice::addConversion(std::int16_t counts) {
   words[0x00] = static_cast<std::uint16_t>(mean);
   config |= 0x2000u;
   // Block-end comparison is inferred for TMP116/N and explicit for TMP117/M/N and TMP119.
-  if (mean > signedCounts(words[0x02])) config |= 0x8000u;
-  if (mean < signedCounts(words[0x03])) config |= 0x4000u;
+  if (mean > high) config |= 0x8000u;
+  if (therm) {
+    config &= 0xBFFFu;  // LOW always reads zero. Only a completed cold block clears HIGH.
+    if (mean < low) config &= 0x7FFFu;
+  } else if (mean < low) {
+    config |= 0x4000u;
+  }
   _sum = 0;
   _count = 0;
   _oneShotActive = false;

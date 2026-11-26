@@ -273,6 +273,29 @@ A clockless binding supports identity and bounded diagnostics. The
 latest-value read engine itself requires no clock for decoding or
 publication, while public managed initialization requires one.
 
+`readLimits(pair)` reads TLOW then THIGH. It publishes the signed pair on a
+complete read, including a pair that reveals drift. A transfer failure keeps
+the caller's pair intact. Each complete word updates the settings snapshot.
+
+`AlertStatus::firstEvent` identifies the CONFIG read that first contributed a
+pending HIGH or LOW. It carries the source operation, observed MOD, generation
+and optional completion tick. `mixedOrUnknown` qualifies that attribution when
+later events differ in source, mode or generation, or a capture lacked verified
+settings. `lastConfigSource`, `lastConfigAtMs` and `readClearMask` describe the
+latest complete CONFIG read, including a late success. Its clear mask is
+`0xE000` for alert and `0x2000` for therm. An engaged `thermHigh` gives the
+level at that read. An attempted CONFIG write, ambiguous CONFIG read or loss
+of live device state invalidates the level. A failed CONFIG read or reported
+outside access can leave a gap in event history (`possibleLoss`).
+
+`takeAlertEvents(out)` succeeds even with an empty record. It copies the
+status and clears the pending bits, first-event origin, mixed marker and loss
+indication. The latest read metadata and therm level remain available.
+`readAlertPinLevel(high)` returns `NOT_BOUND` before binding and `UNSUPPORTED`
+when the binding omits the hook. A failed GPIO sample preserves the caller's
+level and transport health. A hook returning `IN_PROGRESS` violates its
+synchronous contract and yields `INVALID_CONFIG`.
+
 Every complete live read of CONFIG, either limit or a supported offset
 updates the corresponding observation, including a diagnostic word in a
 partly failed dump. Compare owned fields against their verified values or,

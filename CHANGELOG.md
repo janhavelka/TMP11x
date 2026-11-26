@@ -37,3 +37,6 @@
 - Added continuous try-fresh and blocking reads and an explicit blocking
   one-shot from verified shutdown. Fresh samples require a guarded DATA_READY
   observation for the current profile and a timely combined TEMP read.
+- Added guarded limit and alert setters, signed limit readback, and optional
+  physical ALERT sampling. Applications can inspect and consume captured
+  comparator events with their original source, separately from therm HIGH.

@@ -626,11 +626,12 @@ void finalVerificationAndAlertEvidence() {
       CHECK(snapshot.config->observedAtMs == f.device.healthSnapshot().lastSuccessMs);
       CHECK(snapshot.config->dataReady && snapshot.config->high);
     }
-    CHECK(view.alerts().pendingLow);
-    CHECK(view.alerts().source == ConfigReadSource::APPLY &&
-          view.alerts().mode == ObservedMode::CONTINUOUS && view.alerts().mixedOrUnknown);
-    CHECK(view.alerts().pendingHigh == (failure != Err::I2C_SHORT_TRANSFER));
-    CHECK(view.alerts().possibleLoss == (failure == Err::I2C_SHORT_TRANSFER));
+    const auto alerts = f.device.getAlertStatus();
+    CHECK(alerts.pendingLow && alerts.firstEvent);
+    CHECK(alerts.firstEvent->source == ConfigReadSource::APPLY &&
+          alerts.firstEvent->mode == ObservedMode::CONTINUOUS && alerts.mixedOrUnknown);
+    CHECK(alerts.pendingHigh == (failure != Err::I2C_SHORT_TRANSFER));
+    CHECK(alerts.possibleLoss == (failure == Err::I2C_SHORT_TRANSFER));
     CHECK(!view.readyPending());
     CHECK(view.readyHistoryUncertain() == (failure == Err::I2C_SHORT_TRANSFER));
     CHECK(f.device.healthSnapshot().totalSuccess == (failure == Err::I2C_SHORT_TRANSFER ? 13u : 14u));
@@ -669,8 +670,9 @@ void finalThermReadAfterVerifiedAlert() {
     CHECK(change.start().inProgress());
     for (unsigned i = 0; i < 3; ++i) CHECK(nextTransfer(change, f).inProgress());
     const auto lowTime = f.device.healthSnapshot().lastSuccessMs;
-    const auto& alerts = change.alerts();
-    CHECK(alerts.pendingLow && alerts.observedAtMs == lowTime);
+    auto alerts = f.device.getAlertStatus();
+    CHECK(alerts.pendingLow && alerts.firstEvent && alerts.firstEvent->observedAtMs == lowTime);
+    CHECK(alerts.lastConfigAtMs == lowTime && alerts.readClearMask == 0xE000);
     f.beforeTransfer = [&](bool read, std::uint8_t pointer) {
       if (!read || pointer != 0x01 || f.chip.words[0x01] != 0x0230) return;
       f.chip.words[0x01] |= 0xA000;  // THERM HIGH and DATA_READY at final readback.
@@ -684,12 +686,19 @@ void finalThermReadAfterVerifiedAlert() {
           "R0F R04 R01 R03 R02 W01=0620 R01 W03=0000 R03 W02=0500 R02 W01=0630 R01 W01=0230 R01");
     CHECK(f.chip.words[0x01] == 0x8230 && f.device.desiredSettings().alertMode == AlertMode::THERM);
     CHECK(f.device.isInitialized() && f.device.configTrust() == ConfigTrust::DIRTY && !change.baselineMs());
-    CHECK(alerts.pendingLow && !alerts.pendingHigh && !alerts.mixedOrUnknown);
-    CHECK(alerts.observedAtMs == lowTime && alerts.profileGeneration == original.profileGeneration);
+    alerts = f.device.getAlertStatus();
+    CHECK(alerts.pendingLow && !alerts.pendingHigh && !alerts.mixedOrUnknown && alerts.firstEvent);
+    CHECK(alerts.firstEvent->observedAtMs == lowTime && alerts.firstEvent->profileGeneration == original.profileGeneration);
+    CHECK(alerts.firstEvent->source == ConfigReadSource::APPLY && alerts.firstEvent->mode == ObservedMode::CONTINUOUS);
     const bool shortRead = failure == Err::I2C_SHORT_TRANSFER;
     CHECK(alerts.possibleLoss == shortRead);
-    if (shortRead) CHECK(!alerts.thermHigh.has_value());
-    else CHECK(alerts.thermHigh == true && f.device.healthSnapshot().lastSuccessMs == deadline);
+    if (shortRead) {
+      CHECK(!alerts.thermHigh.has_value());
+    } else {
+      CHECK(alerts.thermHigh == true && f.device.healthSnapshot().lastSuccessMs == deadline);
+      CHECK(alerts.lastConfigAtMs == deadline && alerts.lastConfigAtMs != lowTime);
+      CHECK(alerts.lastConfigSource == ConfigReadSource::APPLY && alerts.readClearMask == 0x2000);
+    }
 
     const auto& cache = LatestRead{f.device}.cache;
     CHECK(cache && cache->raw == original.raw && cache->observedAtMs == original.observedAtMs);
@@ -705,9 +714,23 @@ void finalThermReadAfterVerifiedAlert() {
     CHECK(f.device.recover().ok());
     CHECK(transcript(f) ==
           "R0F R04 R01 R03 R02 W01=0630 R01 W03=0000 R03 W02=0500 R02 R01 W01=0230 R01");
+    alerts = f.device.getAlertStatus();
     CHECK(change.baselineMs() == f.device.healthSnapshot().lastSuccessMs && alerts.thermHigh == false);
     CHECK(alerts.pendingLow && !alerts.pendingHigh && !alerts.mixedOrUnknown && alerts.possibleLoss == shortRead);
-    CHECK(alerts.observedAtMs == lowTime && alerts.profileGeneration == original.profileGeneration);
+    CHECK(alerts.firstEvent && alerts.firstEvent->observedAtMs == lowTime &&
+          alerts.firstEvent->profileGeneration == original.profileGeneration);
+    const auto calls = f.bus.trace.size();
+    const auto tick = f.now;
+    AlertStatus taken;
+    CHECK(f.device.takeAlertEvents(taken).ok());
+    CHECK(taken.pendingLow && !taken.pendingHigh && taken.possibleLoss == shortRead && taken.firstEvent);
+    CHECK(taken.firstEvent->observedAtMs == lowTime && taken.thermHigh == false);
+    CHECK(taken.lastConfigAtMs == change.baselineMs() && taken.readClearMask == 0x2000);
+    CHECK(f.device.takeAlertEvents(taken).ok());
+    CHECK(!taken.pendingLow && !taken.pendingHigh && !taken.possibleLoss && !taken.firstEvent);
+    CHECK(taken.thermHigh == false && taken.lastConfigAtMs == change.baselineMs());
+    CHECK(taken.lastConfigSource == ConfigReadSource::APPLY && taken.readClearMask == 0x2000);
+    CHECK(f.now == tick && f.bus.trace.size() == calls);
     CHECK(cache && cache->raw == dirty.raw && cache->observedAtMs == dirty.observedAtMs);
     CHECK(cache->profileGeneration == dirty.profileGeneration && cache->configTrust == ConfigTrust::DIRTY);
     Sample recovered;
@@ -788,38 +811,44 @@ void retainedAlertsAcrossGenerations() {
   f.chip.words[1] = 0xA220;
   CHECK(f.device.readConfiguration(observed).ok());
   CHECK(observed.dataReady && observed.high && !observed.low);
-  const auto first = view.alerts();
+  const auto first = f.device.getAlertStatus();
   CHECK(first.pendingHigh && !first.pendingLow && !first.mixedOrUnknown);
-  CHECK(first.source == ConfigReadSource::OBSERVATION && first.mode == ObservedMode::CONTINUOUS);
-  CHECK(first.observedAtMs == observed.observedAtMs);
-  CHECK(first.profileGeneration == f.device.getSettingsSnapshot().verifiedGeneration);
+  CHECK(first.firstEvent);
+  const auto origin = *first.firstEvent;
+  CHECK(origin.source == ConfigReadSource::OBSERVATION && origin.mode == ObservedMode::CONTINUOUS);
+  CHECK(origin.observedAtMs == observed.observedAtMs);
+  CHECK(origin.profileGeneration == f.device.getSettingsSnapshot().verifiedGeneration);
   CHECK(f.device.readConfiguration(observed).ok() && !observed.high && !observed.dataReady);
   CHECK(view.readyPending());
-  CHECK(transcript(f) == "R01 R01" && view.alerts().observedAtMs == first.observedAtMs);
+  CHECK(transcript(f) == "R01 R01" && f.device.getAlertStatus().firstEvent.value().observedAtMs == origin.observedAtMs);
 
   CHECK(f.device.recover().ok());
-  CHECK(f.device.getSettingsSnapshot().verifiedGeneration != first.profileGeneration);
+  CHECK(f.device.getSettingsSnapshot().verifiedGeneration != origin.profileGeneration);
   CHECK(!view.readyPending() && !view.readyHistoryUncertain());
-  CHECK(view.alerts().pendingHigh && view.alerts().profileGeneration == first.profileGeneration);
-  CHECK(!view.alerts().pendingLow && !view.alerts().mixedOrUnknown);
+  const auto recovered = f.device.getAlertStatus();
+  CHECK(recovered.pendingHigh && recovered.firstEvent && recovered.firstEvent->profileGeneration == origin.profileGeneration);
+  CHECK(!recovered.pendingLow && !recovered.mixedOrUnknown);
   f.chip.words[1] |= 0x4000;
   CHECK(f.device.readConfiguration(observed).ok());
-  CHECK(observed.low && !observed.high && observed.mode == first.mode);
-  CHECK(view.alerts().pendingHigh && view.alerts().pendingLow && view.alerts().mixedOrUnknown);
-  CHECK(view.alerts().source == first.source && view.alerts().mode == first.mode);
-  CHECK(view.alerts().observedAtMs == first.observedAtMs && view.alerts().profileGeneration == first.profileGeneration);
-  CHECK(!view.alerts().possibleLoss);
+  CHECK(observed.low && !observed.high && observed.mode == origin.mode);
+  const auto mixed = f.device.getAlertStatus();
+  CHECK(mixed.pendingHigh && mixed.pendingLow && mixed.mixedOrUnknown && mixed.firstEvent);
+  CHECK(mixed.firstEvent->source == origin.source && mixed.firstEvent->mode == origin.mode);
+  CHECK(mixed.firstEvent->observedAtMs == origin.observedAtMs && mixed.firstEvent->profileGeneration == origin.profileGeneration);
+  CHECK(!mixed.possibleLoss);
 
   Sample historical;
   f.chip.words[0] = 0xF380;
   CHECK(f.device.readLatest(historical).ok());
-  const auto history = view.alerts();
+  const auto history = f.device.getAlertStatus().firstEvent.value();
   const auto calls = f.bus.trace.size();
   CHECK(f.device.invalidateDeviceState().ok());
-  CHECK(f.bus.trace.size() == calls && !view.baselineMs() && !view.alerts().thermHigh);
-  CHECK(view.alerts().pendingHigh && view.alerts().pendingLow && view.alerts().mixedOrUnknown);
-  CHECK(view.alerts().observedAtMs == history.observedAtMs &&
-        view.alerts().profileGeneration == history.profileGeneration);
+  const auto invalidated = f.device.getAlertStatus();
+  CHECK(invalidated.possibleLoss);
+  CHECK(f.bus.trace.size() == calls && !view.baselineMs() && !invalidated.thermHigh);
+  CHECK(invalidated.pendingHigh && invalidated.pendingLow && invalidated.mixedOrUnknown && invalidated.firstEvent);
+  CHECK(invalidated.firstEvent->observedAtMs == history.observedAtMs &&
+        invalidated.firstEvent->profileGeneration == history.profileGeneration);
   const auto saved = LatestRead{f.device}.cache;
   CHECK(saved && saved->raw == 0xF380 && saved->configTrust == ConfigTrust::VERIFIED);
   CHECK(saved->profileGeneration == historical.profileGeneration && saved->observedAtMs == historical.observedAtMs);

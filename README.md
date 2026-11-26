@@ -119,6 +119,33 @@ nominally, 875 ms nominal standby and 124 ms estimated typical active time.
 The helper reports durations in microseconds and continuous update rate in Hz.
 [Timing conditions and examples](docs/device-behavior.md#conversion-modes-and-intervals).
 
+## Set limits and observe ALERT
+
+After initialization, `sensor.setLimits({-1344, -832})` sets TLOW to −10.5 °C
+and THIGH to −6.5 °C. Each count is 1/128 °C. Use `setAlert(mode, polarity,
+pinFunction)` to select the comparator and pin routing. Both setters enter
+guarded shutdown and verify the separate register writes before resuming the
+desired mode. Conversions can be interrupted and the pin can change between
+writes. Therm mode requires TLOW ≤ THIGH. On a partial change, inspect the
+desired profile and call `recover()` under stable power and exclusive access.
+`readLimits(pair)` returns both observed counts. If the second transfer fails,
+the settings snapshot still contains the completed TLOW observation.
+
+In alert mode, a CONFIG read acknowledges latched HIGH and LOW, even after
+temperature has returned inside the window. `getAlertStatus()` inspects the
+captured events. `takeAlertEvents(out)` delivers and clears the pending bits
+and loss indication in memory. Repeated excursions of the same kind coalesce.
+In therm mode, HIGH sets above THIGH and clears below TLOW at a completed
+comparison. Equality retains its previous level. LOW stays zero. A CONFIG
+read leaves therm HIGH intact. Both CONFIG and TEMP reads acknowledge
+DATA_READY. TEMP leaves the comparator flags intact.
+
+`readAlertPinLevel(high)` samples the board's optional GPIO hook in owner
+context. Under threshold routing the pin signals the comparator. Under
+DATA_READY routing it signals a completed conversion. Active-low assertion
+sinks the open-drain line and active-high assertion releases it to the pullup.
+[Comparator and pin behavior](docs/device-behavior.md#comparator-and-pin-evidence).
+
 ## Inspect configuration trust
 
 After initialization, `readConfiguration(out)` reads CONFIG once and returns

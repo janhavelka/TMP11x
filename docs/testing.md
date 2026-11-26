@@ -33,6 +33,8 @@ CTest registers these cases when `TMP11X_BUILD_TESTS=ON`.
 | `timing_cpp` | Check all 32 CONV × AVG settings on each selected model against literal periods, standby budgets and count-scaled active estimates. Check the nominal update rate, software windows and output preservation on invalid input. |
 | `conversion_settings_cpp` | Exercise 384 public steady profiles. Trace a change through shutdown and final verification, including preflight drift, ambiguous writes, late readback, retained alerts and sample provenance. |
 | `averaging_blocks_cpp` | Feed synthetic counts on six models in continuous and one-shot modes. Check TEMP and READY at block completion, acknowledgement, shutdown abort and the first full block after resuming. |
+| `limits_cpp` | Trace signed limit and routing changes through guarded shutdown, ordered writes and final readback. Exercise both partial pair reads and replay after drift or an ambiguous write. |
+| `alert_comparator_cpp` | Check strict threshold crossings, latch re-arm, therm hysteresis through shutdown and all eight polarity/mode/routing combinations on six models. Exercise bound GPIO sampling and callback failures. |
 | `version_generator_check` | Compare `Version.h` and the ESP-IDF manifest's version with `library.json` using the generator's check command. |
 | `version_sync` | Run the delegated version check through the checker script. |
 | `version_generator_regressions` | Exercise IDF version drift and an unwritable mirror. |

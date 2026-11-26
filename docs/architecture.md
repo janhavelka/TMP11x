@@ -16,7 +16,7 @@ conversion or startup interval runs. [Public API and operation gates](api-contra
 | `Temperature.h` | Pure signed count, Celsius and register-word conversions for TEMP and thresholds. |
 | `Configuration.h` | Bus-silent profile validation, CONFIG encoding and observation, and expected-register comparison for CONFIG, THIGH and TLOW. |
 | `Timing.h` | Bus-silent conversion timing for the selected model, cycle and averaging. |
-| `TMP11x.h` | Sample, identity, health and settings evidence and the `TMP11x::TMP11x` device class. It exposes binding, initialization, recovery, invalidation, ID diagnostics, CONFIG observation, profile verification, conversion setters, passive inspectors, and latest, continuous-fresh and one-shot reads. |
+| `TMP11x.h` | The device class and its sample, identity, health, settings and alert evidence. Public operations include binding, initialization and recovery, identity checks, guarded settings changes, CONFIG and limit readback, alert event consumption, GPIO sampling and temperature acquisition. |
 | `Version.h` | Checked-in generated package version from `library.json`. Its constants describe the header, and the out-of-line `version()` describes the linked library. |
 
 Implementation belongs in `src/`. Each public header must compile on its

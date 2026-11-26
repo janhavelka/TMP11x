@@ -311,6 +311,53 @@ void oneShotWireAndTiming() {
   }
 }
 
+void takeOneShotAlertsAfterTempFailure() {
+  for (const auto model : models) {
+    Fixture f{Mode::SHUTDOWN, model};
+    f.config.settings.averaging = Averaging::SAMPLES_1;
+    f.config.settings.limits = {0, 3199};
+    AlertStatus taken;
+    CHECK(f.device.takeAlertEvents(taken).ok() && !taken.firstEvent && !taken.lastConfigSource);
+    f.begin();
+    Sample out;
+    f.chip.words[0] = 0x0100;
+    CHECK(f.device.readLatest(out).ok());
+    const auto oldTick = out.observedAtMs;
+    f.clearTrace();
+    f.beforeIo = [&](std::size_t index) {
+      if (index == 5) CHECK(f.chip.addOneShotConversion(3200));
+    };
+    f.failAt(6, true);
+    CHECK(f.device.readOneShotBlocking(out, 500).is(Err::I2C_TIMEOUT));
+    f.checkTrace({4, 1, -1, 1, -1, 1, 0});
+    CHECK(f.bus.trace[5].rx == std::vector<std::uint8_t>({0xAE, 0x00}));
+    CHECK(out.raw == 0x0100 && out.observedAtMs == oldTick);
+    const auto& cache = LatestRead{f.device}.cache;
+    CHECK(cache && cache->raw == out.raw && cache->observedAtMs == oldTick);
+    f.clearTrace();
+    const auto clockReads = f.clockReads;
+    const auto generation = f.device.getSettingsSnapshot().verifiedGeneration;
+    CHECK(f.device.getAlertStatus().pendingHigh);
+    CHECK(f.device.takeAlertEvents(taken).ok() && taken.pendingHigh && !taken.pendingLow);
+    CHECK(!taken.possibleLoss && !taken.mixedOrUnknown && !taken.thermHigh);
+    CHECK(taken.firstEvent && taken.firstEvent->profileGeneration == generation);
+    CHECK(taken.firstEvent->mode == ObservedMode::ONE_SHOT && taken.firstEvent->source == ConfigReadSource::ACQUISITION);
+    CHECK(taken.firstEvent->observedAtMs && taken.firstEvent->observedAtMs == taken.lastConfigAtMs);
+    CHECK(taken.lastConfigSource == ConfigReadSource::ACQUISITION && taken.readClearMask == 0xE000);
+    CHECK(f.device.takeAlertEvents(taken).ok() && !taken.pendingHigh && !taken.pendingLow && !taken.firstEvent);
+    CHECK(!taken.possibleLoss && taken.readClearMask == 0xE000 && f.clockReads == clockReads);
+    f.checkTrace({});
+
+    f.beforeIo = [&](std::size_t index) {
+      if (index == 5) CHECK(f.chip.addOneShotConversion(1000));
+    };
+    CHECK(f.device.readOneShotBlocking(out, 500).ok() && out.counts == 1000 && out.freshConversion);
+    f.checkTrace({4, 1, -1, 1, -1, 1, 0});
+    CHECK(f.bus.trace[5].rx == std::vector<std::uint8_t>({0x2E, 0x00}));
+    CHECK(f.device.takeAlertEvents(taken).ok() && !taken.pendingHigh && !taken.pendingLow && !taken.firstEvent);
+  }
+}
+
 void oneShotConfigFailures() {
   for (const auto raw : {0x0640, 0x0E20, 0xB640, 0xAE40}) {
     Fixture f{Mode::SHUTDOWN};
@@ -401,7 +448,7 @@ void unlockedDuringOneShotGuardRenewal() {
   CHECK(f.bus.trace[2].tx == std::vector<std::uint8_t>({1, 0x06, 0x20}));
   CHECK(f.dispatchTicks[4] - f.dispatchTicks[3] >= 2);
   const Apply evidence{f.device};
-  CHECK(evidence.alerts().pendingHigh && evidence.alerts().profileGeneration == generation);
+  CHECK(evidence.alerts().pendingHigh && evidence.alerts().firstEvent.value().profileGeneration == generation);
   CHECK(!evidence.readyPending() && out.raw == sentinel.raw && !LatestRead{f.device}.cache);
 
   f.chip.words[4] = 0;
@@ -690,7 +737,7 @@ void diagnosticCapturesOwnedShot() {
   ConfigurationObservation config;
   CHECK(f.device.readConfiguration(config).ok() && config.dataReady && config.high);
   const Apply evidence{f.device};
-  CHECK(evidence.readyPending() && evidence.alerts().source == ::TMP11x::detail::ConfigReadSource::OBSERVATION);
+  CHECK(evidence.readyPending() && evidence.alerts().firstEvent.value().source == ConfigReadSource::OBSERVATION);
   Status status;
   do { status = stepOnce(f, shot, out); } while (status.inProgress());
   CHECK(status.ok());
@@ -766,6 +813,7 @@ int main() {
   continuousGuardAndReadEffects();
   guardDenialsAndLimits();
   oneShotWireAndTiming();
+  takeOneShotAlertsAfterTempFailure();
   oneShotConfigFailures();
   staleReadyAtShutdownBaseline();
   renewedGuards();
