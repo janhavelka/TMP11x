@@ -155,6 +155,8 @@ void allContinuousProfiles() {
     for (unsigned c = 0; c < 8; ++c) {
       for (unsigned a = 0; a < 4; ++a) {
         Fixture f{Mode::CONTINUOUS, model};
+        // EEPROM3 on TMP116/N must never affect TEMP.
+        if (model == Model::TMP116 || model == Model::TMP116N) f.chip.words[7] = 0xFF80;
         f.config.settings.cycle = static_cast<Cycle>(c);
         f.config.settings.averaging = static_cast<Averaging>(a);
         f.begin();
@@ -183,12 +185,10 @@ void allContinuousProfiles() {
 void offsetResultVectors() {
   for (const auto model : {Model::TMP117, Model::TMP117M, Model::TMP117N, Model::TMP119}) {
     Fixture f{Mode::CONTINUOUS, model};
+    f.config.settings.averaging = Averaging::SAMPLES_1;
     f.chip.words[7] = 0xFF80;
     f.begin();
-    // Script the reported TEMP and READY for 3200 linearized counts plus -128.
-    // These observations leave offset/comparator ordering unspecified.
-    f.chip.words[0] = 0x0C00;
-    f.chip.words[1] |= 0x2000;
+    CHECK(f.chip.addContinuousConversion(3200));
     Sample out;
     CHECK(f.device.tryReadFresh(out).ok());
     f.checkTrace({4, 1, 0});
@@ -197,6 +197,7 @@ void offsetResultVectors() {
     CHECK(out.offset.countsValid && out.offset.counts == -128);
 
     struct Vector {
+      std::int16_t conversionCounts;
       double offsetCelsius;
       std::int16_t offsetCounts;
       std::uint16_t temp;
@@ -204,12 +205,12 @@ void offsetResultVectors() {
       double resultCelsius;
     };
     // Independent reported words for +255 C plus +2 C, and -255 C plus -2 C.
-    constexpr Vector vectors[]{{2.0, 256, 0x7FFF, 32767, 255.9921875},
-                               {-2.0, -256, 0x8000, -32768, -256.0},
+    constexpr Vector vectors[]{{32640, 2.0, 256, 0x7FFF, 32767, 255.9921875},
+                               {-32640, -2.0, -256, 0x8000, -32768, -256.0},
                                // The behavior ledger also uses +/-3200 linearized counts
                                // with the largest and smallest representable offsets.
-                               {255.9921875, 32767, 0x7FFF, 32767, 255.9921875},
-                               {-256.0, -32768, 0x8000, -32768, -256.0}};
+                               {3200, 255.9921875, 32767, 0x7FFF, 32767, 255.9921875},
+                               {-3200, -256.0, -32768, 0x8000, -32768, -256.0}};
     for (const auto& v : vectors) {
       const auto prior = out;
       CHECK(f.device.setTemperatureOffset(v.offsetCelsius).ok());
@@ -221,8 +222,10 @@ void offsetResultVectors() {
       CHECK(out.offset.state == OffsetState::UNKNOWN && !out.offset.countsValid);
       CHECK(f.device.tryReadFresh(out).is(Err::MEASUREMENT_NOT_READY));
 
-      f.chip.words[0] = v.temp;
-      f.chip.words[1] |= 0x2000;
+      // Supply comparator evidence independently of the offset arithmetic.
+      f.chip.words[1] |= 0x4000;
+      CHECK(f.chip.addContinuousConversion(v.conversionCounts));
+      CHECK((f.chip.words[1] & 0xE000) == 0x6000);
       f.clearTrace();
       CHECK(f.device.tryReadFresh(out).ok());
       f.checkTrace({4, 1, 0});

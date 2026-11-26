@@ -231,6 +231,7 @@ class TMP11x {
 
   /// Apply a volatile offset on TMP117/M/N or TMP119 through guarded shutdown and readback.
   /// Accepts finite Celsius in [-256, 255.9921875], rounding half counts away from zero.
+  /// If a previously managed offset has drifted, returns CONFIG_MISMATCH before any write.
   /// Zero explicitly manages zero. Recovery replays the requested counts after an attempted write.
   /// TMP116/N returns UNSUPPORTED without I2C. EEPROM contents are preserved.
   Status setTemperatureOffset(double celsius);

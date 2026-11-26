@@ -156,7 +156,10 @@ Status Apply::readLimit(std::uint8_t pointer) {
       if (oldLow > oldHigh || live.config->alertMode != AlertMode::THERM) {
         _shutdown.alertMode = AlertMode::ALERT;
       }
-      _phase = Phase::WRITE_SHUTDOWN;
+      // A settings change checks the previously owned profile before replacing it.
+      // Explicit replay may repair a drifted managed offset in shutdown.
+      _phase = !_replayingTarget && _device._config.settings.managedOffsetCounts
+                   ? Phase::CURRENT_OFFSET : Phase::WRITE_SHUTDOWN;
       break;
     }
     // An ACK can leave the old limit in place. Confirm the first write
@@ -184,11 +187,13 @@ Status Apply::readOffset() {
   std::uint16_t raw = 0;
   const auto result = readWord(RegisterTransport::tracked(_device), command::offset, raw, _budget.remainingMs);
   const auto status = _budget.finishTransfer(result);
-  const auto match = DeviceEvidence{_device}.observeRegister(command::offset, raw, result, &_candidate,
+  const bool preflight = _phase == Phase::CURRENT_OFFSET;
+  const auto& expected = preflight ? _device._config.settings : _candidate;
+  const auto match = DeviceEvidence{_device}.observeRegister(command::offset, raw, result, &expected,
                                                             ConfigReadSource::APPLY);
   if (!status.ok()) return status;
   if (!match.ok()) return match;
-  _phase = beforeBaseline();
+  _phase = preflight ? Phase::WRITE_SHUTDOWN : beforeBaseline();
   return pending;
 }
 
@@ -252,6 +257,7 @@ Status Apply::dispatch() {
     case Phase::WRITE_SECOND_LIMIT: return writeSettingWord(_secondLimit, Phase::VERIFY_SECOND_LIMIT);
     case Phase::VERIFY_SECOND_LIMIT: return readLimit(_secondLimit);
     case Phase::WRITE_OFFSET: return writeSettingWord(command::offset, Phase::READ_OFFSET);
+    case Phase::CURRENT_OFFSET:
     case Phase::READ_OFFSET: return readOffset();
     case Phase::ENABLE_THERM:
       _shutdown.alertMode = AlertMode::THERM;

@@ -21,6 +21,8 @@ struct FakeTmp11xDevice {
 
   // Feed one synthetic ADC result in continuous mode. Block means must be
   // exactly representable and THERM limits ordered for a modeled comparison.
+  // In both conversion modes a supported offset saturates the completed TEMP.
+  // For nonzero offset, seed comparator flags in CONFIG for the scenario.
   bool addContinuousConversion(std::int16_t counts);
 
   // OS ignores CONV and stops after one complete AVG block. TI leaves MOD

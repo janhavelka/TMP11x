@@ -340,29 +340,48 @@ void recoveryAfterReportedReset() {
 }
 
 void interruptedOffsetObservationInShutdown() {
-  for (const bool shortRead : {false, true}) {
+  for (const auto error : {Err::CONFIG_MISMATCH, Err::I2C_SHORT_TRANSFER, Err::OPERATION_TIMEOUT}) {
     Fixture f;
     CHECK(f.device.begin(f.config).ok());
     const auto before = f.device.getSettingsSnapshot();
     f.chip.words[0x07] = 0x0040;
     f.bus.trace.clear();
-    if (shortRead) {
-      f.beforeTransfer = [&](bool read, std::uint8_t pointer) {
-        if (read && pointer == 0x07) {
-          f.bus.script.push_back({Status::Error(Err::I2C_SHORT_TRANSFER, "short OFFSET"), 1});
-        }
-      };
-    }
-    CHECK(f.device.setLimits({-128, 1280}).is(shortRead ? Err::I2C_SHORT_TRANSFER : Err::CONFIG_MISMATCH));
+    const auto deadline = f.now + f.config.operationTimeoutMs;
+    const bool shortRead = error == Err::I2C_SHORT_TRANSFER;
+    f.beforeTransfer = [&](bool read, std::uint8_t pointer) {
+      if (!read || pointer != 0x07) return;
+      if (shortRead) f.bus.script.push_back({Status::Error(error, "short OFFSET"), 1});
+      if (error == Err::OPERATION_TIMEOUT) f.now = deadline;
+    };
+    CHECK(f.device.setLimits({-128, 1280}).is(error));
     CHECK(transcript(f) == "R0F R04 R01 R03 R02 W01=0620 R01 W03=FF80 R03 W02=0500 R02 R07");
     const auto stopped = f.device.getSettingsSnapshot();
     CHECK(stopped.verifiedGeneration == before.verifiedGeneration && stopped.verifiedAtMs == before.verifiedAtMs);
     CHECK(stopped.offset && stopped.offset->raw == (shortRead ? 0xA35C : 0x0040));
+    if (error == Err::OPERATION_TIMEOUT) CHECK(stopped.offset->observedAtMs == deadline);
     CHECK(f.device.desiredSettings().limits.lowCounts == -128);
     CHECK(f.chip.words[1] == 0x0620 && f.chip.words[0x07] == 0x0040);
     if (shortRead) CHECK(f.device.configTrust() == ConfigTrust::DIRTY);
     else CHECK(!f.device.isInitialized());
   }
+}
+
+void managedOffsetDriftBeforeSetter() {
+  Fixture f;
+  f.config.settings.managedOffsetCounts = 0;
+  CHECK(f.device.begin(f.config).ok());
+  const auto before = f.device.getSettingsSnapshot();
+  f.chip.words[7] = 0x0040;
+  f.bus.trace.clear();
+  // The live word matches the candidate but differs from the verified target.
+  CHECK(f.device.setTemperatureOffset(0.5).is(Err::CONFIG_MISMATCH));
+  CHECK(transcript(f) == "R0F R04 R01 R03 R02 R07");
+  const auto stopped = f.device.getSettingsSnapshot();
+  CHECK(stopped.desired.managedOffsetCounts == 0 && stopped.offset && stopped.offset->counts == 64);
+  CHECK(stopped.trust == ConfigTrust::DIRTY && stopped.dirtyReason == DirtyReason::READBACK_MISMATCH);
+  CHECK(stopped.affectedFields == static_cast<std::uint8_t>(SettingsField::OFFSET));
+  CHECK(stopped.verifiedGeneration == before.verifiedGeneration && stopped.verifiedAtMs == before.verifiedAtMs);
+  CHECK(f.device.recover().ok() && f.chip.words[7] == 0);
 }
 
 void managedOffsetApplyRecoverRelease() {
@@ -405,6 +424,7 @@ void managedOffsetApplyRecoverRelease() {
     unmanaged.managedOffsetCounts.reset();
     f.bus.trace.clear();
     CHECK((Apply{f.device, unmanaged}.run().ok()));
+    CHECK(transcript(f).find("R0F R04 R01 R03 R02 R07 W01=") == 0);
     CHECK(transcript(f).find("W07=") == std::string::npos);
     snapshot = f.device.getSettingsSnapshot();
     CHECK(!snapshot.desired.managedOffsetCounts && snapshot.offset && snapshot.offset->raw == 0xFFFF);
@@ -1171,6 +1191,7 @@ int main() {
   recoveryStartupProof();
   recoveryAfterReportedReset();
   interruptedOffsetObservationInShutdown();
+  managedOffsetDriftBeforeSetter();
   managedOffsetApplyRecoverRelease();
   managedOffsetRefusals();
   managedOffsetWriteFailures();

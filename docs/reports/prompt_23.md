@@ -235,3 +235,34 @@ unknown. TMP116/N reports unavailable on every successful sample.
 Phase b ends here. Phase c reviews the full stage diff from `5169ad6` and
 its tests against the source and model gates. Physical arithmetic and
 offset/comparator ordering remain open for stage 41. Stage 43 owns remote CI.
+
+## Phase c review
+
+**PARTIAL, 2026-11-27.** Reviewed `5169ad6..c85fffe` on clean `main`.
+The phase-b request matched the subject and all 12 paths of
+`c85fffe8ea7209be9f224385baff1d7beb650bd2`, whose parent is `ae90617`.
+The wrapper recorded upstream equality on November 26 at 02:45:41 Prague time.
+Both local refs still matched at review entry.
+
+Two independent read-only reviewers traced profile ownership and sample
+publication. Both finished during this phase. The review covered all six
+model gates, startup and EEPROM guard refusals, explicit zero, release,
+ambiguous writes, unmanaged drift, single-use readiness and preservation of
+historical samples after late callbacks. The original TI pages cited in
+phase a confirm the model-specific role of `0x07`, its power-up source and
+saturation of the signed TEMP result. The clean TMP1x2 comparison codec
+at `0791429f` still matches its pinned file.
+
+| Review finding | Fix and regression evidence |
+| --- | --- |
+| A setter could overwrite an externally changed managed offset and report success. | With a verified target of zero and a live value of +64 counts, `managedOffsetDriftBeforeSetter` reproduced the failure by requesting +64. Settings changes now compare the live word with the previous owned target before the first write. The trace ends at `R0F R04 R01 R03 R02 R07` with `CONFIG_MISMATCH`. The snapshot retains desired zero and observed +64. Explicit recovery restores zero. [Apply engine](../../src/Apply.cpp), [regression](../../test/test_apply.cpp). |
+| The synthetic ADC path published the uncorrected mean on a calibrated TMP117. | `offsetResultVectors` failed for 3200 input counts and a −128-count offset. The fixture now adds the signed offset to the completed mean and clamps the sum. On all four capable selections the driver returned 24 °C for this vector and the expected signed endpoints for both saturation directions. The test supplies comparator flags independently. Nonzero EEPROM3 leaves TMP116/N conversions unaffected. [Fixture](../../test/support/FakeTmp11xDevice.cpp), [acquisition tests](../../test/test_acquisition.cpp). |
+| The exact deadline was untested for an unmanaged OFFSET read that exposed drift in shutdown. | Extended `interruptedOffsetObservationInShutdown`. Physical success at expiry retains the changed word and its completion tick, invalidates initialization and leaves the previous verification generation intact. The call returns `OPERATION_TIMEOUT` and the trace ends at the OFFSET read. [Apply tests](../../test/test_apply.cpp). |
+
+- `cmake --build build/host --config Release --parallel` and `cmake -E chdir build/host ctest -C Release --output-on-failure` passed all 22 suites after the fixes with GCC 15.1.0 and CMake/CTest 4.0.1.
+- `doxygen -` with public-header XML output and `WARN_AS_ERROR=YES` passed with Doxygen 1.13.2. The generated setter entry includes the pre-write mismatch behavior.
+- `python scripts/check_references.py` verified 14 pinned PDFs. `python scripts/check_promptset.py` passed 55 stages with Python 3.12.10. `git diff --check` passed.
+
+Phase d owns final software acceptance. Stage 26 integrates diagnostic
+reads and stage 27 exposes full-profile configuration. Physical saturation
+and comparator ordering remain open for stage 41. Stage 43 owns remote CI.

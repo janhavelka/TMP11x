@@ -142,15 +142,21 @@ bool FakeTmp11xDevice::addConversion(std::int16_t counts) {
   const auto divisor = static_cast<std::int32_t>(length);
   if (sum % divisor != 0) return false;  // Fractional rounding is unspecified.
   const auto mean = sum / divisor;
-  words[0x00] = static_cast<std::uint16_t>(mean);
+  const auto offset = hasOffset(model) ? signedCounts(words[0x07]) : 0;
+  const auto reported = std::clamp<std::int32_t>(mean + offset, -32768, 32767);
+  words[0x00] = static_cast<std::uint16_t>(reported);
   config |= 0x2000u;
-  // Block-end comparison is inferred for TMP116/N and explicit for TMP117/M/N and TMP119.
-  if (mean > high) config |= 0x8000u;
-  if (therm) {
-    config &= 0xBFFFu;  // LOW always reads zero. Only a completed cold block clears HIGH.
-    if (mean < low) config &= 0x7FFFu;
-  } else if (mean < low) {
-    config |= 0x4000u;
+  if (therm) config &= 0xBFFFu;  // LOW always reads zero in THERM.
+  // With nonzero calibration, the scenario supplies HIGH/LOW independently.
+  // TI specifies the offset in TEMP but leaves comparator ordering open.
+  if (offset == 0) {
+    // Block-end comparison is inferred for TMP116/N and explicit for TMP117/M/N and TMP119.
+    if (mean > high) config |= 0x8000u;
+    if (therm) {
+      if (mean < low) config &= 0x7FFFu;
+    } else if (mean < low) {
+      config |= 0x4000u;
+    }
   }
   _sum = 0;
   _count = 0;

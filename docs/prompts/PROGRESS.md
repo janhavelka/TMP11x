@@ -6,7 +6,7 @@
 **Preparation input HEAD:** `6c5e4496d5c896af689228d4bee4382a53c20626` (clean and synchronized at entry).
 **Hardware:** Physical TMP11x board and test wiring NOT CONFIRMED.
 **Last completed stage:** 22 (temperature limits and alert handling).
-**Last update:** 2026-11-26. Next eligible stage is [23](23_offset-feature.md), opt-in hardware offset.
+**Last update:** 2026-11-27. Next eligible stage is [23](23_offset-feature.md), opt-in hardware offset.
 
 Preparation evidence includes the [6b173cc second follow-up](../reports/audit-followup-6b173cc.md),
 the [cb73740 follow-up](../reports/audit-followup-cb73740.md#response--2026-11-17),
@@ -45,7 +45,7 @@ every planned deliverable a producer and checks consumer dependencies.
 | [21](21_fresh-one-shot.md) | Fresh-conversion acquisition and explicit one-shot | COMPLETE — [acceptance report](../reports/prompt_21.md#phase-d-acceptance). All 20 Release tests passed, including guarded one-shot writes, single-use readiness and preservation of outputs on timeout. |
 | [49](49_audit-20-21.md) | Audit prompts 20–21 before extending synchronous features | COMPLETE — [acceptance report](../reports/prompt_49.md#phase-d-acceptance). All 20 Release suites passed, including fresh reads after recovery, one-shot guard renewal and deadline clipping across clock wrap. |
 | [22](22_limits-alert.md) | Temperature limits, therm mode and ALERT | COMPLETE — [acceptance report](../reports/prompt_22.md#phase-d-acceptance). All 22 Release suites passed, including ordered limit writes, eight pin routes and single delivery of an alert after a failed one-shot TEMP read. |
-| [23](23_offset-feature.md) | Opt-in hardware temperature offset | PARTIAL — [phase-b report](../reports/prompt_23.md#phase-b--sample-offset-attribution). Fresh samples carry calibration after guarded replay. Host tests cover both saturation endpoints, drift, explicit zero and late reads. Phase c review is next. |
+| [23](23_offset-feature.md) | Opt-in hardware temperature offset | PARTIAL — [phase-c review](../reports/prompt_23.md#phase-c-review). A settings change now detects drift in the previous managed offset before writing. Simulated conversions cover both saturation endpoints. All 22 Release suites passed. Phase d acceptance is next. |
 | 24–27 | EEPROM reads, reset, diagnostics and synchronous API | NOT_STARTED |
 | [50](50_audit-22-27.md) | Audit prompts 22–27 before cooperative work | NOT_STARTED |
 | 28–33 | Cooperative owner operations and adversarial native tests | NOT_STARTED |

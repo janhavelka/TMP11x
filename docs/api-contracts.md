@@ -101,8 +101,10 @@ for the stable selectors. CONV codes 0–3 have AVG-dependent periods.
 `setMode`, `setCycle` and `setAveraging` each copy the desired profile and
 replace one selector. They require initialized, verified settings. Invalid
 selectors on a verified instance return `INVALID_CONFIG` before a callback.
-Known drift returns `CONFIG_DIRTY`. Drift first discovered during preflight
-returns `CONFIG_MISMATCH` and retains the previous target. If preflight
+Known drift returns `CONFIG_DIRTY`. Before the first write, a settings change
+checks CONFIG, both limits and any previously managed OFFSET against the
+current target, including when the candidate changes or releases that offset.
+Drift discovered here returns `CONFIG_MISMATCH` and retains the previous target. If preflight
 reads matching CONFIG in a verified continuous generation with an established
 baseline and BUSY clear, a timely READY observation stays eligible even if
 a later limit read fails before the first write. A late CONFIG read still
