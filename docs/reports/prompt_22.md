@@ -216,3 +216,38 @@ Phase d owns final software acceptance. Physical pin behavior, concurrent
 flag-clear timing, TMP116/N block-end comparison and offset/comparator
 ordering retain their existing evidence gates. MCU, CI and fixture checks
 were not run in this phase.
+
+## Phase d acceptance
+
+**COMPLETE, 2026-11-26.** Software acceptance ran on clean `main` at
+`8a2aaf92326c05bda8d516015f25f24a7d3ccbc0`. The parent `ca6d091`,
+subject and five changed paths matched the phase-c request. The wrapper
+verified equality with `origin/main` at 01:17:04 Prague time. Both local
+refs still pointed to that commit at entry. The two sibling source files
+listed in phase a still matched their pinned revisions.
+
+The Release tests verified that both continuous-mode setters pass through
+guarded shutdown and readback. A failed, mismatched or late SD/alert
+readback stopped the write that would have inverted the limit pair.
+On all six model selections, an above-limit one-shot followed by a TEMP
+timeout preserved the previous sample and delivered HIGH on the first take
+only. The external alert-response vector retained LOW after the sampled
+pin went high. An incompatible identity preserved captured events and
+reported possible loss once.
+[Limit tests](../../test/test_limits.cpp), [apply tests](../../test/test_apply.cpp),
+[acquisition tests](../../test/test_acquisition.cpp), [comparator tests](../../test/test_alert_comparator.cpp).
+
+| Acceptance check | Result |
+| --- | --- |
+| `cmake -S . -B build/host -G "MinGW Makefiles" -DTMP11X_BUILD_TESTS=ON -DCMAKE_BUILD_TYPE=Release`, then `cmake --build build/host --config Release --clean-first --parallel 4` and `cmake -E chdir build/host ctest -C Release --output-on-failure` | PASS, 22/22 suites with GCC 15.1.0 and CMake/CTest 4.0.1. Includes register-ledger validation and its regressions. |
+| [Tests-off consumer configuration](../testing.md#source-consumer) in fresh `build/p22d-consumer`, using this checkout and disabling Python and Git discovery. Ran `cmake --build build/p22d-consumer --config Release --parallel 4` and `build/p22d-consumer/tmp11x_native_consumer.exe`. | PASS. The linked consumer printed `0.1.0` and exited successfully. |
+| One include per public header with `g++ -std=c++17 -Wall -Wextra -Wpedantic -Werror -Iinclude -fsyntax-only -x c++ -`. Ran `doxygen -` on `include/TMP11x` with XML enabled and `WARN_AS_ERROR=YES`. | PASS. All eight headers compiled independently. Doxygen 1.13.2 produced documented public entries for all six limit and alert operations in `build/p22d-docs/xml`. |
+| `python -B scripts/check_references.py`, `python -B scripts/check_promptset.py`, local Markdown targets and `git diff --check` | PASS. Python 3.12.10 verified the paths, sizes and hashes of all 14 pinned PDFs and the 55-stage promptset. |
+
+The accepted `limits-alert` artifact supplies the [public operations](../../include/TMP11x/TMP11x.h)
+and [retained alert evidence](../../src/DeviceEvidence.cpp) to stages 26 and
+27 for diagnostics and snapshots, audit 50, stage 30 for measurement jobs,
+and stage 38 for CLI operations. Stages 40–41 own physical ALERT levels and
+read-clear timing, TMP116/N comparator timing during averaging and offset
+ordering on offset-capable models. MCU links, physical fixtures and remote
+CI were not run. Stage 43 owns the first remote CI checkpoint.

@@ -1,12 +1,12 @@
 # TMP11x implementation progress
 
-**State:** All six model selections support guarded initialization and recovery, configuration verification and dirty-state tracking, typed conversion settings and timing estimates, latest temperature reads, continuous fresh reads and explicit one-shot acquisition.
+**State:** All six model selections support guarded initialization and recovery, configuration verification and dirty-state tracking, typed conversion settings and timing estimates, latest and fresh temperature reads, and explicit one-shot acquisition. The driver also supports signed temperature limits, therm hysteresis, retained alert events and optional ALERT pin sampling.
 **Target:** 55 stages in manifest order, including 11 new audit checkpoints. TMP117 is primary, with all six selected BOM-model capability gates covered by every relevant stage.
 **Repository:** `main`, tracking `origin/main` at `https://github.com/janhavelka/TMP11x.git`.
 **Preparation input HEAD:** `6c5e4496d5c896af689228d4bee4382a53c20626` (clean and synchronized at entry).
 **Hardware:** Physical TMP11x board and test wiring NOT CONFIRMED.
-**Last completed stage:** 49 (audit of conversion settings and fresh acquisition).
-**Last update:** 2026-11-26. Next eligible stage is [22](22_limits-alert.md), temperature limits and alert handling.
+**Last completed stage:** 22 (temperature limits and alert handling).
+**Last update:** 2026-11-26. Next eligible stage is [23](23_offset-feature.md), opt-in hardware offset.
 
 Preparation evidence includes the [6b173cc second follow-up](../reports/audit-followup-6b173cc.md),
 the [cb73740 follow-up](../reports/audit-followup-cb73740.md#response--2026-11-17),
@@ -44,7 +44,8 @@ every planned deliverable a producer and checks consumer dependencies.
 | [20](20_conversion-settings.md) | Conversion settings and timing | COMPLETE — [acceptance report](../reports/prompt_20.md#phase-d-acceptance). All 19 Release tests passed, including 384 steady profiles, 192 timing selections and shutdown during averaging. |
 | [21](21_fresh-one-shot.md) | Fresh-conversion acquisition and explicit one-shot | COMPLETE — [acceptance report](../reports/prompt_21.md#phase-d-acceptance). All 20 Release tests passed, including guarded one-shot writes, single-use readiness and preservation of outputs on timeout. |
 | [49](49_audit-20-21.md) | Audit prompts 20–21 before extending synchronous features | COMPLETE — [acceptance report](../reports/prompt_49.md#phase-d-acceptance). All 20 Release suites passed, including fresh reads after recovery, one-shot guard renewal and deadline clipping across clock wrap. |
-| 22–27 | Limits, offset, EEPROM reads, reset, diagnostics and synchronous API | NOT_STARTED |
+| [22](22_limits-alert.md) | Temperature limits, therm mode and ALERT | COMPLETE — [acceptance report](../reports/prompt_22.md#phase-d-acceptance). All 22 Release suites passed, including ordered limit writes, eight pin routes and single delivery of an alert after a failed one-shot TEMP read. |
+| 23–27 | Offset, EEPROM reads, reset, diagnostics and synchronous API | NOT_STARTED |
 | [50](50_audit-22-27.md) | Audit prompts 22–27 before cooperative work | NOT_STARTED |
 | 28–33 | Cooperative owner operations and adversarial native tests | NOT_STARTED |
 | [51](51_audit-28-33.md) | Audit prompts 28–33 before firmware and CLI integration | NOT_STARTED |
