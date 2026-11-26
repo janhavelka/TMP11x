@@ -124,11 +124,16 @@ Status DeviceEvidence::observeRegister(std::uint8_t pointer, std::uint16_t raw,
     if (command::accessFor(device._config.model, pointer) != command::Access::GUARDED_OFFSET) {
       return Status::Error(Err::UNSUPPORTED, "Selected model has no temperature offset");
     }
-    const bool drift = live.offset && live.offset->raw != raw;
+    const bool drift = live.offset && !live.offsetContinuityLost && live.offset->raw != raw;
     // An unexplained calibration change also breaks continuity of the profile
     // and its ready evidence. Keep the word that exposed the change.
-    if (drift) device.clearLiveState();
+    if (drift) {
+      const auto completedReads = live.verificationReads;
+      device.clearLiveState();
+      if (source == ConfigReadSource::VERIFICATION) live.verificationReads = completedReads;
+    }
     live.offset = OffsetObservation{raw, temperature::decodeCounts(raw), transfer.completedMs};
+    live.offsetContinuityLost = drift;
     if (source == ConfigReadSource::VERIFICATION) {
       live.verificationReads |= static_cast<std::uint8_t>(SettingsField::OFFSET);
     }

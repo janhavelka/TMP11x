@@ -81,8 +81,8 @@ transiently change the ALERT pin. A failed write can leave the target dirty
 and partially applied. Use the returned status to decide when to recover.
 An observed EEPROM unlock requires external correction.
 
-Successful initialization verifies CONFIG and both limits. It preserves
-hardware calibration and leaves offset provenance unknown. The final CONFIG
+Initialization and recovery verify CONFIG and both limits. On TMP117/M/N and
+TMP119 they also read and preserve the live calibration in shutdown. The final CONFIG
 read consumes DATA_READY. A subsequent `readLatest` reports the stored word
 with `freshConversion == false`, including immediately after initialization.
 [Startup, read effects and recovery](docs/api-contracts.md#startup-apply-and-reset).
@@ -160,8 +160,8 @@ the observed fields. `out.raw & out.readClearMask` gives the asserted flags
 acknowledged by that read.
 A complete read returns success even when a changed stable field latches
 `DIRTY`. To check the entire owned profile, call `verifyConfiguration()`.
-It reads CONFIG, TLOW and THIGH in order and reports `CONFIG_MISMATCH` on
-drift. A transfer error stops the scan.
+It reads CONFIG, TLOW and THIGH in order, then OFFSET on capable models.
+Drift returns `CONFIG_MISMATCH`. A transfer error stops the scan.
 
 `getSettingsSnapshot()` uses no bus or clock callbacks. It shows the desired
 profile, the last complete observation of each register, and the generation

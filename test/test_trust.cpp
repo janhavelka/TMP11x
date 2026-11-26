@@ -51,11 +51,13 @@ struct Fixture {
   std::uint32_t guardTick = 0;
 };
 
-void checkVerificationReads(const Fixture& f) {
+void checkVerificationReads(const Fixture& f, bool stoppedAtHigh = false) {
   const auto& trace = f.bus.trace;
-  CHECK(trace.size() == 3);
+  const bool readsOffset = !stoppedAtHigh && f.chip.model != Model::TMP116 && f.chip.model != Model::TMP116N;
+  CHECK(trace.size() == (readsOffset ? 4u : 3u));
   for (const auto& frame : trace) CHECK(frame.combinedRead && frame.tx.size() == 1);
   CHECK(trace[0].tx[0] == 1 && trace[1].tx[0] == 3 && trace[2].tx[0] == 2);
+  if (readsOffset) CHECK(trace[3].tx[0] == 7);
 }
 
 void admissionAndObservations() {
@@ -167,11 +169,11 @@ void typedOffsetObservations() {
   }
 }
 
-void unexplainedOffsetDriftInvalidatesReadiness() {
+void unexplainedOffsetDriftInvalidatesReadiness(bool detectDuringVerification) {
   Fixture f;
   CHECK(f.device.begin(f.config).ok());
-  std::int16_t counts = -1;
-  CHECK(f.device.readTemperatureOffset(counts).ok() && counts == 0);
+  const auto initial = f.device.getSettingsSnapshot();
+  CHECK(initial.offset && initial.offset->raw == 0);
   // Capture DATA_READY for this continuous generation before the outside change.
   f.chip.words[1] |= 0x2000;
   ConfigurationObservation config;
@@ -179,8 +181,17 @@ void unexplainedOffsetDriftInvalidatesReadiness() {
   const auto verified = f.device.getSettingsSnapshot();
   f.chip.words[7] = 0x0040;
   f.bus.trace.clear();
-  CHECK(f.device.readTemperatureOffset(counts).ok() && counts == 64);
-  CHECK(f.bus.trace.size() == 1 && f.bus.trace[0].combinedRead && f.bus.trace[0].tx[0] == 7);
+  if (detectDuringVerification) {
+    CHECK(f.device.verifyConfiguration().is(Err::CONFIG_MISMATCH));
+    checkVerificationReads(f);
+    CHECK(f.device.getSettingsSnapshot().verificationReads ==
+          (static_cast<unsigned>(SettingsField::CONFIG) | static_cast<unsigned>(SettingsField::LOW_LIMIT) |
+           static_cast<unsigned>(SettingsField::HIGH_LIMIT) | static_cast<unsigned>(SettingsField::OFFSET)));
+  } else {
+    std::int16_t counts = -1;
+    CHECK(f.device.readTemperatureOffset(counts).ok() && counts == 64);
+    CHECK(f.bus.trace.size() == 1 && f.bus.trace[0].combinedRead && f.bus.trace[0].tx[0] == 7);
+  }
   const auto invalid = f.device.getSettingsSnapshot();
   CHECK(invalid.offset && invalid.offset->raw == 0x0040 && invalid.offset->counts == 64);
   CHECK(invalid.offset->observedAtMs == f.device.healthSnapshot().lastSuccessMs);
@@ -193,8 +204,22 @@ void unexplainedOffsetDriftInvalidatesReadiness() {
   CHECK(f.device.tryReadFresh(sample).is(Err::NOT_INITIALIZED));
   CHECK(f.bus.trace.empty() && sample.raw == 0x1234);
 
+  // Before ownership returns, an outside writer can change calibration again.
+  if (detectDuringVerification) f.chip.words[7] = 0xFF80;
+  const auto newBaseline = f.chip.words[7];
   CHECK(f.device.recover().ok());
   CHECK(f.guardTick - f.idTick >= 4);
+  unsigned offsetReads = 0;
+  for (const auto& frame : f.bus.trace) {
+    if (frame.tx[0] == 7) {
+      CHECK(frame.combinedRead);
+      ++offsetReads;
+    }
+  }
+  CHECK(offsetReads == 1 && f.chip.words[7] == newBaseline);
+  const auto recovered = f.device.getSettingsSnapshot();
+  CHECK(recovered.trust == ConfigTrust::VERIFIED && recovered.offset && recovered.offset->raw == newBaseline);
+  CHECK(recovered.verifiedGeneration == verified.verifiedGeneration + 1);
   CHECK(f.device.tryReadFresh(sample).is(Err::MEASUREMENT_NOT_READY) && sample.raw == 0x1234);
 }
 
@@ -238,7 +263,7 @@ void partialVerificationRetainsEvidence() {
   f.chip.words[3] ^= 1;
   f.bus.trace.clear();
   CHECK(f.device.verifyConfiguration().is(Err::I2C_TIMEOUT));
-  checkVerificationReads(f);
+  checkVerificationReads(f, true);
   const auto partial = f.device.getSettingsSnapshot();
   CHECK(partial.config && partial.config->raw == 0x0224);
   CHECK(partial.low && partial.high && partial.trust == ConfigTrust::DIRTY);
@@ -269,9 +294,10 @@ void partialVerificationRetainsEvidence() {
   CHECK(matching.trust == ConfigTrust::DIRTY && matching.dirtyReason == partial.dirtyReason);
   CHECK(matching.affectedFields == partial.affectedFields && matching.verifiedAtMs == before.verifiedAtMs);
   CHECK(matching.verifiedGeneration == before.verifiedGeneration);
-  CHECK(matching.verificationReads == (prefix | static_cast<unsigned>(SettingsField::HIGH_LIMIT)));
+  CHECK(matching.verificationReads == (prefix | static_cast<unsigned>(SettingsField::HIGH_LIMIT) |
+                                       static_cast<unsigned>(SettingsField::OFFSET)));
   CHECK(matching.config->raw == 0x0220 && matching.low->raw == 0xFF00 && matching.high->raw == 0x0500);
-  CHECK(matching.high->observedAtMs == f.device.healthSnapshot().lastSuccessMs);
+  CHECK(matching.offset && matching.offset->observedAtMs == f.device.healthSnapshot().lastSuccessMs);
 
   f.bus.script.push_back({Status::Error(Err::I2C_NACK, "CONFIG failed")});
   f.bus.trace.clear();
@@ -284,7 +310,7 @@ void partialVerificationRetainsEvidence() {
 
   f.bus.trace.clear();
   CHECK(f.device.recover().ok());
-  CHECK(f.bus.trace.size() == 14);
+  CHECK(f.bus.trace.size() == 15);
   CHECK(f.bus.trace[0].combinedRead && f.bus.trace[0].tx[0] == 0x0F);
   CHECK(f.bus.trace[1].combinedRead && f.bus.trace[1].tx[0] == 0x04);
   CHECK(f.bus.trace.back().combinedRead && f.bus.trace.back().tx[0] == 0x01);
@@ -293,6 +319,28 @@ void partialVerificationRetainsEvidence() {
   CHECK(recovered.affectedFields == 0 && recovered.verificationReads == 0);
   CHECK(recovered.verifiedGeneration == before.verifiedGeneration + 1);
   CHECK(recovered.verifiedAtMs == f.device.healthSnapshot().lastSuccessMs);
+}
+
+void shortOffsetVerificationRetainsPriorCalibration() {
+  Fixture f;
+  f.chip.words[7] = 0xFF80;
+  CHECK(f.device.begin(f.config).ok());
+  const auto before = f.device.getSettingsSnapshot();
+  CHECK(before.offset && before.offset->counts == -128);
+  f.chip.words[7] = 0x0040;
+  f.bus.script = {{}, {}, {}, {Status::Error(Err::I2C_SHORT_TRANSFER, "partial OFFSET"), 1}};
+  f.bus.trace.clear();
+  CHECK(f.device.verifyConfiguration().is(Err::I2C_SHORT_TRANSFER));
+  checkVerificationReads(f);
+  const auto partial = f.device.getSettingsSnapshot();
+  CHECK(partial.trust == ConfigTrust::VERIFIED && partial.verifiedAtMs == before.verifiedAtMs);
+  CHECK(partial.verificationReads ==
+        (static_cast<unsigned>(SettingsField::CONFIG) | static_cast<unsigned>(SettingsField::LOW_LIMIT) |
+         static_cast<unsigned>(SettingsField::HIGH_LIMIT)));
+  CHECK(partial.config && partial.config->observedAtMs > before.config->observedAtMs);
+  CHECK(partial.low && partial.low->observedAtMs > before.low->observedAtMs);
+  CHECK(partial.high && partial.high->observedAtMs == f.device.healthSnapshot().lastSuccessMs);
+  CHECK(partial.offset && partial.offset->raw == 0xFF80 && partial.offset->observedAtMs == before.offset->observedAtMs);
 }
 
 void ambiguousWritesKeepTheTarget() {
@@ -400,9 +448,11 @@ void invalidationAfterExternalCorrection() {
 int main() {
   admissionAndObservations();
   typedOffsetObservations();
-  unexplainedOffsetDriftInvalidatesReadiness();
+  unexplainedOffsetDriftInvalidatesReadiness(false);
+  unexplainedOffsetDriftInvalidatesReadiness(true);
   verifyLimitDrift();
   partialVerificationRetainsEvidence();
+  shortOffsetVerificationRetainsPriorCalibration();
   ambiguousWritesKeepTheTarget();
   interruptedReadbackKeepsItsFirstCause();
   invalidationAfterExternalCorrection();

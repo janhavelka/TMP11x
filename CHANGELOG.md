@@ -40,5 +40,6 @@
 - Added guarded limit and alert setters, signed limit readback, and optional
   physical ALERT sampling. Applications can inspect and consume captured
   comparator events with their original source, separately from therm HIGH.
-- Added signed hardware-offset readback on TMP117/M/N and TMP119. An
+- Added signed hardware-offset readback on TMP117/M/N and TMP119 during
+  guarded settings replay, explicit verification and typed reads. An
   unexplained calibration change invalidates initialization and pending readiness.

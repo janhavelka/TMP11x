@@ -138,3 +138,31 @@ verification. Cover a nonfactory startup value, a partial verification scan,
 and drift detected during verification. Managed writes, explicit zero,
 recovery of owned calibration and conversion attribution remain later phase-b
 work. Remote CI and physical trials remain at stages 43 and 41.
+
+## Phase b — Unmanaged offset in replay and verification
+
+**PARTIAL.** Clean input `a8853af13af71a1d1bc2d9ae366dff952f9fd812`
+matched the previous request's parent, subject and ten paths. The wrapper
+verified upstream equality at 02:00:38 Prague time.
+
+[Apply](../../src/Apply.cpp) reads OFFSET after both verified limits in
+shutdown, before enabling THERM or consuming baseline CONFIG. Full
+[verification](../../src/TMP11x.cpp) reads OFFSET fourth on TMP117/M/N and
+TMP119. Both paths skip pointer `0x07` on TMP116/N. A short fourth read
+preserves the earlier calibration, its timestamp and the completed scan
+prefix. A complete changed word invalidates initialization and remains in the
+snapshot alongside the last successful verification time. Recovery establishes
+a new offset baseline once the owner restores exclusive access.
+
+- In `apply_cpp`, `allModelsBeginRecoverLatest` checks exact wire frames for all six models. `recoveryAfterReportedReset` preserves the new power-up calibration. `interruptedOffsetObservationInShutdown` stops on a short or changed word before resuming conversions.
+- `offsetObservedBeforeIncompleteInitialization` checks that a successful calibration read still establishes continuity when the following CONFIG read fails. A changed OFFSET on retry reports drift.
+- In `trust_cpp`, `shortOffsetVerificationRetainsPriorCalibration` checks the failed fourth read. `unexplainedOffsetDriftInvalidatesReadiness` exercises typed and verification reads, bus-silent fresh refusal and recovery with zero OFFSET writes even if calibration changed again.
+
+CMake 4.0.1 built the Release tree with `cmake --build build/host --config Release --parallel`.
+`cmake -E chdir build/host ctest -C Release --output-on-failure` passed all 22 suites.
+With Python 3.12.10, `python scripts/check_references.py` verified all 14 pinned PDFs
+and `python scripts/check_promptset.py` passed all 55 stages. `git diff --check` passed.
+
+Next phase-b slice connects the optional desired count and typed setter to
+guarded volatile write/readback and recovery, including explicit zero and
+TMP116/N refusal. Sample attribution and saturation vectors follow.

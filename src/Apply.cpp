@@ -163,10 +163,27 @@ Status Apply::readLimit(std::uint8_t pointer) {
     // before the second can rely on its effect to keep the pair ordered.
     case Phase::VERIFY_FIRST_LIMIT: _phase = Phase::WRITE_SECOND_LIMIT; break;
     case Phase::VERIFY_SECOND_LIMIT:
-      _phase = _shutdown.alertMode == _candidate.alertMode ? Phase::BASELINE : Phase::ENABLE_THERM;
+      _phase = command::accessFor(_device._config.model, command::offset) == command::Access::GUARDED_OFFSET
+                   ? Phase::READ_OFFSET : beforeBaseline();
       break;
     default: return Status::Error(Err::INVALID_PARAM, "Unexpected limit phase");
   }
+  return pending;
+}
+
+Apply::Phase Apply::beforeBaseline() const noexcept {
+  return _shutdown.alertMode == _candidate.alertMode ? Phase::BASELINE : Phase::ENABLE_THERM;
+}
+
+Status Apply::readOffset() {
+  std::uint16_t raw = 0;
+  const auto result = readWord(RegisterTransport::tracked(_device), command::offset, raw, _budget.remainingMs);
+  const auto status = _budget.finishTransfer(result);
+  const auto match = DeviceEvidence{_device}.observeRegister(command::offset, raw, result, nullptr,
+                                                            ConfigReadSource::APPLY);
+  if (!status.ok()) return status;
+  if (!match.ok()) return match;
+  _phase = beforeBaseline();
   return pending;
 }
 
@@ -222,6 +239,7 @@ Status Apply::dispatch() {
     case Phase::VERIFY_FIRST_LIMIT: return readLimit(_firstLimit);
     case Phase::WRITE_SECOND_LIMIT: return writeLimit(_secondLimit, Phase::VERIFY_SECOND_LIMIT);
     case Phase::VERIFY_SECOND_LIMIT: return readLimit(_secondLimit);
+    case Phase::READ_OFFSET: return readOffset();
     case Phase::ENABLE_THERM:
       _shutdown.alertMode = AlertMode::THERM;
       return writeConfig(_shutdown, Phase::BASELINE);

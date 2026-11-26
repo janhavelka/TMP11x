@@ -30,7 +30,7 @@ struct Apply {
   enum class Phase {
     IDENTITY, GUARD, CURRENT_CONFIG, CURRENT_LOW, CURRENT_HIGH,
     WRITE_SHUTDOWN, VERIFY_SHUTDOWN, WRITE_FIRST_LIMIT, VERIFY_FIRST_LIMIT,
-    WRITE_SECOND_LIMIT, VERIFY_SECOND_LIMIT, ENABLE_THERM, BASELINE, WRITE_MODE, FINAL_CONFIG
+    WRITE_SECOND_LIMIT, VERIFY_SECOND_LIMIT, READ_OFFSET, ENABLE_THERM, BASELINE, WRITE_MODE, FINAL_CONFIG
   };
 
   Status dispatch();
@@ -38,6 +38,8 @@ struct Apply {
   Status readGuard();
   Status readConfig();
   Status readLimit(std::uint8_t pointer);
+  Status readOffset();
+  Phase beforeBaseline() const noexcept;
   Status writeConfig(const SensorSettings& settings, Phase next);
   Status writeLimit(std::uint8_t pointer, Phase next);
 

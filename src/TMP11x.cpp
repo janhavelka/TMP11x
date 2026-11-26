@@ -181,17 +181,22 @@ Status TMP11x::verifyConfiguration() {
   _live.verificationReads = 0;
   const auto transport = detail::RegisterTransport::tracked(*this);
   Status firstMismatch{};
-  for (const auto pointer : {command::config, command::lowLimit, command::highLimit}) {
+  std::optional<std::uint32_t> lastReadMs;
+  for (const auto pointer : {command::config, command::lowLimit, command::highLimit, command::offset}) {
+    if (pointer == command::offset && command::accessFor(_config.model, pointer) != command::Access::GUARDED_OFFSET) {
+      continue;
+    }
     std::uint16_t raw = 0;
     const auto transfer = detail::readWord(transport, pointer, raw, _config.i2cTimeoutMs);
     const auto match = detail::DeviceEvidence{*this}.observeRegister(pointer, raw, transfer, &_config.settings,
                                                                     ConfigReadSource::VERIFICATION);
     if (!transfer.status.ok()) return transfer.status;
+    lastReadMs = transfer.completedMs;
     if (firstMismatch.ok() && !match.ok()) firstMismatch = match;
   }
   if (!firstMismatch.ok()) return firstMismatch;
   if (_live.trust == ConfigTrust::DIRTY) return Status::Error(Err::CONFIG_DIRTY, "Verified replay required");
-  _live.verifiedAtMs = _live.high->observedAtMs;
+  _live.verifiedAtMs = lastReadMs;
   return Status::Ok();
 }
 

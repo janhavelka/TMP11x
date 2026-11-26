@@ -47,7 +47,7 @@ struct Fixture {
     config.i2cWriteRead = [](std::uint8_t address, const std::uint8_t* tx, std::size_t n,
                              std::uint8_t* rx, std::size_t m, std::uint32_t ms, void* user) {
       auto& f = *static_cast<Fixture*>(user);
-      if (f.injectFinalFlags && f.bus.trace.size() == 13) {
+      if (f.injectFinalFlags && f.bus.trace.size() == 14) {
         CHECK(n == 1 && *tx == 0x01);
         f.chip.words[1] |= 0xA000;  // HIGH and READY published after returning to CC.
         if (f.changeFinalRouting) f.chip.words[1] ^= 0x0004;
@@ -192,7 +192,7 @@ void checkBoundary(const Fixture& f, std::uint16_t cc, std::uint16_t low) {
   };
   const std::vector<std::vector<std::uint8_t>> expected{
       {0x0F}, {0x04}, {0x01}, {0x03}, {0x02}, write(0x01, cc | 0x0400), {0x01},
-      write(0x03, low), {0x03}, write(0x02, 960), {0x02}, {0x01}, write(0x01, cc), {0x01}};
+      write(0x03, low), {0x03}, write(0x02, 960), {0x02}, {0x07}, {0x01}, write(0x01, cc), {0x01}};
   CHECK(f.bus.trace.size() == expected.size());
   for (std::size_t i = 0; i < expected.size(); ++i) {
     const auto& frame = f.bus.trace[i];
@@ -273,7 +273,7 @@ void incompleteChangesKeepIntent() {
     } else {
       f.injectFinalFlags = true;
       f.changeFinalRouting = fault == Err::CONFIG_MISMATCH;
-      if (fault == Err::OPERATION_TIMEOUT) f.expireOnRead = 13;
+      if (fault == Err::OPERATION_TIMEOUT) f.expireOnRead = 14;
     }
     CHECK(f.device.setAveraging(Averaging::SAMPLES_64).is(fault));
     const auto failed = f.device.getSettingsSnapshot();
@@ -285,7 +285,7 @@ void incompleteChangesKeepIntent() {
       CHECK(f.bus.trace.size() == 6 && f.chip.words[1] == 0x0660);
       CHECK(failed.dirtyReason == DirtyReason::AMBIGUOUS_WRITE);
     } else {
-      CHECK(f.bus.trace.size() == 14 && evidence.alerts().pendingHigh);
+      CHECK(f.bus.trace.size() == 15 && evidence.alerts().pendingHigh);
       CHECK(failed.config && failed.config->dataReady && failed.config->high);
     }
     checkRefused(f, Err::CONFIG_DIRTY);

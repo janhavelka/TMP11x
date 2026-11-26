@@ -65,7 +65,8 @@ void signedLimitsAndRouting() {
         CHECK(f.device.setLimits({-1344, -832}).ok());  // -10.5 and -6.5 degrees Celsius.
       }
       const std::uint16_t cc = routingChange ? 0x022C : 0x0220;
-      CHECK(f.bus.trace.size() == 14);
+      const bool hasOffset = model != Model::TMP116 && model != Model::TMP116N;
+      CHECK(f.bus.trace.size() == (hasOffset ? 15u : 14u));
       checkRead(f, 0, 0x0F);
       checkRead(f, 1, 0x04);
       checkRead(f, 2, 0x01);
@@ -77,9 +78,11 @@ void signedLimitsAndRouting() {
       checkRead(f, 8, 0x03);
       checkWrite(f, 9, 0x02, 0xFCC0);
       checkRead(f, 10, 0x02);
-      checkRead(f, 11, 0x01);
-      checkWrite(f, 12, 0x01, cc);
-      checkRead(f, 13, 0x01);
+      if (hasOffset) checkRead(f, 11, 0x07);
+      const auto baseline = hasOffset ? 12u : 11u;
+      checkRead(f, baseline, 0x01);
+      checkWrite(f, baseline + 1, 0x01, cc);
+      checkRead(f, baseline + 2, 0x01);
       const auto settings = f.device.getSettingsSnapshot();
       ++generation;
       CHECK(settings.trust == ConfigTrust::VERIFIED && settings.verifiedGeneration == generation);
@@ -177,17 +180,18 @@ void invertedStartingPairRequiresRecovery() {
   CHECK(f.device.setLimits({1920, 2560}).is(Err::CONFIG_DIRTY));
   CHECK(f.device.setAlert(AlertMode::THERM, Polarity::ACTIVE_HIGH, PinFunction::THRESHOLD).is(Err::CONFIG_DIRTY));
   CHECK(f.bus.trace.empty() && f.device.desiredSettings().limits.lowCounts == 0);
-  CHECK(f.device.recover().ok() && f.bus.trace.size() == 15);
+  CHECK(f.device.recover().ok() && f.bus.trace.size() == 16);
   checkWrite(f, 5, 0x01, 0x0620);  // Shutdown, temporarily using alert comparison.
   checkRead(f, 6, 0x01);
   checkWrite(f, 7, 0x03, 0x0000);
   checkRead(f, 8, 0x03);
   checkWrite(f, 9, 0x02, 0x0500);
   checkRead(f, 10, 0x02);
-  checkWrite(f, 11, 0x01, 0x0630);  // Enable hysteresis after both verified limits.
-  checkRead(f, 12, 0x01);
-  checkWrite(f, 13, 0x01, 0x0230);
-  checkRead(f, 14, 0x01);
+  checkRead(f, 11, 0x07);
+  checkWrite(f, 12, 0x01, 0x0630);  // Enable hysteresis after both verified limits.
+  checkRead(f, 13, 0x01);
+  checkWrite(f, 14, 0x01, 0x0230);
+  checkRead(f, 15, 0x01);
   CHECK(f.device.configTrust() == ConfigTrust::VERIFIED);
 }
 

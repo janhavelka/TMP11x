@@ -31,8 +31,8 @@ startup evidence and profile trust. A complete incompatible ID clears that
 evidence and retains the desired settings. `begin(config)` requires a clock
 and an operation budget of at least one tick before replacing the binding.
 `begin()` and `recover()` establish startup timing from their own compatible
-ID read when proof is missing. They verify CONFIG and both limits. Offset
-provenance stays unknown until stage 23. `end()` clears observations while retaining
+ID read when proof is missing. They verify CONFIG and both limits and observe
+unmanaged OFFSET on capable models in shutdown. `end()` clears observations while retaining
 the binding and desired settings. `unbind()` also drops the binding.
 Both operations succeed on an empty instance and invoke zero callbacks.
 Stage 28 adds the active-job and pending-result guards described in the
@@ -307,8 +307,8 @@ observation API returns its observed data on a complete read.
 verification or acquisition stops on drift. A later matching diagnostic
 cannot clear dirty.
 
-`getSettingsSnapshot()` uses optional observations for CONFIG, TLOW and
-THIGH. An attempted write discards the previous observation for its register.
+`getSettingsSnapshot()` uses optional observations for CONFIG, TLOW, THIGH
+and supported OFFSET. An attempted write discards the previous observation for its register.
 A failed read supplies no replacement. During an explicit verification,
 `verificationReads` records each complete register using the `SettingsField`
 bits. If TLOW differs and THIGH then times out, the call returns the transport

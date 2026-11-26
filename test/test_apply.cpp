@@ -48,7 +48,8 @@ struct Fixture {
                              std::uint8_t* rx, std::size_t m, std::uint32_t ms, void* user) {
       auto& f = *static_cast<Fixture*>(user);
       CHECK(address == f.config.i2cAddress && n == 1 && m == 2 && ms != 0);
-      CHECK(*tx <= 0x04 || *tx == 0x0F);
+      CHECK(*tx <= 0x04 || *tx == 0x0F ||
+            (*tx == 0x07 && f.config.model != Model::TMP116 && f.config.model != Model::TMP116N));
       if (f.beforeTransfer) f.beforeTransfer(true, *tx);
       return FakeTmp11xBus::writeRead(address, tx, n, rx, m, ms, &f.bus);
     };
@@ -86,8 +87,10 @@ std::string transcript(const Fixture& f) {
   return result;
 }
 
-constexpr char normal[] =
+constexpr char normalTmp116[] =
     "R0F R04 R01 R03 R02 W01=0620 R01 W03=0000 R03 W02=0500 R02 R01 W01=0220 R01";
+constexpr char normal[] =
+    "R0F R04 R01 R03 R02 W01=0620 R01 W03=0000 R03 W02=0500 R02 R07 R01 W01=0220 R01";
 
 void allModelsBeginRecoverLatest() {
   for (const auto model : {Model::TMP116, Model::TMP116N, Model::TMP117, Model::TMP117M,
@@ -96,7 +99,12 @@ void allModelsBeginRecoverLatest() {
     f.chip.words[1] = 0xE220;  // Factory-style CC plus old HIGH/LOW/ready.
     CHECK(f.device.begin(f.config).ok());
     CHECK(f.device.isInitialized() && f.device.isOnline());
-    CHECK(transcript(f) == normal);
+    const bool hasOffset = model != Model::TMP116 && model != Model::TMP116N;
+    const auto expected = hasOffset ? normal : normalTmp116;
+    CHECK(transcript(f) == expected);
+    const auto initialOffset = f.device.getSettingsSnapshot().offset;
+    CHECK(initialOffset.has_value() == hasOffset);
+    if (hasOffset) CHECK(initialOffset->raw == 0xA35C && initialOffset->counts == -23716);
     CHECK(f.device.identityInfo().compatible);
     CHECK(!LatestRead{f.device}.cache.has_value());
     Sample sample;
@@ -107,7 +115,7 @@ void allModelsBeginRecoverLatest() {
     CHECK(f.bus.trace.back().combinedRead && f.bus.trace.back().tx[0] == 0x00);
     const auto generation = sample.profileGeneration;
     f.bus.trace.clear();
-    CHECK(f.device.recover().ok() && transcript(f) == normal);
+    CHECK(f.device.recover().ok() && transcript(f) == expected);
     CHECK(f.device.readLatest(sample).ok() && sample.profileGeneration > generation);
     CHECK(!sample.freshConversion && f.chip.words[0x07] == 0xA35C);
   }
@@ -196,7 +204,7 @@ void startupFromCompatibleCompletion() {
     CHECK(nextTransfer(apply, f).inProgress() && transcript(f) == "R0F R04");
     auto status = oneStep(apply, f);
     while (status.inProgress()) status = oneStep(apply, f);
-    CHECK(status.ok() && transcript(f) == normal);
+    CHECK(status.ok() && transcript(f) == normalTmp116);
     CHECK(f.device.end().ok());
     Apply renewed{f.device, f.config.settings};
     f.bus.trace.clear();
@@ -297,6 +305,7 @@ void recoveryAfterReportedReset() {
   Sample sample;
   CHECK(f.device.readLatest(sample).is(Err::NOT_INITIALIZED) && f.bus.trace.empty());
 
+  f.chip.words[0x07] = 0xFF80;  // The new power-up image carries another calibration.
   f.chip.words[4] = 0x4000;  // Still loading after power returns.
   f.tickIncrement = 0;
   f.now += 100;
@@ -319,8 +328,51 @@ void recoveryAfterReportedReset() {
   while (status.inProgress()) status = oneStep(replay, f);
   CHECK(status.ok() && f.device.isInitialized());
   CHECK(transcript(f) ==
-        "R0F R04 R04 R01 R03 R02 W01=0620 R01 W03=0000 R03 W02=0500 R02 R01 W01=0220 R01");
-  CHECK(f.device.getSettingsSnapshot().verifiedGeneration == generation + 1);
+        "R0F R04 R04 R01 R03 R02 W01=0620 R01 W03=0000 R03 W02=0500 R02 R07 R01 W01=0220 R01");
+  const auto recovered = f.device.getSettingsSnapshot();
+  CHECK(recovered.verifiedGeneration == generation + 1);
+  CHECK(recovered.offset && recovered.offset->counts == -128 && f.chip.words[0x07] == 0xFF80);
+}
+
+void interruptedOffsetObservationInShutdown() {
+  for (const bool shortRead : {false, true}) {
+    Fixture f;
+    CHECK(f.device.begin(f.config).ok());
+    const auto before = f.device.getSettingsSnapshot();
+    f.chip.words[0x07] = 0x0040;
+    f.bus.trace.clear();
+    if (shortRead) {
+      f.beforeTransfer = [&](bool read, std::uint8_t pointer) {
+        if (read && pointer == 0x07) {
+          f.bus.script.push_back({Status::Error(Err::I2C_SHORT_TRANSFER, "short OFFSET"), 1});
+        }
+      };
+    }
+    CHECK(f.device.setLimits({-128, 1280}).is(shortRead ? Err::I2C_SHORT_TRANSFER : Err::CONFIG_MISMATCH));
+    CHECK(transcript(f) == "R0F R04 R01 R03 R02 W01=0620 R01 W03=FF80 R03 W02=0500 R02 R07");
+    const auto stopped = f.device.getSettingsSnapshot();
+    CHECK(stopped.verifiedGeneration == before.verifiedGeneration && stopped.verifiedAtMs == before.verifiedAtMs);
+    CHECK(stopped.offset && stopped.offset->raw == (shortRead ? 0xA35C : 0x0040));
+    CHECK(f.device.desiredSettings().limits.lowCounts == -128);
+    CHECK(f.chip.words[1] == 0x0620 && f.chip.words[0x07] == 0x0040);
+    if (shortRead) CHECK(f.device.configTrust() == ConfigTrust::DIRTY);
+    else CHECK(!f.device.isInitialized());
+  }
+}
+
+void offsetObservedBeforeIncompleteInitialization() {
+  Fixture f;
+  f.bus.script.resize(12);  // Through the complete OFFSET observation.
+  f.bus.script.push_back({Status::Error(Err::I2C_TIMEOUT, "shutdown baseline timed out")});
+  CHECK(f.device.begin(f.config).is(Err::I2C_TIMEOUT));
+  const auto initial = f.device.getSettingsSnapshot();
+  CHECK(!f.device.isInitialized() && initial.offset && initial.offset->raw == 0xA35C);
+  f.chip.words[7] = 0x0040;
+  f.bus.trace.clear();
+  CHECK(f.device.recover().is(Err::CONFIG_MISMATCH));
+  CHECK(f.bus.trace.back().combinedRead && f.bus.trace.back().tx[0] == 7);
+  const auto invalid = f.device.getSettingsSnapshot();
+  CHECK(!f.device.isInitialized() && invalid.offset && invalid.offset->counts == 64);
 }
 
 void busyShutdownReadbackRequiresNewGuard() {
@@ -366,7 +418,7 @@ void busyRecheckAndFinalBusy() {
   };
   CHECK(f.device.begin(f.config).ok() && guards == 3 && finalBusy);
   CHECK(transcript(f) ==
-        "R0F R04 R04 R01 R03 R02 W01=0620 R01 W03=0000 R03 W02=0500 R02 R01 W01=0220 R01 R04 R01");
+        "R0F R04 R04 R01 R03 R02 W01=0620 R01 W03=0000 R03 W02=0500 R02 R07 R01 W01=0220 R01 R04 R01");
   Apply view{f.device, f.config.settings};
   CHECK(view.alerts().pendingHigh);
 }
@@ -378,7 +430,7 @@ void comparatorTransitions() {
   up.config.settings.limits = {0x0780, 0x0A00};
   CHECK(up.device.begin(up.config).ok());
   CHECK(transcript(up) ==
-        "R0F R04 R01 R03 R02 W01=0630 R01 W02=0A00 R02 W03=0780 R03 R01 W01=0230 R01");
+        "R0F R04 R01 R03 R02 W01=0630 R01 W02=0A00 R02 W03=0780 R03 R07 R01 W01=0230 R01");
   Fixture down;
   down.chip.words[1] = 0x0230;
   down.chip.words[2] = 0x0A00;
@@ -386,14 +438,14 @@ void comparatorTransitions() {
   down.config.settings.alertMode = AlertMode::THERM;
   CHECK(down.device.begin(down.config).ok());
   CHECK(transcript(down) ==
-        "R0F R04 R01 R03 R02 W01=0630 R01 W03=0000 R03 W02=0500 R02 R01 W01=0230 R01");
+        "R0F R04 R01 R03 R02 W01=0630 R01 W03=0000 R03 W02=0500 R02 R07 R01 W01=0230 R01");
   Fixture entering;
   entering.chip.words[1] = 0x0220;
   entering.chip.words[3] = 0x0A00;  // Inverted alert pair [20, 10].
   entering.config.settings.alertMode = AlertMode::THERM;
   CHECK(entering.device.begin(entering.config).ok());
   CHECK(transcript(entering) ==
-        "R0F R04 R01 R03 R02 W01=0620 R01 W03=0000 R03 W02=0500 R02 W01=0630 R01 W01=0230 R01");
+        "R0F R04 R01 R03 R02 W01=0620 R01 W03=0000 R03 W02=0500 R02 R07 W01=0630 R01 W01=0230 R01");
 
   for (const auto failure : {Err::OK, Err::I2C_SHORT_TRANSFER, Err::CONFIG_MISMATCH,
                              Err::OPERATION_TIMEOUT}) {
@@ -417,7 +469,7 @@ void comparatorTransitions() {
     const std::string prefix = "R0F R04 R01 R03 R02 W01=0620 R01";
     if (failure == Err::OK) {
       CHECK(transcript(leaving) == prefix +
-            " W02=0500 R02 W03=0A00 R03 R01 W01=0220 R01");
+            " W02=0500 R02 W03=0A00 R03 R07 R01 W01=0220 R01");
     } else {
       CHECK(transcript(leaving) == prefix);
       CHECK(leaving.chip.words[3] == 0 && leaving.device.configTrust() == ConfigTrust::DIRTY);
@@ -434,7 +486,7 @@ void signedThermLimitOrderAcrossZero() {
   f.config.settings.limits = {0, 1};
   CHECK(f.device.begin(f.config).ok());
   CHECK(transcript(f) ==
-        "R0F R04 R01 R03 R02 W01=0630 R01 W02=0001 R02 W03=0000 R03 R01 W01=0230 R01");
+        "R0F R04 R01 R03 R02 W01=0630 R01 W02=0001 R02 W03=0000 R03 R07 R01 W01=0230 R01");
   CHECK(f.chip.words[3] == 0 && f.chip.words[2] == 1);
 }
 
@@ -534,7 +586,7 @@ void stagedThermLimitsAndPartialRecovery() {
   f.bus.trace.clear();
   CHECK(f.device.recover().ok());
   CHECK(transcript(f) ==
-        "R0F R04 R01 R03 R02 W01=0630 R01 W03=0780 R03 W02=0A00 R02 R01 W01=0230 R01");
+        "R0F R04 R01 R03 R02 W01=0630 R01 W03=0780 R03 W02=0A00 R02 R07 R01 W01=0230 R01");
   CHECK(f.chip.words[3] == 0x0780 && f.device.configTrust() == ConfigTrust::VERIFIED);
   CHECK(f.device.getSettingsSnapshot().verifiedGeneration == verified.verifiedGeneration + 1);
 }
@@ -551,7 +603,7 @@ void pinOnlyChangeUsesSameGuardedReplay() {
   CHECK(status.inProgress() && f.bus.trace.empty());
   while (status.inProgress()) status = oneStep(change, f);
   CHECK(status.ok() && transcript(f) ==
-        "R0F R04 R01 R03 R02 W01=062C R01 W03=0000 R03 W02=0500 R02 R01 W01=022C R01");
+        "R0F R04 R01 R03 R02 W01=062C R01 W03=0000 R03 W02=0500 R02 R07 R01 W01=022C R01");
 }
 
 void stagedIntentAndIndependentReadback() {
@@ -559,7 +611,7 @@ void stagedIntentAndIndependentReadback() {
     Fixture f;
     CHECK(f.device.begin(f.config).ok());
     CHECK(f.device.verifyConfiguration().ok());
-    CHECK(f.device.getSettingsSnapshot().verificationReads == 7);
+    CHECK(f.device.getSettingsSnapshot().verificationReads == 15);
     f.bus.trace.clear();
     auto candidate = f.config.settings;
     candidate.limits = {0x0101, 0x0402};
@@ -582,7 +634,7 @@ void stagedIntentAndIndependentReadback() {
     CHECK(status.is(failureAt < 8 ? Err::I2C_NACK_DATA : Err::CONFIG_MISMATCH));
     CHECK(f.bus.trace.size() == failureAt + 1);
     CHECK(f.device.desiredSettings().limits.lowCounts == (failureAt == 1 ? 0 : 0x0101));
-    CHECK(f.device.getSettingsSnapshot().verificationReads == (failureAt == 1 ? 7 : 0));
+    CHECK(f.device.getSettingsSnapshot().verificationReads == (failureAt == 1 ? 15 : 0));
     CHECK(f.device.isInitialized());
     f.beforeTransfer = {};
     if (failureAt != 1) {
@@ -593,7 +645,7 @@ void stagedIntentAndIndependentReadback() {
       f.bus.trace.clear();
       CHECK(f.device.recover().ok());
       CHECK(transcript(f) ==
-            "R0F R04 R01 R03 R02 W01=0620 R01 W03=0101 R03 W02=0402 R02 R01 W01=0220 R01");
+            "R0F R04 R01 R03 R02 W01=0620 R01 W03=0101 R03 W02=0402 R02 R07 R01 W01=0220 R01");
     }
   }
 }
@@ -604,7 +656,7 @@ void finalVerificationAndAlertEvidence() {
     Fixture f;
     f.chip.words[1] = 0x4220;
     f.beforeTransfer = [&](bool read, std::uint8_t ptr) {
-      if (f.bus.trace.size() != 13) return;
+      if (f.bus.trace.size() != 14) return;
       CHECK(read && ptr == 1);
       f.chip.words[1] |= 0xA000;  // HIGH and ready at the final observation.
       if (failure == Err::CONFIG_MISMATCH) f.chip.words[1] ^= 0x0004;
@@ -634,7 +686,7 @@ void finalVerificationAndAlertEvidence() {
     CHECK(alerts.possibleLoss == (failure == Err::I2C_SHORT_TRANSFER));
     CHECK(!view.readyPending());
     CHECK(view.readyHistoryUncertain() == (failure == Err::I2C_SHORT_TRANSFER));
-    CHECK(f.device.healthSnapshot().totalSuccess == (failure == Err::I2C_SHORT_TRANSFER ? 13u : 14u));
+    CHECK(f.device.healthSnapshot().totalSuccess == (failure == Err::I2C_SHORT_TRANSFER ? 14u : 15u));
     CHECK(f.device.healthSnapshot().totalFailures == (failure == Err::I2C_SHORT_TRANSFER ? 1u : 0u));
     CHECK((f.chip.words[1] & 0xE000) == 0);
     Sample sample;
@@ -644,7 +696,7 @@ void finalVerificationAndAlertEvidence() {
     } else {
       CHECK(!f.device.isInitialized() && f.device.configTrust() == ConfigTrust::DIRTY);
       CHECK(!view.baselineMs() && f.device.readLatest(sample).is(Err::NOT_INITIALIZED));
-      CHECK(f.bus.trace.size() == 14);
+      CHECK(f.bus.trace.size() == 15);
       if (failure == Err::OPERATION_TIMEOUT) {
         CHECK(f.device.healthSnapshot().lastSuccessMs == f.config.operationTimeoutMs);
         CHECK(f.bus.trace.back().rx == std::vector<std::uint8_t>({0xA2, 0x20}));
@@ -683,7 +735,7 @@ void finalThermReadAfterVerifiedAlert() {
     while (status.inProgress()) status = oneStep(change, f);
     CHECK(status.is(failure));
     CHECK(transcript(f) ==
-          "R0F R04 R01 R03 R02 W01=0620 R01 W03=0000 R03 W02=0500 R02 W01=0630 R01 W01=0230 R01");
+          "R0F R04 R01 R03 R02 W01=0620 R01 W03=0000 R03 W02=0500 R02 R07 W01=0630 R01 W01=0230 R01");
     CHECK(f.chip.words[0x01] == 0x8230 && f.device.desiredSettings().alertMode == AlertMode::THERM);
     CHECK(f.device.isInitialized() && f.device.configTrust() == ConfigTrust::DIRTY && !change.baselineMs());
     alerts = f.device.getAlertStatus();
@@ -713,7 +765,7 @@ void finalThermReadAfterVerifiedAlert() {
     f.bus.trace.clear();
     CHECK(f.device.recover().ok());
     CHECK(transcript(f) ==
-          "R0F R04 R01 R03 R02 W01=0630 R01 W03=0000 R03 W02=0500 R02 R01 W01=0230 R01");
+          "R0F R04 R01 R03 R02 W01=0630 R01 W03=0000 R03 W02=0500 R02 R07 R01 W01=0230 R01");
     alerts = f.device.getAlertStatus();
     CHECK(change.baselineMs() == f.device.healthSnapshot().lastSuccessMs && alerts.thermHigh == false);
     CHECK(alerts.pendingLow && !alerts.pendingHigh && !alerts.mixedOrUnknown && alerts.possibleLoss == shortRead);
@@ -786,7 +838,7 @@ void preflightDriftAtDeadline() {
     CHECK(snapshot.trust == ConfigTrust::DIRTY && snapshot.dirtyReason == DirtyReason::READBACK_MISMATCH);
     const auto field = config ? SettingsField::CONFIG : SettingsField::LOW_LIMIT;
     CHECK(snapshot.affectedFields == static_cast<std::uint8_t>(field));
-    CHECK(snapshot.verificationReads == verified.verificationReads && snapshot.verificationReads == 7);
+    CHECK(snapshot.verificationReads == verified.verificationReads && snapshot.verificationReads == 15);
     CHECK(snapshot.verifiedAtMs == verified.verifiedAtMs && snapshot.verifiedGeneration == verified.verifiedGeneration);
     if (config) {
       CHECK(snapshot.config && snapshot.config->raw == changedWord && snapshot.config->observedAtMs == deadline);
@@ -990,6 +1042,8 @@ int main() {
   startupFromCompatibleCompletion();
   recoveryStartupProof();
   recoveryAfterReportedReset();
+  interruptedOffsetObservationInShutdown();
+  offsetObservedBeforeIncompleteInitialization();
   busyShutdownReadbackRequiresNewGuard();
   busyAndUnlockedGuards();
   unlockedGuardAtDeadline();

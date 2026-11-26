@@ -130,7 +130,8 @@ struct SettingsSnapshot {
   ConfigTrust trust = ConfigTrust::UNKNOWN;        ///< Current live profile trust.
   DirtyReason dirtyReason = DirtyReason::NONE;     ///< Retained until verified replay or invalidation.
   std::uint8_t affectedFields = 0;                 ///< Registers written or found different while dirty.
-  /// Fields read by the last explicit verification. The first replay write attempt or invalidation clears this mask.
+  /// Fields completed by the last verification, including a scan that detected offset drift.
+  /// Explicit invalidation or the first replay write attempt clears this mask.
   std::uint8_t verificationReads = 0;
   std::uint32_t verifiedGeneration = 0;            ///< Generation established by the last full replay.
   std::optional<std::uint32_t> verifiedAtMs;       ///< Last successful full check, including read-only verification.
@@ -193,7 +194,7 @@ class TMP11x {
   /// Requires nowMs and at least one clock tick of operationTimeoutMs. Checks identity,
   /// waits for startup, reads EEPROM_UL for locked/idle and verifies CONFIG and both limits
   /// through guarded shutdown and restoration of the desired mode. CONFIG reads consume flags.
-  /// A successful call admits readLatest(). Hardware offset provenance remains UNKNOWN.
+  /// Reads the unmanaged hardware offset in shutdown on capable models. A successful call admits readLatest().
   Status begin();
 
   /// Replay and verify the retained target with the same deadline and guards as begin().
@@ -259,8 +260,9 @@ class TMP11x {
   /// no pin setup or I2C and supplies no comparator, health or fresh-conversion evidence.
   Status readAlertPinLevel(bool& high) const;
 
-  /// Read CONFIG, TLOW and THIGH after initialization. Each complete read records its
-  /// evidence. A transport fault stops the scan. CONFIG_MISMATCH reports observed drift,
+  /// Read CONFIG, TLOW, THIGH and, on capable models, OFFSET after initialization.
+  /// A transport fault stops the scan. An unmanaged offset change invalidates initialization.
+  /// CONFIG_MISMATCH reports observed drift,
   /// CONFIG_DIRTY a matching scan with unresolved changes. Only guarded replay clears DIRTY.
   Status verifyConfiguration();
 
@@ -369,6 +371,7 @@ class TMP11x {
     std::optional<LimitObservation> low;
     std::optional<LimitObservation> high;
     std::optional<OffsetObservation> offset;
+    bool offsetContinuityLost = false;  // A drift observation is historical until recovery reads OFFSET again.
     std::optional<std::uint32_t> baselineMs;
     // Negative observations since the acquisition's guard. A later clear
     // CONFIG cannot undo BUSY or an ambiguous diagnostic transfer.
