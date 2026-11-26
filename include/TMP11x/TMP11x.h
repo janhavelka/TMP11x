@@ -108,14 +108,18 @@ enum class SettingsField : std::uint8_t {
   CONFIG = 1,      ///< Stable CONFIG fields at 0x01.
   LOW_LIMIT = 2,   ///< Complete TLOW word at 0x03.
   HIGH_LIMIT = 4,  ///< Complete THIGH word at 0x02.
+  OFFSET = 8,      ///< Complete hardware offset word at 0x07 on capable models.
 };
 
-/// Complete threshold word and its signed value in units of 1/128 degree Celsius.
+/// Complete temperature limit or calibration word in units of 1/128 degree Celsius.
 struct LimitObservation {
   std::uint16_t raw{};   ///< Two received bytes in register bit order.
   std::int16_t counts{}; ///< Signed two's-complement interpretation of raw.
   std::optional<std::uint32_t> observedAtMs;  ///< Wrapping completion tick when available.
 };
+
+/// Hardware calibration uses the same signed word and completion tick as a limit.
+using OffsetObservation = LimitObservation;
 
 /// Separate the software target, latest complete observations and whole-profile verification.
 struct SettingsSnapshot {
@@ -130,6 +134,7 @@ struct SettingsSnapshot {
   std::uint8_t verificationReads = 0;
   std::uint32_t verifiedGeneration = 0;            ///< Generation established by the last full replay.
   std::optional<std::uint32_t> verifiedAtMs;       ///< Last successful full check, including read-only verification.
+  std::optional<OffsetObservation> offset;          ///< Last complete OFFSET, including the word that exposed drift.
 };
 
 /// Origin and trust of a sample's hardware-offset evidence.
@@ -242,6 +247,12 @@ class TMP11x {
   /// published even on drift, which latches DIRTY. A transfer failure preserves @p out and
   /// retains each completed observation in getSettingsSnapshot(). Neither read acknowledges flags.
   Status readLimits(Limits& out);
+
+  /// Read the live hardware calibration in signed counts of 1/128 degree Celsius.
+  /// Requires initialization on TMP117/M/N and TMP119. TMP116/N returns UNSUPPORTED
+  /// without I2C. A complete read publishes the word even if an unexplained change
+  /// invalidates initialization and readiness. A failed read preserves @p out.
+  Status readTemperatureOffset(std::int16_t& out);
 
   /// Sample the physical line once through the bound GPIO hook in owner context outside an ISR.
   /// UNSUPPORTED means the hook is absent. A failed call preserves @p high. Sampling performs
@@ -357,6 +368,7 @@ class TMP11x {
     std::optional<ConfigurationObservation> config;
     std::optional<LimitObservation> low;
     std::optional<LimitObservation> high;
+    std::optional<OffsetObservation> offset;
     std::optional<std::uint32_t> baselineMs;
     // Negative observations since the acquisition's guard. A later clear
     // CONFIG cannot undo BUSY or an ambiguous diagnostic transfer.

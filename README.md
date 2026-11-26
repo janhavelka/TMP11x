@@ -87,6 +87,13 @@ read consumes DATA_READY. A subsequent `readLatest` reports the stored word
 with `freshConversion == false`, including immediately after initialization.
 [Startup, read effects and recovery](docs/api-contracts.md#startup-apply-and-reset).
 
+After initialization, `readTemperatureOffset(counts)` reads the hardware
+calibration on TMP117/M/N and TMP119 in units of 1/128 °C. A complete read
+updates `getSettingsSnapshot().offset`. If the calibration changes between
+reads, the call returns the new value and invalidates initialization and
+pending readiness. Restore exclusive access and stable power before calling
+`recover()`. On TMP116/N the call returns `UNSUPPORTED` without a transfer.
+
 ## Read a new conversion
 
 In verified continuous mode, `tryReadFresh(sample)` checks once and returns

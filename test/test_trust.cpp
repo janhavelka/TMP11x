@@ -127,6 +127,77 @@ void admissionAndObservations() {
   }
 }
 
+void typedOffsetObservations() {
+  for (const auto model : {Model::TMP116, Model::TMP116N, Model::TMP117, Model::TMP117M,
+                           Model::TMP117N, Model::TMP119}) {
+    Fixture f{model};
+    f.chip.words[7] = 0xFF80;
+    std::int16_t counts = 1234;
+    CHECK(f.device.readTemperatureOffset(counts).is(Err::NOT_BOUND));
+    CHECK(f.device.bind(f.config).ok());
+    const bool supported = model != Model::TMP116 && model != Model::TMP116N;
+    CHECK(f.device.readTemperatureOffset(counts).is(supported ? Err::NOT_INITIALIZED : Err::UNSUPPORTED));
+    CHECK(counts == 1234 && f.bus.trace.empty() && !f.device.getSettingsSnapshot().offset);
+    CHECK(f.device.begin().ok());
+    f.bus.trace.clear();
+    const auto before = f.device.healthSnapshot();
+    const auto status = f.device.readTemperatureOffset(counts);
+    if (!supported) {
+      CHECK(status.is(Err::UNSUPPORTED) && counts == 1234 && f.bus.trace.empty());
+      CHECK(!f.device.getSettingsSnapshot().offset && f.chip.words[7] == 0xFF80);
+      continue;
+    }
+    CHECK(status.ok() && counts == -128);
+    CHECK(f.bus.trace.size() == 1 && f.bus.trace[0].combinedRead && f.bus.trace[0].tx[0] == 7);
+    const auto success = f.device.healthSnapshot();
+    const auto observed = f.device.getSettingsSnapshot().offset;
+    CHECK(success.totalSuccess == before.totalSuccess + 1 && success.lastSuccessMsValid);
+    CHECK(observed && observed->raw == 0xFF80 && observed->counts == -128);
+    CHECK(observed->observedAtMs == success.lastSuccessMs);
+
+    f.chip.words[7] = 0x0040;
+    f.bus.script.push_back({Status::Error(Err::I2C_SHORT_TRANSFER, "partial OFFSET"), 1});
+    counts = 5678;
+    CHECK(f.device.readTemperatureOffset(counts).is(Err::I2C_SHORT_TRANSFER) && counts == 5678);
+    const auto retained = f.device.getSettingsSnapshot();
+    CHECK(retained.offset && retained.offset->raw == 0xFF80 && retained.offset->counts == -128);
+    CHECK(retained.offset->observedAtMs == observed->observedAtMs);
+    CHECK(f.device.isInitialized() && retained.trust == ConfigTrust::VERIFIED);
+    CHECK(f.device.healthSnapshot().totalFailures == success.totalFailures + 1);
+  }
+}
+
+void unexplainedOffsetDriftInvalidatesReadiness() {
+  Fixture f;
+  CHECK(f.device.begin(f.config).ok());
+  std::int16_t counts = -1;
+  CHECK(f.device.readTemperatureOffset(counts).ok() && counts == 0);
+  // Capture DATA_READY for this continuous generation before the outside change.
+  f.chip.words[1] |= 0x2000;
+  ConfigurationObservation config;
+  CHECK(f.device.readConfiguration(config).ok() && config.dataReady);
+  const auto verified = f.device.getSettingsSnapshot();
+  f.chip.words[7] = 0x0040;
+  f.bus.trace.clear();
+  CHECK(f.device.readTemperatureOffset(counts).ok() && counts == 64);
+  CHECK(f.bus.trace.size() == 1 && f.bus.trace[0].combinedRead && f.bus.trace[0].tx[0] == 7);
+  const auto invalid = f.device.getSettingsSnapshot();
+  CHECK(invalid.offset && invalid.offset->raw == 0x0040 && invalid.offset->counts == 64);
+  CHECK(invalid.offset->observedAtMs == f.device.healthSnapshot().lastSuccessMs);
+  CHECK(f.device.isBound() && !f.device.isInitialized() && invalid.trust == ConfigTrust::UNKNOWN);
+  CHECK(!invalid.config && !invalid.low && !invalid.high && f.device.getAlertStatus().possibleLoss);
+  CHECK(invalid.verifiedGeneration == verified.verifiedGeneration && invalid.verifiedAtMs == verified.verifiedAtMs);
+  f.bus.trace.clear();
+  Sample sample;
+  sample.raw = 0x1234;
+  CHECK(f.device.tryReadFresh(sample).is(Err::NOT_INITIALIZED));
+  CHECK(f.bus.trace.empty() && sample.raw == 0x1234);
+
+  CHECK(f.device.recover().ok());
+  CHECK(f.guardTick - f.idTick >= 4);
+  CHECK(f.device.tryReadFresh(sample).is(Err::MEASUREMENT_NOT_READY) && sample.raw == 0x1234);
+}
+
 void verifyLimitDrift() {
   for (const auto pointer : {2, 3}) {
     Fixture f;
@@ -328,6 +399,8 @@ void invalidationAfterExternalCorrection() {
 
 int main() {
   admissionAndObservations();
+  typedOffsetObservations();
+  unexplainedOffsetDriftInvalidatesReadiness();
   verifyLimitDrift();
   partialVerificationRetainsEvidence();
   ambiguousWritesKeepTheTarget();

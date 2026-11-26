@@ -120,6 +120,21 @@ Status DeviceEvidence::observeRegister(std::uint8_t pointer, std::uint16_t raw,
     return transfer.status;
   }
   auto& live = device._live;
+  if (pointer == command::offset) {
+    if (command::accessFor(device._config.model, pointer) != command::Access::GUARDED_OFFSET) {
+      return Status::Error(Err::UNSUPPORTED, "Selected model has no temperature offset");
+    }
+    const bool drift = live.offset && live.offset->raw != raw;
+    // An unexplained calibration change also breaks continuity of the profile
+    // and its ready evidence. Keep the word that exposed the change.
+    if (drift) device.clearLiveState();
+    live.offset = OffsetObservation{raw, temperature::decodeCounts(raw), transfer.completedMs};
+    if (source == ConfigReadSource::VERIFICATION) {
+      live.verificationReads |= static_cast<std::uint8_t>(SettingsField::OFFSET);
+    }
+    if (drift) return Status::Error(Err::CONFIG_MISMATCH, "Unmanaged temperature offset changed", pointer);
+    return Status::Ok();
+  }
   const auto field = fieldFor(pointer);
   if (!field) return Status::Error(Err::INVALID_PARAM, "Expected an owned settings register", pointer);
   const auto match = expected ? compareExpectedRegister(device._config.model, *expected, pointer, raw, live.trigger)

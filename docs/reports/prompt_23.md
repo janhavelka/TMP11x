@@ -106,3 +106,35 @@ replay, 38 CLI integration and 41 physical evidence. [Handoffs](../prompts/HANDO
 - `python scripts/check_references.py` passed with Python 3.12.10. All 14 pinned PDFs matched their sizes and SHA-256 hashes.
 - `cmake -E chdir build/host ctest -C Release --output-on-failure -R '^(register_transport_cpp|temperature_cpp|configuration_cpp|apply_cpp|trust_cpp|acquisition_cpp|latest_cpp|limits_cpp|register_ledger)$'` passed all nine prerequisite cases in the existing Release build with CMake 4.0.1.
 - Two read-only reviews checked the pinned silicon sources and the producer artifacts. No software prerequisite is blocked. Feature acceptance and physical observations remain pending. Stage 43 owns the first remote CI checkpoint.
+
+## Phase b — Unmanaged offset readback
+
+**PARTIAL.** This slice started on clean `main` at
+`3e11f374fa202c46419eba13a6b80513567dec4f`. Its parent, subject and sole
+report path match the phase-a request. The wrapper confirmed upstream
+equality at 01:45:03 Prague time.
+
+The [typed reader](../../src/TMP11x.cpp) reads one tracked word on an
+initialized TMP117/M/N or TMP119. The model's command table gates access
+before any transfer on TMP116/N. The [shared observation path](../../src/DeviceEvidence.cpp)
+records raw bits, signed counts and completion time. A short read preserves
+the prior observation and caller output. An unexplained change clears live
+device state and retained readiness while preserving historical verification
+and the newly observed offset.
+
+The [trust suite](../../test/test_trust.cpp) adds `typedOffsetObservations`
+for all six BOM selections and `unexplainedOffsetDriftInvalidatesReadiness`.
+With DATA_READY already captured, an offset change from zero to `0x0040`
+returned +64 counts. The subsequent fresh read refused before I2C. Recovery
+renewed the startup wait and a fresh read still required a new conversion.
+
+- `cmake --build build/host --config Release --parallel` passed with CMake 4.0.1.
+- `cmake -E chdir build/host ctest -C Release --output-on-failure` passed all 22 registered tests.
+- `python scripts/check_references.py` verified all 14 pinned PDFs.
+
+The first typed read currently establishes the offset baseline. Next, read
+supported unmanaged OFFSET during guarded apply/recovery and explicit profile
+verification. Cover a nonfactory startup value, a partial verification scan,
+and drift detected during verification. Managed writes, explicit zero,
+recovery of owned calibration and conversion attribution remain later phase-b
+work. Remote CI and physical trials remain at stages 43 and 41.

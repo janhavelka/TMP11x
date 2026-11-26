@@ -105,7 +105,7 @@ SettingsSnapshot TMP11x::getSettingsSnapshot() const noexcept {
   const auto reason = _live.trust == ConfigTrust::DIRTY && _live.dirtyReason == DirtyReason::NONE
                           ? DirtyReason::INCOMPLETE_APPLY : _live.dirtyReason;
   return {_config.settings, _live.config, _live.low, _live.high, _live.trust, reason,
-          _live.affectedFields, _live.verificationReads, _live.profileGeneration, _live.verifiedAtMs};
+          _live.affectedFields, _live.verificationReads, _live.profileGeneration, _live.verifiedAtMs, _live.offset};
 }
 
 Status TMP11x::requireInitialized() const noexcept {
@@ -140,6 +140,17 @@ Status TMP11x::readLimits(Limits& out) {
   }
   out = {_live.low->counts, _live.high->counts};
   return Status::Ok();
+}
+
+Status TMP11x::readTemperatureOffset(std::int16_t& out) {
+  if (isBound() && command::accessFor(_config.model, command::offset) != command::Access::GUARDED_OFFSET) {
+    return Status::Error(Err::UNSUPPORTED, "Selected model has no temperature offset");
+  }
+  const auto admission = requireInitialized();
+  if (!admission.ok()) return admission;
+  const auto status = readObservedRegister(command::offset);
+  if (status.ok()) out = _live.offset->counts;
+  return status;
 }
 
 Status TMP11x::readAlertPinLevel(bool& high) const {
