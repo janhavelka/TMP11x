@@ -3,12 +3,13 @@
 **State:** All six model selections support guarded initialization and recovery, configuration verification and dirty-state tracking, typed conversion settings and timing estimates, latest and fresh temperature reads, and explicit one-shot acquisition. The driver also supports signed temperature limits, therm hysteresis, retained alert events and optional ALERT pin sampling.
 TMP117/M/N and TMP119 preserve unmanaged calibration and support guarded volatile offset writes. Fresh samples record the calibration used. TMP116/N refuses offset operations before I²C.
 All six models support read-only observations of individual EEPROM shadows and a non-atomic snapshot with identity and lock/busy evidence.
+TMP117/M/N and TMP119 support guarded addressed reset. TMP116/N refuses reset before I²C.
 **Target:** 55 stages in manifest order, including 11 new audit checkpoints. TMP117 is primary, with all six selected BOM-model capability gates covered by every relevant stage.
 **Repository:** `main`, tracking `origin/main` at `https://github.com/janhavelka/TMP11x.git`.
 **Preparation input HEAD:** `6c5e4496d5c896af689228d4bee4382a53c20626` (clean and synchronized at entry).
 **Hardware:** Physical TMP11x board and test wiring NOT CONFIRMED.
-**Last completed stage:** 24 (read-only EEPROM shadows).
-**Last update:** 2026-11-27. Next eligible stage is [25](25_per-device-reset.md), guarded per-device reset and invalidation.
+**Last completed stage:** 25 (guarded addressed reset and invalidation).
+**Last update:** 2026-11-28. Next eligible stage is [26](26_diagnostic-access.md), read-only register snapshots and checked diagnostic access.
 
 Preparation evidence includes the [6b173cc second follow-up](../reports/audit-followup-6b173cc.md),
 the [cb73740 follow-up](../reports/audit-followup-cb73740.md#response--2026-11-17),
@@ -49,7 +50,8 @@ every planned deliverable a producer and checks consumer dependencies.
 | [22](22_limits-alert.md) | Temperature limits, therm mode and ALERT | COMPLETE — [acceptance report](../reports/prompt_22.md#phase-d-acceptance). All 22 Release suites passed, including ordered limit writes, eight pin routes and single delivery of an alert after a failed one-shot TEMP read. |
 | [23](23_offset-feature.md) | Opt-in hardware temperature offset | COMPLETE — [acceptance report](../reports/prompt_23.md#phase-d-acceptance). All 22 Release suites passed. Tests verified guarded offset replay, preservation of unmanaged calibration, TMP116/N refusal before I²C, and fresh-sample attribution at both saturation endpoints. |
 | [24](24_readonly-eeprom.md) | Read-only EEPROM shadows and traceability metadata | COMPLETE — [acceptance report](../reports/prompt_24.md#phase-d-acceptance). All 23 Release suites passed. Six-model traces verified the shadow maps and lock/busy handling. The public operations preserved seeded words and the private policy refused every protected payload before I²C. |
-| 25–27 | Reset, diagnostics and synchronous API | NOT_STARTED |
+| [25](25_per-device-reset.md) | Guarded addressed reset and invalidation | COMPLETE — [acceptance report](../reports/prompt_25.md#phase-d-acceptance). All 25 Release suites passed. Tests verified the selected-address command, both waits, retained evidence after ambiguous writes and explicit recovery with managed or unmanaged offset. |
+| 26–27 | Diagnostics and synchronous API | NOT_STARTED |
 | [50](50_audit-22-27.md) | Audit prompts 22–27 before cooperative work | NOT_STARTED |
 | 28–33 | Cooperative owner operations and adversarial native tests | NOT_STARTED |
 | [51](51_audit-28-33.md) | Audit prompts 28–33 before firmware and CLI integration | NOT_STARTED |

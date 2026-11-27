@@ -241,3 +241,31 @@ external-invalidation reference remained clean at `0791429f`.
 
 Phase d owns final acceptance, the report index and the progress row.
 Physical addressed-reset effects remain open. Remote CI belongs to stage 43.
+
+## Phase d acceptance
+
+**COMPLETE, 2026-11-28.** The accepted `device-reset` implementation is
+`7d77d2af3d08e246a16ad6cbb5201e268d49293f`. Its parent was
+`521acd3aea85c6054440bcb0c281bfd1da7c3afc`. The subject and seven paths
+matched the phase-c commit request. The wrapper verified upstream equality
+at 00:33:20 Prague time. The working tree was clean at acceptance entry.
+
+| Exit criterion | Final Release evidence |
+| --- | --- |
+| Model, command and address | TMP116/N returned `UNSUPPORTED` before I²C. On TMP117/M/N and TMP119 the locked-idle trace had one preflight read, one CONFIG write at the selected address and six post-command reads in order (ID, lock/busy, CONFIG, TLOW, THIGH, OFFSET). A busy preflight added guard reads only. `resetUsesVerifiedSettings` and `resetAfterOwnedOneShot` checked literal command bytes against nondefault settings and a transient MOD value. Every traced frame used the selected address. [Reset tests](../../test/test_reset.cpp), [transport admission tests](../../test/test_register_transport.cpp). |
+| Safety, timing and retained evidence | Missing startup proof, EUN and unresolved BUSY prevented the write. An ambiguous or late command invalidated live trust and retained historical alerts. Matching readback left the device uninitialized. `postCommandTiming` and `resetWaitAfterRebind` verified the command interval before ID and the separate startup interval before the guard, including recovery on a new clock at the same address. [Reset tests](../../test/test_reset.cpp). |
+| Reset outcomes and explicit recovery | `addressedOutcomeAndRecovery` exercised 24 combinations of model, post-command register image and offset ownership. Recovery restored the nonfactory limits, wrote only a managed offset and preserved all observed EEPROM shadows. `reportedProgrammedReload` separately checked the persistent CONFIG mask across six models. [Outcome tests](../../test/test_reset_outcomes.cpp). |
+
+| Acceptance check | Result |
+| --- | --- |
+| `cmake -S . -B build/host -G "MinGW Makefiles" -DTMP11X_BUILD_TESTS=ON -DCMAKE_BUILD_TYPE=Release`, `cmake --build build/host --config Release --clean-first --parallel 6`, `cmake -E chdir build/host ctest -C Release --output-on-failure` | PASS, 25/25 with GCC 15.1.0 and CMake/CTest 4.0.1. A focused rerun of `register_transport_cpp`, `reset_cpp` and `reset_outcomes_cpp` passed 3/3. |
+| [Tests-off source consumer](../testing.md#source-consumer) in fresh `build/p25d-consumer` using MinGW Release, then `cmake --build build/p25d-consumer --config Release --parallel 2` and `build/p25d-consumer/tmp11x_native_consumer.exe` | PASS, linked and printed `0.1.0`. |
+| One public include per translation unit with `g++ -std=c++17 -Wall -Wextra -Wpedantic -Werror -Iinclude -fsyntax-only -x c++ -`. Generate public XML with `doxygen -`, `GENERATE_XML=YES`, `WARN_AS_ERROR=YES`. | PASS, eight standalone headers. Doxygen 1.13.2 produced the reset entry in `build/p25d-docs/xml`. Its contract includes the refusal, both waits, mismatch and explicit recovery. |
+| `python -B scripts/check_references.py`, `python -B scripts/check_promptset.py`, `python -B tools/check_register_ledger.py`, `python -B tools/test_check_register_ledger.py`, `git diff --check` | PASS, 14 pinned PDFs, 55 stages, six model rows, 31 ledger regressions and clean diffs. Python 3.12.10. |
+
+Stage 27 consumes the synchronous reset and snapshot semantics. Audit 50
+reviews them with stages 22–27. Stage 31 covers fault handling and stage 38
+owns the guarded CLI route. MCU links, remote CI and physical tests were
+NOT RUN at this software checkpoint. Stage 43 owns the first remote CI run.
+Physical EEPROM reload, EUN, companion CONFIG bits and ACK availability
+during addressed reset remain unknown.
