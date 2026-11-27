@@ -6,6 +6,8 @@
 namespace TMP11x::detail {
 namespace {
 
+constexpr auto eepromBusy = Status::Error(Err::MEASUREMENT_NOT_READY, "EEPROM busy");
+
 std::optional<SettingsField> fieldFor(std::uint8_t pointer) noexcept {
   switch (pointer) {
     case command::config: return SettingsField::CONFIG;
@@ -18,17 +20,18 @@ std::optional<SettingsField> fieldFor(std::uint8_t pointer) noexcept {
 
 }  // namespace
 
-Status DeviceEvidence::observeGuard(std::uint16_t raw) noexcept {
+Status DeviceEvidence::observeGuard(std::uint16_t raw, std::optional<std::uint32_t> tick) noexcept {
   if (raw & command::unlock) device._eepromUnsafe = true;
+  const bool busy = (raw & command::unlockBusy) != 0;
+  if (busy) observeBusy(tick);
   if (device._eepromUnsafe) return Status::Error(Err::EEPROM_UNSAFE, "Observed unlocked EEPROM");
-  if (raw & command::unlockBusy) return Status::Error(Err::MEASUREMENT_NOT_READY, "EEPROM busy");
-  return Status::Ok();
+  return busy ? eepromBusy : Status::Ok();
 }
 
 void DeviceEvidence::observeBusy(std::optional<std::uint32_t> tick) noexcept {
   auto& live = device._live;
   if (live.guardInterruption.ok()) {
-    live.guardInterruption = Status::Error(Err::MEASUREMENT_NOT_READY, "EEPROM busy");
+    live.guardInterruption = eepromBusy;
   }
   live.guardBusyMs = tick;
   live.readyPending = false;

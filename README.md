@@ -68,18 +68,20 @@ transfer. No data writes, resets, CONFIG reads or TEMP reads occur.
 | TMP116, TMP116N | 1 → `0x05`, 2 → `0x06`, 3 → `0x07`, 4 → `0x08` |
 | TMP117, TMP117M, TMP117N, TMP119 | 1 → `0x05`, 2 → `0x06`, 3 → `0x08` |
 
-Use the first `snapshot.wordCount` entries of `snapshot.words`.
-Each entry records its pointer, raw 16-bit
-word (high byte first on the wire) and optional completion time. On a failed
-scan, `failedPointer` identifies where it stopped. A complete incompatible ID
+Check the returned status. `NOT_BOUND` leaves the previous snapshot intact.
+Once a scan starts, the first `snapshot.wordCount` entries of `snapshot.words`
+hold the completed shadow reads. Each entry records its pointer, raw 16-bit
+word (high byte first on the wire) and optional completion time. If the scan
+stops early, `failedPointer` identifies the first failed read or ID check. A complete incompatible ID
 remains in `snapshot.identity`. An absent `snapshot.lock` means lock and BUSY
 are unknown. A present lock describes only that read. An observed unlock
 blocks guarded operations until the owner corrects the device and calls
 `invalidateDeviceState()`.
 
-For one word, `readEepromWord(index, out)` takes one transfer and preserves
-`out` on failure. It uses the BOM selection even before an ID read and
-refuses a cached identity mismatch. Keep the shipment-label lot code with
+For one word, `readEepromWord(index, out)` uses the BOM selection even before
+an ID read. An unbound device, out-of-range index or cached identity mismatch
+returns an error before I²C. An admitted read takes one transfer.
+All failures preserve `out`. Keep the shipment-label lot code with
 the model, address, route and ordered readings. Every shadow value, including
 zero, is valid. An external writer can change a shadow even with EEPROM
 locked, so the non-atomic snapshot alone cannot authenticate a factory ID

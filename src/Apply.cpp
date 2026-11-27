@@ -74,7 +74,8 @@ Status Apply::readGuard() {
   _device._live.startupReady = true;  // step() has completed any required FIRST_ACK wait.
   std::uint16_t raw = 0;
   const auto result = readWord(RegisterTransport::tracked(_device), command::eepromUnlock, raw, _budget.remainingMs);
-  const auto guard = result.status.ok() ? DeviceEvidence{_device}.observeGuard(raw) : result.status;
+  const auto guard = result.status.ok() ? DeviceEvidence{_device}.observeGuard(raw, result.completedMs)
+                                        : result.status;
   const auto status = _budget.finishTransfer(result);
   if (!status.ok()) return status;
   if (guard.is(Err::MEASUREMENT_NOT_READY)) return _budget.waitForUs(1000);

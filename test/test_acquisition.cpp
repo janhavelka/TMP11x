@@ -650,6 +650,40 @@ void diagnosticInterruptsGuard() {
   }
 }
 
+void busyGuardDiscardsCachedReady() {
+  for (const bool duringRecovery : {false, true}) {
+    Fixture f;
+    f.config.settings.averaging = Averaging::SAMPLES_1;
+    f.begin();
+    CHECK(f.chip.addContinuousConversion(100));
+    ConfigurationObservation observed;
+    CHECK(f.device.readConfiguration(observed).ok() && observed.dataReady);
+    auto out = sentinel;
+    f.clearTrace();
+    f.chip.words[4] = 0x4000;
+    if (duringRecovery) {
+      // End recovery on the next guard read, before any write can clear readiness.
+      f.failAt(2);
+      CHECK(f.device.recover().is(Err::I2C_TIMEOUT));
+      f.checkTrace({0x0F, 4, 4});
+    } else {
+      CHECK(f.device.tryReadFresh(out).is(Err::MEASUREMENT_NOT_READY));
+      f.checkTrace({4});
+    }
+
+    f.chip.words[4] = 0;
+    f.clearTrace();
+    CHECK(f.device.tryReadFresh(out).is(Err::MEASUREMENT_NOT_READY));
+    f.checkTrace({4, 1});
+    CHECK(out.raw == sentinel.raw && !LatestRead{f.device}.cache);
+    CHECK(f.chip.addContinuousConversion(3200));
+    f.clearTrace();
+    CHECK(f.device.tryReadFresh(out).ok());
+    f.checkTrace({4, 1, 0});
+    checkFresh(f, out, ReadKind::CONTINUOUS_FRESH);
+  }
+}
+
 void diagnosticBusyBeforeContinuousTemp(bool readEeprom) {
   for (const bool timed : {false, true}) {
     Fixture f;
@@ -905,6 +939,7 @@ int main() {
   continuousPollingAcrossWrap();
   shortOneShotBudget();
   diagnosticInterruptsGuard();
+  busyGuardDiscardsCachedReady();
   diagnosticBusyBeforeContinuousTemp(false);
   diagnosticBusyBeforeContinuousTemp(true);
   residualOwnedOneShot();

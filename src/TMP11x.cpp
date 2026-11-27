@@ -312,10 +312,8 @@ Status TMP11x::readEepromSnapshot(EepromSnapshot& out) {
     return lockRead;
   }
   out.lock = EepromLockObservation{raw, completionTime()};
-  detail::DeviceEvidence evidence{*this};
   // Keep adverse evidence for guarded operations. Either lock state permits shadow reads.
-  evidence.observeGuard(raw);
-  if (out.lock->busy()) evidence.observeBusy(out.lock->observedAtMs);
+  detail::DeviceEvidence{*this}.observeGuard(raw, out.lock->observedAtMs);
 
   const auto& map = *detail::findModelDescriptor(_config.model);
   while (out.wordCount < map.capabilities.eepromWordCount) {

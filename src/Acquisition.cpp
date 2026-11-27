@@ -121,7 +121,8 @@ Status Acquisition::preparePoll() {
 Status Acquisition::readGuard() {
   std::uint16_t raw = 0;
   const auto result = readWord(RegisterTransport::tracked(_device), command::eepromUnlock, raw, _budget.remainingMs);
-  const auto guard = result.status.ok() ? DeviceEvidence{_device}.observeGuard(raw) : result.status;
+  const auto guard = result.status.ok() ? DeviceEvidence{_device}.observeGuard(raw, result.completedMs)
+                                        : result.status;
   const auto status = finish(result);
   if (!status.ok()) return status;
   if (guard.is(Err::MEASUREMENT_NOT_READY)) return renewGuard();

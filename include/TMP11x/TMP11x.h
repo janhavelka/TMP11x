@@ -329,6 +329,7 @@ class TMP11x {
   /// Each read uses the bound callback timeout. A clock is optional. No CONFIG or TEMP flags are consumed.
   /// On a transfer failure or incompatible ID, return its status and publish the completed prefix
   /// and failedPointer. Local rejection preserves @p out. EUN and BUSY are reported without polling.
+  /// Observed BUSY discards cached DATA_READY evidence for fresh acquisition.
   /// Observed EUN blocks later guarded operations until external correction and invalidateDeviceState().
   /// All shadow values, including zero, are valid. Prior volatile writes can obscure factory data.
   Status readEepromSnapshot(EepromSnapshot& out);

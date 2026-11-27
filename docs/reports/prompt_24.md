@@ -169,3 +169,58 @@ owns general register dump integration, stage 28 occupied-job rejection,
 and stages 37/38 the CLI. MCU, physical and remote CI checks were not run.
 Physical observation belongs to stage 40 and the first remote checkpoint
 to stage 43. The wrapper owns the staged diff, commit and push.
+
+## Phase c review
+
+Reviewed the 14-path implementation at `b29b6c48f01501903fb5b0bfba7963ff86eb77fe`
+on clean `main`. Its parent, subject and paths matched the phase-b request.
+The wrapper recorded synchronization at 01:03:16 Prague time, and the
+local upstream ref matched at entry. The eight inputs listed in phase a
+were available. Two parallel read-only reviewers examined runtime evidence
+and the physical maps, write policy, tests and documentation.
+
+**Freshness correction.** After a CONFIG read retained DATA_READY, an
+untimed fresh read could observe BUSY at EEPROM_UL and return not-ready.
+When BUSY cleared, the next request could publish the previously cached
+conversion. The new public regression failed on that second request at
+the review baseline. A snapshot observing the same BUSY word already
+discarded cached readiness. All complete EEPROM_UL observations now use
+the same BUSY handling and completion tick. EUN still takes precedence
+when both bits are set. [Evidence handling](../../src/DeviceEvidence.cpp).
+
+`busyGuardDiscardsCachedReady` covers both an untimed fresh read and
+recovery interrupted on its guard reread before any write. In both cases
+the next idle attempt reads only EEPROM_UL and CONFIG, returns
+`MEASUREMENT_NOT_READY` and preserves the caller's output. A new conversion
+then produces the trace `R04 R01 R00` and returns 25 °C.
+[Acquisition regression](../../test/test_acquisition.cpp).
+
+**Snapshot and write policy.** The ID-first scan, mismatch stop, optional
+timestamps including tick zero, partial outputs, immediate EUN retention
+and neutral transport accounting matched the public contract. The README
+now distinguishes local refusal, which preserves the previous output,
+from a scan that stops after I²C starts. The pinned map and traceability
+pages cited in phase a agree with the six-model pointer and byte-order
+tests. The protected-write sweep and public traces cover both meanings
+of `0x07`. [EEPROM tests](../../test/test_eeprom.cpp),
+[transport tests](../../test/test_register_transport.cpp),
+[application guide](../../README.md#read-eeprom-traceability-metadata).
+
+The private apply engine relies on exclusive ownership between steps.
+Interposing a diagnostic manually after a safe guard would violate that
+assumption. Both public callers drive the engine synchronously to completion.
+Stage 28 owns refusal of unrelated diagnostics while a job or result occupies
+the slot. Stage 29 exercises that gate with stepped configuration.
+[Apply engine](../../src/Apply.h), [admission contract](../prompts/28_cooperative-admission.md),
+[configuration jobs](../prompts/29_cooperative-config.md).
+
+| Local check | Review result |
+| --- | --- |
+| `cmake -E chdir build/host ctest -C Release --output-on-failure -R '^acquisition_cpp$'` with the new regression before the fix | FAIL at the second fresh request after BUSY cleared. |
+| `cmake --build build/host --config Release --parallel 6` and `cmake -E chdir build/host ctest -C Release --output-on-failure` | PASS, 23/23 suites, including acquisition, apply, EEPROM and the 6,815,744 protected-write refusals. CMake/CTest 4.0.1, GNU C++ 15.1.0. |
+| `doxygen -` on `include/TMP11x` with XML and `WARN_AS_ERROR=YES` | PASS, Doxygen 1.13.2. The generated snapshot entry documents the effect of BUSY on cached readiness. |
+| `python scripts/check_references.py`, `python scripts/check_promptset.py`, `git diff --check` | PASS, 14 pinned PDFs, 55 stages and the working diff. Python 3.12.10. |
+
+Phase d owns final software acceptance and the progress entry. MCU, physical
+and remote CI checks were outside this review. Physical observation belongs
+to stage 40 and remote CI to stage 43.
