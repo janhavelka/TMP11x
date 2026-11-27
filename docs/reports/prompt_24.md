@@ -224,3 +224,33 @@ the slot. Stage 29 exercises that gate with stepped configuration.
 Phase d owns final software acceptance and the progress entry. MCU, physical
 and remote CI checks were outside this review. Physical observation belongs
 to stage 40 and remote CI to stage 43.
+
+## Phase d acceptance
+
+**COMPLETE, 2026-11-27.** Accepted `readonly-eeprom` on clean `main` at
+`0a0ac78c4d2cea5fddc66f30b9469a0b1f9afc3f`. Its parent was `b29b6c4`.
+The subject and nine paths matched the phase-c request. The wrapper verified
+upstream equality at 01:17:23 Prague time, and both refs matched at entry.
+
+| Exit criterion | Evidence from the final Release run |
+| --- | --- |
+| Bounds, pointer order and repeated reads | Across all six models, `scalarBoundsAndFrames` rejected indices zero, count + 1 and 255 before I²C. It read changed and zero values from the fixture. TMP116/N included EEPROM3 at `0x07`. TMP117/M/N and TMP119 skipped that pointer. [EEPROM tests](../../test/test_eeprom.cpp). |
+| Snapshot, lock and BUSY | The ID-first scan used six reads on TMP116/N and five on the other selections. Faults at each position preserved the completed prefix. The lock tests covered all EUN/BUSY combinations, including an unlock followed by a failed shadow read. `busyGuardDiscardsCachedReady` required a new conversion after BUSY discarded cached readiness. [EEPROM tests](../../test/test_eeprom.cpp), [acquisition tests](../../test/test_acquisition.cpp). |
+| Prohibited writes and preservation of shadow data | `protectedWritesDenyEveryPayload` refused 6,815,744 attempts before any callback. `publicRoutesPreserveEeprom` traced begin, latest and both EEPROM APIs at the bound address. Each trace preserved the seeded words and contained zero protected writes, unlocks or reset commands. [Transport tests](../../test/test_register_transport.cpp). |
+
+The pinned register maps, lock definitions and shipment-label guidance in
+phase a were rechecked. The API reports non-atomic observations of volatile
+shadows. An outside write can change those observations even with EEPROM
+locked. The application guide covers recording the ordered words and lot
+code together. [Traceability guide](../../README.md#read-eeprom-traceability-metadata).
+
+| Acceptance check | Result |
+| --- | --- |
+| `cmake -S . -B build/host -G "MinGW Makefiles" -DTMP11X_BUILD_TESTS=ON -DCMAKE_BUILD_TYPE=Release`, `cmake --build build/host --config Release --clean-first --parallel 4`, `cmake -E chdir build/host ctest -C Release --output-on-failure` | PASS, 23/23 suites with GCC 15.1.0 and CMake/CTest 4.0.1. |
+| [Tests-off consumer configuration](../testing.md#source-consumer) with the MinGW generator in fresh `build/p24d-consumer`, then `cmake --build build/p24d-consumer --config Release --parallel 2` and `build/p24d-consumer/tmp11x_native_consumer.exe` | PASS, linked version `0.1.0`. |
+| One include per header with `g++ -std=c++17 -Wall -Wextra -Wpedantic -Werror -Iinclude -fsyntax-only -x c++ -`, then `doxygen -` on `include/TMP11x` with XML and `WARN_AS_ERROR=YES` | PASS, all eight headers compiled. Doxygen 1.13.2 emitted both EEPROM method entries, including bounds, partial results and BUSY effects. |
+| `python -B scripts/check_references.py`, `python -B scripts/check_promptset.py`, `git diff --check` | PASS, 14 pinned PDFs, 55 stages and the acceptance diff. Python 3.12.10. |
+
+Stage 26 owns diagnostic dump integration, stages 37/38 own CLI enforcement
+and stage 40 owns physical observation. MCU, fixture and remote CI checks
+were not run at this software checkpoint. Stage 43 owns remote CI.
