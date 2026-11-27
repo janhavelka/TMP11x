@@ -5,6 +5,7 @@
 #include "DeviceEvidence.h"
 #include "Identity.h"
 #include "ModelDescriptor.h"
+#include "Reset.h"
 #include "TMP11x/CommandTable.h"
 #include "TMP11x/Temperature.h"
 
@@ -40,6 +41,10 @@ Status TMP11x::begin() {
 
 Status TMP11x::recover() {
   return begin();
+}
+
+Status TMP11x::reset() {
+  return detail::Reset{*this}.run();
 }
 
 Status TMP11x::applySettings(const SensorSettings& candidate) {
@@ -217,6 +222,7 @@ Status TMP11x::verifyConfiguration() {
 
 void TMP11x::clearObservations() noexcept {
   _live = {};
+  _resetAttemptMs.reset();
   _alerts = {};
   _lastSample.reset();
   _health = {};

@@ -48,9 +48,8 @@ Status writeWord(FakeTmp11xDevice& device, const std::uint8_t* tx,
                  const TransferOutcome& outcome) {
   const auto pointer = tx[0];
   const auto value = static_cast<std::uint16_t>((tx[1] << 8) | tx[2]);
-  // Model the unchanged-register outcome for an addressed reset. Its effects
-  // on companion CONFIG bits, lock state and EEPROM shadows are unspecified.
   if (pointer == 0x01 && isTmp117Like(device.model) && (value & 0xF803) == 0x0002) {
+    if (outcome.addressedResetWords) device.loadResetImage(*outcome.addressedResetWords);
     return outcome.status;
   }
   // Ordinary CONFIG writes select canonical settings or the MOD=11 command.
@@ -104,6 +103,27 @@ Status exchange(FakeTmp11xDevice* device, TransferTrace& frame, const std::uint8
 }
 
 }  // namespace
+
+void FakeTmp11xDevice::loadResetImage(const RegisterWords& image) {
+  words = image;
+  _sum = 0;
+  _count = 0;
+  _blockUncertain = false;
+  _explicitShutdown = false;
+  _oneShotActive = false;
+}
+
+void FakeTmp11xDevice::loadProgrammedStartup(const RegisterWords& programmed) {
+  RegisterWords image{};
+  image[0] = 0x8000;
+  image[1] = programmed[1] & 0x07FC;  // Only MOD0 and CONFIG bits 9:2 persist.
+  image[2] = programmed[2];
+  image[3] = programmed[3];
+  // Three shadows and OFFSET on TMP117-like parts, four shadows on TMP116/N.
+  std::copy_n(programmed.begin() + 5, 4, image.begin() + 5);
+  image[0x0F] = words[0x0F];
+  loadResetImage(image);
+}
 
 void FakeTmp11xDevice::applyConfigWord(std::uint16_t word) {
   const auto mode = word & 0x0C00u;

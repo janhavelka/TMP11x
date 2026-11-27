@@ -223,6 +223,15 @@ change. This call costs zero callbacks. Restore stable power and exclusive
 access before calling `recover()`. Recovery checks identity, waits from the
 new compatible read, and checks EEPROM lock and busy before its first write.
 
+On an initialized TMP117, TMP117M, TMP117N or TMP119, call `reset()` to
+issue one command to the bound address. It waits for the 2 ms reset interval,
+checks identity, waits the separate 3 ms startup interval, then checks the
+EEPROM guard and reads CONFIG, both limits and OFFSET. TMP116/N returns
+`UNSUPPORTED` before I²C. After a command attempt, inspect the returned
+status and `getSettingsSnapshot()`. Even a matching readback leaves the
+device uninitialized. Call `recover()` when you want the desired settings
+applied and verified again. [Reset and recovery](docs/api-contracts.md#startup-apply-and-reset).
+
 ## Inspect transport health
 
 `healthSnapshot()` copies the instance's tracked I2C history without calling

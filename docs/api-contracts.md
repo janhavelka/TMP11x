@@ -452,9 +452,19 @@ evidence immediately before the single command attempt. Preserve desired
 settings and historical events/samples. A failed attempt leaves uncertain
 effects. After physical success wait at least 2 ms from completion, rounded
 up, before any post-reset observation. Establish a new postwait compatible
-ID/FIRST_ACK, observe startup wait, safe `0x04` and full profile readback.
-Report mismatch/unsafe/transport failure explicitly. Keep initialization
-clear until explicit begin/recover. No observed reset bit, factory image,
+ID/FIRST_ACK, wait the separately rounded 3 ms, then read `0x04`, CONFIG,
+TLOW, THIGH and OFFSET. A BUSY CONFIG acknowledges flags and requires a
+paced guard renewal and another CONFIG read. The scan records complete
+words in `verificationReads`, including a complete late callback. It returns
+`CONFIG_MISMATCH` with the first differing owned pointer after a complete
+scan. An unsafe guard, transfer fault or exhausted budget stops dependent
+reads and returns that failure. Matching fields leave trust UNKNOWN, and
+owned drift latches DIRTY. Both outcomes preserve the historical verification
+time and generation. Keep initialization clear until explicit begin/recover.
+If the command fails or the reset interval cannot finish, a subsequent
+`begin()` or `recover()` on the retained binding waits out the remaining
+command interval before its ID read. Bound-only diagnostics keep their
+ordinary read semantics and supply no startup proof. No observed reset bit, factory image,
 EEPROM reload, EUN state or bus availability is assumed. [Safety policy
 and per-model evidence](eeprom-and-reset-policy.md).
 

@@ -26,6 +26,7 @@ enum class ConfigReadSource : std::uint8_t {
   OBSERVATION,   ///< A single managed CONFIG query.
   VERIFICATION,  ///< Read-only profile verification.
   ACQUISITION,   ///< Freshness preflight, shutdown baseline or readiness poll.
+  RESET,         ///< Profile readback after an addressed reset command.
 };
 
 /// Origin of the first pending alert-mode event. Later observations may add either flag.
@@ -157,7 +158,7 @@ struct SettingsSnapshot {
   ConfigTrust trust = ConfigTrust::UNKNOWN;        ///< Current live profile trust.
   DirtyReason dirtyReason = DirtyReason::NONE;     ///< Retained until verified replay or invalidation.
   std::uint8_t affectedFields = 0;                 ///< Registers written or found different while dirty.
-  /// Fields completed by the last verification, including a scan that detected offset drift.
+  /// Fields completed by the last verification or post-reset scan, including late complete reads.
   /// Explicit invalidation or the first replay write attempt clears this mask.
   std::uint8_t verificationReads = 0;
   std::uint32_t verifiedGeneration = 0;            ///< Generation established by the last full replay.
@@ -229,6 +230,17 @@ class TMP11x {
   /// A failed write can leave partial changes and a DIRTY target. Recovery performs no reset
   /// or rollback. A known unlocked device requires external correction and invalidation.
   Status recover();
+
+  /// Issue one addressed Soft_Reset on an initialized, verified TMP117/M/N or TMP119.
+  /// TMP116/N returns UNSUPPORTED before I2C. Under stable power and exclusive ownership,
+  /// check EEPROM lock/busy, issue the command, wait at least 2 ms, read compatible ID,
+  /// wait the separate 3 ms startup interval, then check lock/busy and read the full profile.
+  /// Both waits round up for the bound clock. One operationTimeoutMs covers the entire call.
+  /// CONFIG reads acknowledge flags. Inspect getSettingsSnapshot() for complete observations
+  /// even on failure. CONFIG_MISMATCH identifies the first differing owned register.
+  /// After any command attempt the device remains uninitialized. Historical alerts, samples
+  /// and desired settings survive. Call recover() explicitly to replay the owned profile.
+  Status reset();
 
   /// Select continuous conversion or shutdown on an initialized, verified device.
   /// All three conversion setters use the binding's operation deadline and tracked
@@ -446,6 +458,8 @@ class TMP11x {
   Config _config{};
   IdentityInfo _identity{};
   LiveState _live{};
+  // A command may have reached this binding even when reset() returned early.
+  std::optional<std::uint32_t> _resetAttemptMs;
   AlertStatus _alerts{};
   // Sticky across ordinary begin/recover, teardown and rebind. The owner must
   // correct a known unlocked part before reporting device-state invalidation.

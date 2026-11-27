@@ -11,11 +11,13 @@ struct Reset {
   Reset(const Reset&) = delete;
   Reset& operator=(const Reset&) = delete;
 
-  // Success here means only that the addressed write completed within budget.
-  Status issueCommand();
+  Status run();
 
  private:
-  Status awaitDispatch();
+  Status awaitDispatch(std::uint32_t delayUs = 0);
+  Status readGuard(std::uint32_t delayUs = 0);
+  Status issueCommand();
+  Status readProfile();
   TMP11x& _device;
   OperationBudget _budget;
 };

@@ -139,6 +139,7 @@ Status DeviceEvidence::observeRegister(std::uint8_t pointer, std::uint16_t raw,
     return transfer.status;
   }
   auto& live = device._live;
+  const bool verification = source == ConfigReadSource::VERIFICATION || source == ConfigReadSource::RESET;
   if (pointer == command::offset) {
     if (command::accessFor(device._config.model, pointer) != command::Access::GUARDED_OFFSET) {
       return Status::Error(Err::UNSUPPORTED, "Selected model has no temperature offset");
@@ -150,11 +151,11 @@ Status DeviceEvidence::observeRegister(std::uint8_t pointer, std::uint16_t raw,
     if (drift) {
       const auto completedReads = live.verificationReads;
       device.clearLiveState();
-      if (source == ConfigReadSource::VERIFICATION) live.verificationReads = completedReads;
+      if (verification) live.verificationReads = completedReads;
     }
     live.offset = OffsetObservation{raw, temperature::decodeCounts(raw), transfer.completedMs};
     live.offsetContinuityLost = drift;
-    if (source == ConfigReadSource::VERIFICATION) {
+    if (verification) {
       live.verificationReads |= static_cast<std::uint8_t>(SettingsField::OFFSET);
     }
     if (drift) return Status::Error(Err::CONFIG_MISMATCH, "Unmanaged temperature offset changed", pointer);
@@ -176,7 +177,7 @@ Status DeviceEvidence::observeRegister(std::uint8_t pointer, std::uint16_t raw,
     auto& limit = pointer == command::lowLimit ? live.low : live.high;
     limit = LimitObservation{raw, temperature::decodeCounts(raw), transfer.completedMs};
   }
-  if (source == ConfigReadSource::VERIFICATION) live.verificationReads |= static_cast<std::uint8_t>(*field);
+  if (verification) live.verificationReads |= static_cast<std::uint8_t>(*field);
   return match;
 }
 

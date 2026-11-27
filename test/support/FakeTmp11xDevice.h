@@ -16,8 +16,15 @@ namespace TMP11x::test {
 struct FakeTmp11xDevice {
   explicit FakeTmp11xDevice(Model selected) : model(selected) {}
 
+  using RegisterWords = std::array<std::uint16_t, 16>;
   Model model;
-  std::array<std::uint16_t, 16> words{};
+  RegisterWords words{};
+
+  // Install a scenario's register image with an empty conversion accumulator.
+  void loadResetImage(const RegisterWords& image);
+  // Settled POR or external general-call reload, before the first conversion.
+  // The source is an independently seeded programmed image in pointer order.
+  void loadProgrammedStartup(const RegisterWords& programmed);
 
   // Feed one synthetic ADC result in continuous mode. Block means must be
   // exactly representable and THERM limits ordered for a modeled comparison.
@@ -53,6 +60,9 @@ struct TransferOutcome {
   // TI leaves the transition unspecified. Therm mode only exposes HIGH.
   std::uint16_t comparatorFlagsOnModeChange = 0;
   bool ignoreSuccessfulWrite = false;  // A reset-load write may ACK without changing storage.
+  // At an addressed reset attempt, optionally replace the words even on a
+  // transport error. Unchanged words and a supplied image are model choices.
+  std::optional<FakeTmp11xDevice::RegisterWords> addressedResetWords{};
 };
 
 struct TransferTrace {

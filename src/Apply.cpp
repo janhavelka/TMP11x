@@ -27,6 +27,10 @@ Status Apply::start() {
 
   _shutdown.mode = Mode::SHUTDOWN;
   _budget.start(binding, binding.operationTimeoutMs);
+  if (_device._resetAttemptMs) {
+    const auto elapsed = _budget.previousMs - *_device._resetAttemptMs;
+    return _status = _budget.waitForUs(addressedResetUs, elapsed);
+  }
   return _status = pending;
 }
 
@@ -49,6 +53,7 @@ Status Apply::step() {
 }
 
 Status Apply::readIdentityStep() {
+  _device._resetAttemptMs.reset();  // Any outstanding command interval elapsed before this dispatch.
   const auto result = detail::readIdentity(RegisterTransport::tracked(_device), _device._identity,
                                             _budget.remainingMs);
   if (result.status.is(Err::IDENTITY_MISMATCH)) _device.clearLiveState();
@@ -58,7 +63,7 @@ Status Apply::readIdentityStep() {
 
   _phase = Phase::GUARD;
   // Until the operation-local wait elapses, the instance holds no proof.
-  return _device._live.startupReady ? pending : _budget.waitForUs(3000);
+  return _device._live.startupReady ? pending : _budget.waitForUs(startupWaitUs);
 }
 
 Status Apply::readGuard() {

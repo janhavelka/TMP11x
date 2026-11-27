@@ -16,7 +16,7 @@ conversion or startup interval runs. [Public API and operation gates](api-contra
 | `Temperature.h` | Pure signed count, Celsius and register-word conversions for TEMP and thresholds. |
 | `Configuration.h` | Bus-silent profile validation, CONFIG encoding and observation, and expected-register comparison for CONFIG, THIGH, TLOW and managed OFFSET. |
 | `Timing.h` | Bus-silent conversion timing for the selected model, cycle and averaging. |
-| `TMP11x.h` | The device class and its sample, identity, health, settings and alert evidence. Public operations include binding, initialization and recovery, identity checks, guarded settings changes, CONFIG and limit readback, alert event consumption, GPIO sampling and temperature acquisition. |
+| `TMP11x.h` | The device class and its sample, identity, health, settings and alert evidence. Public operations include binding, initialization and recovery, addressed reset, identity checks, guarded settings changes, CONFIG and limit readback, alert event consumption, GPIO sampling and temperature acquisition. |
 | `Version.h` | Checked-in generated package version from `library.json`. Its constants describe the header, and the out-of-line `version()` describes the linked library. |
 
 Implementation belongs in `src/`. Each public header must compile on its
@@ -90,6 +90,13 @@ publishing a generation. Acquisition uses a separate typed write permission
 for MOD=11 after explicit shutdown and its CONFIG baseline read. Guarded
 replay issues a managed OFFSET write only for an engaged target on a
 capable model, then reads back the full word before the CONFIG baseline.
+
+`detail::Reset` uses the verified settings encoder and its own CONFIG write
+purpose. One operation budget spans preflight, the command and all readback.
+The reset interval starts at command completion. The startup interval starts
+at the subsequent compatible ID completion. Reset records the settings and
+alert evidence observed under the new guard. Only an explicit replay can
+establish the next verified generation. [Reset implementation](../src/Reset.cpp).
 
 | Owner | Exclusive decision and callers |
 | --- | --- |

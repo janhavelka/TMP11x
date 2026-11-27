@@ -4,6 +4,9 @@
 
 namespace TMP11x::detail {
 
+inline constexpr std::uint32_t addressedResetUs = 2000;  // Documented Soft_Reset duration.
+inline constexpr std::uint32_t startupWaitUs = 3000;     // Stable-power policy from compatible ID completion.
+
 // Shared by exclusive, timed register operations. Each clock sample is a
 // floor reading in the binding's epoch, including the sample at callback return.
 struct OperationBudget {

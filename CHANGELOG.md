@@ -52,3 +52,6 @@
 - Added bound-only reads of individual EEPROM data shadows and an ID-first
   snapshot of lock, BUSY and the model's three or four shadow words.
   A failed scan reports the completed prefix and first unsuccessful pointer.
+- Added guarded addressed reset on TMP117/M/N and TMP119 with timed identity,
+  EEPROM guard and profile readback. Explicit recovery replays owned settings
+  and preserves unmanaged calibration. TMP116/N refuses reset before I²C.

@@ -165,3 +165,46 @@ completion through the rounded 2 ms reset wait, compatible ID/FIRST_ACK,
 separate startup wait, renewed guard and full profile observation. Case 4
 retains the changed/unchanged reset fixture and explicit replay coverage.
 Physical reset behavior remains unverified. Remote CI belongs to stage 43.
+
+## Phase b — Public reset and explicit recovery
+
+Cases 3 and 4 completed phase b on 2026-11-28. The clean input was
+`ca1d91c35b4202284d331744289ed3f09ba8419e`. Its parent, subject and 14
+paths matched the case 2 wrapper request. The wrapper logged upstream equality
+at 02:16:14 Prague time on November 27. The pinned field tables cited above
+still define the same model split and 2 ms command interval. The read-only
+TMP1x2 reference remained clean at `0791429f`.
+
+The public `reset()` uses one operation deadline. On an idle, matching
+device its eight callbacks are one EEPROM preflight read, one addressed
+command write, then reads of DEVICE_ID, EEPROM_UL, CONFIG, TLOW, THIGH and OFFSET in that order. Command completion starts the reset wait. Compatible ID
+completion starts the separate startup wait. A CONFIG reporting BUSY retains
+its flags and requires a paced guard renewal and another CONFIG observation.
+A complete mismatch latches DIRTY. Matching observations leave trust UNKNOWN.
+Neither outcome advances the verified generation or initializes the device.
+[Public contract](../api-contracts.md#startup-apply-and-reset),
+[reset engine](../../src/Reset.cpp).
+
+If the reset interval is interrupted, the retained binding keeps the command
+completion tick, including on an ambiguous transfer. A subsequent explicit
+recovery waits the outstanding interval before taking a new ID/startup origin.
+Bound-only diagnostics do not establish this proof. [Replay engine](../../src/Apply.cpp).
+
+| Host cases | Observed result |
+| --- | --- |
+| `postCommandTiming`, `waitAtDeadline`, `invalidationAtCommand` | At 1 ms resolution ID began 3 ms after command completion and the guard began 4 ms after ID completion. At 2 ms resolution the waits were 4 and 6 ms. Equality at expiry stopped the next read. A stalled recovery returned WORK_LIMIT before any callback and preserved the pending reset interval. |
+| `postCommandSafety`, `partialPostCommandReads`, `resetDispatchLimit` | Incompatible ID, EUN and persistent BUSY stopped the sequence. A short transfer at each of the six read positions retained the completed prefix. A late complete word was observed and counted before timeout. The 256th dispatch could finish at OFFSET. With the command in that slot, the operation returned WORK_LIMIT before ID. [Public reset tests](../../test/test_reset.cpp). |
+| `addressedOutcomeAndRecovery`, `independentCommandAndObservationOutcomes`, `driftBeforeReadFailure` | All four supported selections exercised unchanged, changed-profile and offset-only images with managed and unmanaged calibration. Only explicit recovery wrote the nonfactory limits and any managed offset. Separate cases combined changed or unchanged limits with a command NACK, ID NACK or unlocked/busy guard. A short THIGH read after a mismatching TLOW returned the transport fault and retained the low-limit drift. |
+| `reportedProgrammedReload` | Across all six selections the external POR/general-call fixture loaded only `0x07FC` of programmed CONFIG. External invalidation made zero callbacks. Recovery preserved the seeded shadows and unmanaged calibration. Addressed-reset images remain independent fixture choices. [Outcome tests](../../test/test_reset_outcomes.cpp), [register fixture](../../test/support/FakeTmp11xDevice.cpp). |
+
+| Local check on the phase-b working tree | Result |
+| --- | --- |
+| `cmake -S . -B build/host -DTMP11X_BUILD_TESTS=ON -DCMAKE_BUILD_TYPE=Release`, `cmake --build build/host --config Release --parallel 6`, `cmake -E chdir build/host ctest -C Release --output-on-failure` | PASS, 25/25 suites with CMake/CTest 4.0.1 and GCC 15.1.0. |
+| `cmake -S examples/native_consumer -B build/p25b-consumer -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release -DCMAKE_DISABLE_FIND_PACKAGE_Python3=TRUE -DCMAKE_DISABLE_FIND_PACKAGE_Git=TRUE`, `cmake --build build/p25b-consumer --config Release --parallel 6`, `build/p25b-consumer/tmp11x_native_consumer.exe` | PASS, tests-off consumer linked and printed `0.1.0`. |
+| `doxygen -` on `include/TMP11x` with XML and `WARN_AS_ERROR=YES` | PASS, Doxygen 1.13.2. Parsed the generated public `reset()` entry in `build/p25b-docs/xml`. |
+| `python scripts/check_references.py`, `python scripts/check_promptset.py`, `python tools/check_register_ledger.py`, `python tools/test_check_register_ledger.py` | PASS, 14 pinned PDFs, 55 stages, six model rows and 31 ledger regressions with Python 3.12.10. |
+| `git diff --check` and `git diff --cached --check` | PASS. The wrapper owns staging, commit and push for this tree. |
+
+Phase c owns fresh-session review of the command, evidence, fixture assertions
+and source claims. Phase d owns acceptance and the completion marker.
+The physical reset image, EUN outcome and bus availability remain unverified.
