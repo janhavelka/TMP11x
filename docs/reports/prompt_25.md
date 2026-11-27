@@ -208,3 +208,36 @@ Bound-only diagnostics do not establish this proof. [Replay engine](../../src/Ap
 Phase c owns fresh-session review of the command, evidence, fixture assertions
 and source claims. Phase d owns acceptance and the completion marker.
 The physical reset image, EUN outcome and bus availability remain unverified.
+
+## Phase c — Fresh review, 2026-11-28
+
+Reviewed the stage diff from `d80da0faf4ffeb39a65ca2092026b8b964ebe2f8`
+through `521acd3aea85c6054440bcb0c281bfd1da7c3afc` on clean-entry
+`main`. The phase-b commit matched the requested subject, parent and 19 paths.
+The wrapper recorded upstream equality at 00:21:02 Prague time.
+
+Two parallel read-only reviews covered the driver and lifecycle, and the TI
+sources, fixtures and trace assertions. The TMP116 p.26, TMP117 pp.27–28 and
+TMP119 pp.34–35 field tables support the existing command gate and reset
+duration. The command uses one bound address. The post-command ID starts a
+separate startup interval, and the readback records complete words through
+the first fault. An earlier observed mismatch remains in the settings snapshot
+when a later transfer fails. The programmed-startup fixture masks CONFIG with
+`0x07FC`; addressed-reset tests choose their own register images. The sibling
+external-invalidation reference remained clean at `0791429f`.
+
+| Finding | Correction and evidence |
+| --- | --- |
+| Teardown discarded the command completion tick. After a command NACK, `end(); recover()` issued an ID read while the clock was frozen inside the reset interval. The new trace assertion failed against the phase-b driver. | The pending wait now belongs to the command address. `end()` preserves its clock origin. Rebinding to the same address starts a full wait in the new epoch. A failed identity read at a different address preserves the outstanding wait. `invalidationAtCommand` and `resetWaitAfterRebind` verify zero early callbacks, the separate startup delay and successful recovery. [Apply](../../src/Apply.cpp), [public contract](../api-contracts.md#startup-apply-and-reset). |
+| Public traces previously used default CONFIG subfields for both modes. A fixed default word could pass those tests. | After public setters change the profile, `resetUsesVerifiedSettings` observes `0xABFC` and asserts the literal command `01 03 FE`. `resetAfterOwnedOneShot` observes MOD=11 after a real driver-triggered shot, asserts the shutdown command `01 06 22`, and gets a CONFIG mismatch when the fixture retains MOD=11 after reset. [Public regressions](../../test/test_reset.cpp). |
+
+| Phase-c check | Result |
+| --- | --- |
+| `cmake -S . -B build/host -DTMP11X_BUILD_TESTS=ON -DCMAKE_BUILD_TYPE=Release`, `cmake --build build/host --config Release --parallel 6`, `cmake -E chdir build/host ctest -C Release --output-on-failure` | PASS, all 25 suites with CMake/CTest 4.0.1 and GCC 15.1.0. |
+| `cmake -S examples/native_consumer -B build/p25b-consumer -DCMAKE_BUILD_TYPE=Release -DCMAKE_DISABLE_FIND_PACKAGE_Python3=TRUE -DCMAKE_DISABLE_FIND_PACKAGE_Git=TRUE`, `cmake --build build/p25b-consumer --config Release --parallel 4`, `build/p25b-consumer/tmp11x_native_consumer.exe` | PASS, tests-off consumer linked and printed `0.1.0`. |
+| `doxygen -` over `include/TMP11x` with `GENERATE_XML=YES` and `WARN_AS_ERROR=YES` | PASS, Doxygen 1.13.2. Parsed the bind, end and reset contracts from `build/p25c-docs/xml`. |
+| `python scripts/check_references.py`, `python scripts/check_promptset.py`, `python tools/check_register_ledger.py`, `python tools/test_check_register_ledger.py` | PASS, 14 pinned PDFs, 55 stages, six model rows and 31 ledger regressions on Python 3.12.10. |
+| `git diff --check`, `git diff --cached --check` | PASS. The wrapper owns staging, commit and upstream verification. |
+
+Phase d owns final acceptance, the report index and the progress row.
+Physical addressed-reset effects remain open. Remote CI belongs to stage 43.

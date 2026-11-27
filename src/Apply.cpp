@@ -27,8 +27,10 @@ Status Apply::start() {
 
   _shutdown.mode = Mode::SHUTDOWN;
   _budget.start(binding, binding.operationTimeoutMs);
-  if (_device._resetAttemptMs) {
-    const auto elapsed = _budget.previousMs - *_device._resetAttemptMs;
+  auto& reset = _device._pendingReset;
+  if (reset && reset->address == binding.i2cAddress) {
+    if (!reset->originMs) reset->originMs = _budget.previousMs;
+    const auto elapsed = _budget.previousMs - *reset->originMs;
     return _status = _budget.waitForUs(addressedResetUs, elapsed);
   }
   return _status = pending;
@@ -53,7 +55,9 @@ Status Apply::step() {
 }
 
 Status Apply::readIdentityStep() {
-  _device._resetAttemptMs.reset();  // Any outstanding command interval elapsed before this dispatch.
+  if (_device._pendingReset && _device._pendingReset->address == _device._config.i2cAddress) {
+    _device._pendingReset.reset();  // The wait for this address elapsed before dispatch.
+  }
   const auto result = detail::readIdentity(RegisterTransport::tracked(_device), _device._identity,
                                             _budget.remainingMs);
   if (result.status.is(Err::IDENTITY_MISMATCH)) _device.clearLiveState();

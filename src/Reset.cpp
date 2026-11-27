@@ -60,7 +60,7 @@ Status Reset::issueCommand() {
   if (alerts.firstEvent) alerts.mixedOrUnknown = true;
   const auto result = writeWord(RegisterTransport::tracked(_device), command::config,
                                 stableWord | command::softReset, access, _budget.remainingMs);
-  _device._resetAttemptMs = result.completedMs;
+  _device._pendingReset = TMP11x::PendingReset{binding.i2cAddress, result.completedMs};
   return _budget.finishTransfer(result);
 }
 
@@ -94,7 +94,7 @@ Status Reset::run() {
 
   const auto admission = awaitDispatch(addressedResetUs);
   if (!admission.ok()) return admission;
-  _device._resetAttemptMs.reset();
+  _device._pendingReset.reset();
   const auto id = readIdentity(RegisterTransport::tracked(_device), _device._identity, _budget.remainingMs);
   const auto status = _budget.finishTransfer(id.transfer);
   if (!status.ok()) return status;

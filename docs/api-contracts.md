@@ -463,7 +463,10 @@ owned drift latches DIRTY. Both outcomes preserve the historical verification
 time and generation. Keep initialization clear until explicit begin/recover.
 If the command fails or the reset interval cannot finish, a subsequent
 `begin()` or `recover()` on the retained binding waits out the remaining
-command interval before its ID read. Bound-only diagnostics keep their
+command interval before its ID read, including after `end()`. If the same
+instance rebinds to that address while the wait is outstanding, the first
+managed operation starts a full reset wait in the new clock epoch. Managed
+identity reads at a different address can proceed immediately. Bound-only diagnostics keep their
 ordinary read semantics and supply no startup proof. No observed reset bit, factory image,
 EEPROM reload, EUN state or bus availability is assumed. [Safety policy
 and per-model evidence](eeprom-and-reset-policy.md).

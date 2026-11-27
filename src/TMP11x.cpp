@@ -22,6 +22,7 @@ Status TMP11x::bind(const Config& config) noexcept {
   if (!profile.ok()) return profile;
 
   _config = config;
+  if (_pendingReset) _pendingReset->originMs.reset();  // An accepted binding starts a new clock epoch.
   clearObservations();
   return Status::Ok();
 }
@@ -222,7 +223,6 @@ Status TMP11x::verifyConfiguration() {
 
 void TMP11x::clearObservations() noexcept {
   _live = {};
-  _resetAttemptMs.reset();
   _alerts = {};
   _lastSample.reset();
   _health = {};

@@ -184,6 +184,48 @@ void commandAfterBusy() {
   }
 }
 
+void resetUsesVerifiedSettings() {
+  Fixture f;
+  f.begin();
+  CHECK(f.device.setCycle(Cycle::CODE_7).ok());
+  CHECK(f.device.setAveraging(Averaging::SAMPLES_64).ok());
+  CHECK(f.device.setAlert(AlertMode::THERM, Polarity::ACTIVE_HIGH, PinFunction::DATA_READY).ok());
+  // The alternate continuous MOD (10), HIGH and DATA_READY appear in the last read.
+  f.chip.words[1] |= 0xA800;
+  ConfigurationObservation observed;
+  CHECK(f.device.readConfiguration(observed).ok() && observed.raw == 0xABFC);
+  CHECK(f.device.configTrust() == ConfigTrust::VERIFIED);
+  f.bus.trace.clear();
+  CHECK(f.device.reset().ok());
+  CHECK(f.bus.trace.size() == 8);
+  const auto& command = f.bus.trace[1];
+  CHECK(!command.combinedRead && command.address == 0x4B);
+  CHECK((command.tx == std::vector<std::uint8_t>{0x01, 0x03, 0xFE}));
+}
+
+void resetAfterOwnedOneShot() {
+  Fixture f;
+  f.config.settings.mode = Mode::SHUTDOWN;
+  f.begin();
+  f.afterTransfer = [&](const TransferTrace& frame) {
+    if (!frame.combinedRead && frame.tx == std::vector<std::uint8_t>{1, 0x0E, 0x20}) {
+      for (int i = 0; i < 8; ++i) CHECK(f.chip.addOneShotConversion(128));
+    }
+  };
+  Sample sample;
+  CHECK(f.device.readOneShotBlocking(sample, 500).ok() && sample.freshConversion);
+  const auto before = f.device.getSettingsSnapshot();
+  CHECK(before.config && before.config->mode == ObservedMode::ONE_SHOT && before.trust == ConfigTrust::VERIFIED);
+  f.afterTransfer = {};
+  f.bus.trace.clear();
+  // This addressed-reset scenario preserves the register image. The old trigger
+  // no longer qualifies MOD=11 as a match for the desired shutdown profile.
+  const auto status = f.device.reset();
+  CHECK(status.is(Err::CONFIG_MISMATCH) && status.detail == 1);
+  f.checkFrames(1, true, {0x0F, 4, 1, 3, 2, 7});
+  CHECK(f.device.configTrust() == ConfigTrust::DIRTY && !f.device.isInitialized());
+}
+
 void invalidationAtCommand() {
   for (const bool late : {false, true}) {
     Fixture f;
@@ -232,12 +274,15 @@ void invalidationAtCommand() {
     f.bus.trace.clear();
     f.guardTicks.clear();
     const auto commandCompleted = late ? after.lastSuccessMs : after.lastErrorMs;
-    if (late) {
-      f.clockFrozen = true;
-      CHECK(f.device.recover().is(Err::WORK_LIMIT));
-      CHECK(f.bus.trace.empty());
-      f.clockFrozen = false;
+    if (!late) {
+      const auto clockReads = f.clockReads;
+      CHECK(f.device.end().ok() && f.device.isBound());
+      CHECK(f.clockReads == clockReads && f.bus.trace.empty());
     }
+    f.clockFrozen = true;
+    CHECK(f.device.recover().is(Err::WORK_LIMIT));
+    CHECK(f.bus.trace.empty());
+    f.clockFrozen = false;
     std::uint32_t idCompleted = 0;
     f.afterTransfer = [&](const TransferTrace& frame) {
       if (frame.tx[0] == 0x0F) {
@@ -287,6 +332,36 @@ void postCommandTiming() {
     CHECK(!f.device.isInitialized() && observed.trust == ConfigTrust::UNKNOWN);
     CHECK(observed.verificationReads == 0x0F);
     CHECK(f.device.healthSnapshot().totalSuccess == health.totalSuccess + 8);
+  }
+}
+
+void resetWaitAfterRebind() {
+  for (const bool unbind : {false, true}) {
+    Fixture f;
+    f.begin();
+    f.bus.script = {{}, {Status::Error(Err::I2C_NACK_DATA, "ambiguous reset")}};
+    CHECK(f.device.reset().is(Err::I2C_NACK_DATA));
+    f.bus.trace.clear();
+    if (unbind) {
+      CHECK(f.device.unbind().ok());
+      // Another address can be probed by begin() while the first part is resetting.
+      auto other = f.config;
+      other.i2cAddress = 0x48;
+      f.clockFrozen = true;
+      CHECK(f.device.begin(other).is(Err::I2C_NACK_ADDR));
+      CHECK(f.bus.trace.size() == 1 && f.bus.trace[0].address == 0x48);
+      f.bus.trace.clear();
+    }
+    // Explicit rebind can replace the clock epoch, even with the same callback.
+    f.config.clockResolutionMs = 2;
+    f.clockReads = 0;
+    f.clockFrozen = true;
+    CHECK(f.device.begin(f.config).is(Err::WORK_LIMIT));
+    CHECK(f.bus.trace.empty());
+    f.clockFrozen = false;
+    f.guardTicks.clear();
+    CHECK(f.device.recover().ok());
+    CHECK(f.idTick >= 4 && !f.guardTicks.empty() && f.guardTicks[0] - f.idTick >= 6);
   }
 }
 
@@ -445,8 +520,11 @@ int main() {
   preflightRefusals();
   lockedIdlePreflight();
   commandAfterBusy();
+  resetUsesVerifiedSettings();
+  resetAfterOwnedOneShot();
   invalidationAtCommand();
   postCommandTiming();
+  resetWaitAfterRebind();
   waitAtDeadline();
   postCommandSafety();
   partialPostCommandReads();

@@ -211,6 +211,8 @@ class TMP11x {
   /// Copy the selected target, hooks, transport policy and desired settings without I/O.
   /// INVALID_CONFIG preserves the previous target and evidence. Acceptance starts
   /// a new observation history. A known EEPROM unlock still blocks mutation.
+  /// If a reset interval is outstanding at this address, begin() waits the full
+  /// interval on the new clock before reading identity.
   /// Checks all settings, including ordered THERM limits. Hardware verification requires begin().
   Status bind(const Config& config) noexcept;
 
@@ -314,7 +316,8 @@ class TMP11x {
   Status verifyConfiguration();
 
   /// Clear local observations, initialization and startup proof, keeping the bound
-  /// target and desired settings. Safe to repeat. The physical power mode is untouched.
+  /// target and desired settings. An outstanding addressed-reset wait still applies
+  /// before the next managed identity read. Safe to repeat. The physical power mode is untouched.
   Status end() noexcept;
 
   /// Clear local evidence and release the binding and its borrowed hooks without I/O.
@@ -458,8 +461,12 @@ class TMP11x {
   Config _config{};
   IdentityInfo _identity{};
   LiveState _live{};
-  // A command may have reached this binding even when reset() returned early.
-  std::optional<std::uint32_t> _resetAttemptMs;
+  // An ambiguous command can outlive its binding. A new clock epoch needs a new wait origin.
+  struct PendingReset {
+    std::uint8_t address;
+    std::optional<std::uint32_t> originMs;
+  };
+  std::optional<PendingReset> _pendingReset;
   AlertStatus _alerts{};
   // Sticky across ordinary begin/recover, teardown and rebind. The owner must
   // correct a known unlocked part before reporting device-state invalidation.
