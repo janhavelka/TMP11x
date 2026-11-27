@@ -26,7 +26,7 @@ Status TMP11x::bind(const Config& config) noexcept {
 }
 
 Status TMP11x::begin(const Config& config) {
-  const auto timing = detail::Apply::validateTiming(config);
+  const auto timing = detail::OperationBudget::validateTiming(config);
   if (!timing.ok()) return timing;
   const auto accepted = bind(config);
   if (!accepted.ok()) return accepted;

@@ -4,12 +4,16 @@
 
 namespace TMP11x::detail {
 
+struct OperationBudget;
+
 // Record the physical outcome before the owner resolves its deadline or publishes output.
 struct DeviceEvidence {
   TMP11x& device;
 
   // Record a complete EEPROM_UL word, including when its callback was late.
   Status observeGuard(std::uint16_t raw, std::optional<std::uint32_t> tick) noexcept;
+  // One tracked guard read. A timely BUSY schedules the next paced read on this budget.
+  Status readTimedGuard(OperationBudget& budget);
 
   // Compare owned registers, including managed OFFSET, and check unmanaged calibration continuity.
   Status observeRegister(std::uint8_t pointer, std::uint16_t raw, const TransferResult& transfer,

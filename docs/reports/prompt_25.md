@@ -127,3 +127,41 @@ protected pointer with the new purpose.
 Continue phase b with case 2, timed preflight and invalidation immediately
 before the reset write, including ambiguous and late completion. The full
 public operation, post-reset observations and explicit recovery tests remain open.
+
+## Phase b — Timed reset preflight and invalidation, 2026-11-27
+
+Case 2 passed on clean-entry `main` at `88f05ebdc082466f2187c20da1e070b1c35741bf`.
+Its parent, subject and five paths matched the preceding wrapper request.
+The wrapper recorded upstream equality at 01:59:50 Prague time.
+
+The [private reset operation](../../src/Reset.cpp) encodes the verified target,
+obtains a fresh locked-idle guard, and issues one addressed CONFIG write.
+It shares timing admission and paced guard handling with initialization.
+Immediately before the write it discards startup, initialization, current
+profile and conversion evidence. Pending alerts retain their original
+generation and gain the unknown-provenance and possible-loss flags. The
+command result covers transport and deadline only. The public entry point
+remains pending until post-command observations are implemented.
+
+The [reset suite](../../test/test_reset.cpp) exercises four cases.
+
+| Case | Observed result |
+| --- | --- |
+| `preflightRefusals` | Unbound, uninitialized, dirty-profile and TMP116/N requests issued zero callbacks. |
+| `lockedIdlePreflight` | EUN alone and EUN+BUSY each latched unsafe after one guard. Short, continually busy and late guards issued zero writes and kept initialization. |
+| `commandAfterBusy` | TMP117/M/N and TMP119 each retried BUSY after the paced interval, then issued exactly one canonical continuous or shutdown frame. Every transfer went to the selected address `0x4B`. |
+| `invalidationAtCommand` | An injected write effect with a data NACK and a successful late write both left the driver uninitialized. Pending HIGH was already historical inside the write callback. Both cases retained desired settings, verification history and the last sample. A second command request made zero transfers. Explicit recovery established a new ID/startup interval. |
+
+| Local check | Result |
+| --- | --- |
+| `cmake -S . -B build/host -DTMP11X_BUILD_TESTS=ON -DCMAKE_BUILD_TYPE=Release` and `cmake --build build/host --config Release --parallel 6` | PASS, CMake 4.0.1 and GCC 15.1.0. Rebuilt the final test with `--target tmp11x_reset_test --parallel 6`. |
+| `cmake -E chdir build/host ctest -C Release --output-on-failure` | PASS, all 24 registered suites. |
+| `python scripts/check_references.py` and `python scripts/check_promptset.py` | PASS, 14 pinned PDFs and 55 stages, Python 3.12.10. |
+| `python tools/check_register_ledger.py` and `python tools/test_check_register_ledger.py` | PASS, six models and 31 regression cases. |
+| `git diff --check` and `git diff --cached --check` | PASS. Staging, commit and push belong to the wrapper. |
+
+Continue phase b with case 3. Carry the same operation budget from command
+completion through the rounded 2 ms reset wait, compatible ID/FIRST_ACK,
+separate startup wait, renewed guard and full profile observation. Case 4
+retains the changed/unchanged reset fixture and explicit replay coverage.
+Physical reset behavior remains unverified. Remote CI belongs to stage 43.

@@ -14,15 +14,6 @@ constexpr auto unsafe = Status::Error(Err::EEPROM_UNSAFE, "Observed unlocked EEP
 
 }  // namespace
 
-Status Apply::validateTiming(const Config& binding) noexcept {
-  if (!binding.nowMs) return Status::Error(Err::CLOCK_REQUIRED, "Apply requires a clock");
-  if (!isValidInterval(binding.operationTimeoutMs) || !isValidInterval(binding.clockResolutionMs) ||
-      binding.operationTimeoutMs < binding.clockResolutionMs) {
-    return Status::Error(Err::INVALID_CONFIG, "Apply budget must cover at least one clock tick");
-  }
-  return Status::Ok();
-}
-
 Status Apply::start() {
   if (_started) return _status;
   _started = true;
@@ -30,7 +21,7 @@ Status Apply::start() {
   const auto& binding = _device._config;
   _status = validateSettings(binding.model, _candidate);
   if (!_status.ok()) return _status;
-  _status = validateTiming(binding);
+  _status = OperationBudget::validateTiming(binding);
   if (!_status.ok()) return _status;
   if (_device._eepromUnsafe) return _status = unsafe;
 
@@ -72,14 +63,8 @@ Status Apply::readIdentityStep() {
 
 Status Apply::readGuard() {
   _device._live.startupReady = true;  // step() has completed any required FIRST_ACK wait.
-  std::uint16_t raw = 0;
-  const auto result = readWord(RegisterTransport::tracked(_device), command::eepromUnlock, raw, _budget.remainingMs);
-  const auto guard = result.status.ok() ? DeviceEvidence{_device}.observeGuard(raw, result.completedMs)
-                                        : result.status;
-  const auto status = _budget.finishTransfer(result);
+  const auto status = DeviceEvidence{_device}.readTimedGuard(_budget);
   if (!status.ok()) return status;
-  if (guard.is(Err::MEASUREMENT_NOT_READY)) return _budget.waitForUs(1000);
-  if (!guard.ok()) return guard;
   _lockedIdle = true;
   _phase = _afterGuard;
   return pending;

@@ -14,6 +14,15 @@ struct OperationBudget {
   std::uint32_t previousMs = 0;
   std::uint32_t remainingMs = 0;
 
+  static Status validateTiming(const Config& binding) noexcept {
+    if (!binding.nowMs) return Status::Error(Err::CLOCK_REQUIRED, "Operation requires a clock");
+    if (!isValidInterval(binding.operationTimeoutMs) || !isValidInterval(binding.clockResolutionMs) ||
+        binding.operationTimeoutMs < binding.clockResolutionMs) {
+      return Status::Error(Err::INVALID_CONFIG, "Operation budget must cover at least one clock tick");
+    }
+    return Status::Ok();
+  }
+
   void start(const Config& binding, std::uint32_t timeoutMs) {
     _resolutionMs = binding.clockResolutionMs;
     remainingMs = (timeoutMs / _resolutionMs) * _resolutionMs;

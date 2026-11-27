@@ -284,7 +284,9 @@ the caller's pair intact. Each complete word updates the settings snapshot.
 pending HIGH or LOW. It carries the source operation, observed MOD, generation
 and optional completion tick. `mixedOrUnknown` qualifies that attribution when
 later events differ in source, mode or generation, or a capture lacked verified
-settings. `lastConfigSource`, `lastConfigAtMs` and `readClearMask` describe the
+settings. An addressed reset attempt also sets this marker for pending events,
+preserving their first origin across the loss of live state.
+`lastConfigSource`, `lastConfigAtMs` and `readClearMask` describe the
 latest complete CONFIG read, including a late success. Its clear mask is
 `0xE000` for alert and `0x2000` for therm. An engaged `thermHigh` gives the
 level at that read. An attempted CONFIG write, ambiguous CONFIG read or loss

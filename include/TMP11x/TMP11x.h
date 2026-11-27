@@ -15,6 +15,7 @@ struct Acquisition;
 struct Apply;
 struct DeviceEvidence;
 struct RegisterTransport;
+struct Reset;
 struct TransferResult;
 struct LatestRead;
 }
@@ -40,7 +41,7 @@ struct AlertStatus {
   bool pendingHigh = false;    ///< At least one acknowledged above-high event since the previous take.
   bool pendingLow = false;     ///< At least one acknowledged below-low event since the previous take.
   bool possibleLoss = false;   ///< Alert history may have a gap after a failed CONFIG read or loss of device state.
-  bool mixedOrUnknown = false; ///< Captures differed in source, mode or generation, or lacked verified settings.
+  bool mixedOrUnknown = false; ///< Mixed/unverified captures, or pending events retained across a reset attempt.
   std::optional<AlertEventOrigin> firstEvent; ///< Retained attribution while either event is pending.
   std::optional<bool> thermHigh;              ///< HIGH at the last applicable therm observation. LOW is always zero.
   std::optional<ConfigReadSource> lastConfigSource; ///< Source of the most recent complete CONFIG read.
@@ -406,6 +407,7 @@ class TMP11x {
   friend struct detail::Apply;
   friend struct detail::DeviceEvidence;
   friend struct detail::RegisterTransport;
+  friend struct detail::Reset;
   friend struct detail::LatestRead;
 
   // Current device knowledge expires on teardown or incompatible identity.

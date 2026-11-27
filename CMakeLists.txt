@@ -10,6 +10,7 @@ set(TMP11X_SOURCES
   src/Identity.cpp
   src/LatestRead.cpp
   src/RegisterTransport.cpp
+  src/Reset.cpp
   src/TMP11x.cpp
   src/Temperature.cpp
   src/Timing.cpp
@@ -51,6 +52,13 @@ if(TMP11X_BUILD_TESTS)
   target_link_libraries(tmp11x_register_transport_test PRIVATE TMP11x)
   target_include_directories(tmp11x_register_transport_test PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src")
   add_test(NAME register_transport_cpp COMMAND tmp11x_register_transport_test)
+
+  add_executable(tmp11x_reset_test
+    test/test_reset.cpp
+    test/support/FakeTmp11xDevice.cpp)
+  target_link_libraries(tmp11x_reset_test PRIVATE TMP11x)
+  target_include_directories(tmp11x_reset_test PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src")
+  add_test(NAME reset_cpp COMMAND tmp11x_reset_test)
 
   add_executable(tmp11x_identity_test
     test/test_identity.cpp
@@ -146,7 +154,7 @@ if(TMP11X_BUILD_TESTS)
                  tmp11x_binding_test tmp11x_health_test tmp11x_temperature_test tmp11x_latest_test
                  tmp11x_configuration_test tmp11x_apply_test tmp11x_trust_test tmp11x_timing_test
                  tmp11x_conversion_settings_test tmp11x_averaging_blocks_test tmp11x_acquisition_test
-                 tmp11x_limits_test tmp11x_alert_comparator_test tmp11x_eeprom_test)
+                 tmp11x_limits_test tmp11x_alert_comparator_test tmp11x_eeprom_test tmp11x_reset_test)
     set_target_properties(${target} PROPERTIES
       CXX_STANDARD 17 CXX_STANDARD_REQUIRED YES CXX_EXTENSIONS NO)
     if(MSVC)

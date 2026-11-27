@@ -1,5 +1,6 @@
 #include "DeviceEvidence.h"
 
+#include "OperationBudget.h"
 #include "TMP11x/CommandTable.h"
 #include "TMP11x/Temperature.h"
 
@@ -19,6 +20,15 @@ std::optional<SettingsField> fieldFor(std::uint8_t pointer) noexcept {
 }
 
 }  // namespace
+
+Status DeviceEvidence::readTimedGuard(OperationBudget& budget) {
+  std::uint16_t raw = 0;
+  const auto result = readWord(RegisterTransport::tracked(device), command::eepromUnlock, raw, budget.remainingMs);
+  const auto guard = result.status.ok() ? observeGuard(raw, result.completedMs) : result.status;
+  const auto status = budget.finishTransfer(result);
+  if (!status.ok()) return status;
+  return guard.is(Err::MEASUREMENT_NOT_READY) ? budget.waitForUs(1000) : guard;
+}
 
 Status DeviceEvidence::observeGuard(std::uint16_t raw, std::optional<std::uint32_t> tick) noexcept {
   if (raw & command::unlock) device._eepromUnsafe = true;

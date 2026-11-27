@@ -16,7 +16,6 @@ struct Apply {
   Apply(const Apply&) = delete;
   Apply& operator=(const Apply&) = delete;
 
-  static Status validateTiming(const Config& binding) noexcept;
   Status start();
   Status step();
   Status run();
