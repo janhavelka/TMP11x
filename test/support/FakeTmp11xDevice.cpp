@@ -6,7 +6,7 @@ namespace TMP11x::test {
 namespace {
 
 // These literals are independent of the production register and capability tables.
-bool hasOffset(Model model) {
+bool isTmp117Like(Model model) {
   return model == Model::TMP117 || model == Model::TMP117M ||
          model == Model::TMP117N || model == Model::TMP119;
 }
@@ -48,13 +48,18 @@ Status writeWord(FakeTmp11xDevice& device, const std::uint8_t* tx,
                  const TransferOutcome& outcome) {
   const auto pointer = tx[0];
   const auto value = static_cast<std::uint16_t>((tx[1] << 8) | tx[2]);
-  // The fixture accepts canonical settings or the explicit MOD=11 command.
+  // Model the unchanged-register outcome for an addressed reset. Its effects
+  // on companion CONFIG bits, lock state and EEPROM shadows are unspecified.
+  if (pointer == 0x01 && isTmp117Like(device.model) && (value & 0xF803) == 0x0002) {
+    return outcome.status;
+  }
+  // Ordinary CONFIG writes select canonical settings or the MOD=11 command.
   // Rejection here does not prescribe a silicon NACK for a policy violation.
   const bool stable = (value & 0xF803) == 0;
   const bool oneShot = (value & 0xFC03) == 0x0C00;
   const bool allowed = (pointer == 0x01 && (stable || oneShot)) ||
                        pointer == 0x02 || pointer == 0x03 ||
-                       (pointer == 0x07 && hasOffset(device.model));
+                       (pointer == 0x07 && isTmp117Like(device.model));
   if (!allowed) {
     return Status::Error(Err::I2C_ERROR, "Unexpected fixture write");
   }
@@ -142,7 +147,7 @@ bool FakeTmp11xDevice::addConversion(std::int16_t counts) {
   const auto divisor = static_cast<std::int32_t>(length);
   if (sum % divisor != 0) return false;  // Fractional rounding is unspecified.
   const auto mean = sum / divisor;
-  const auto offset = hasOffset(model) ? signedCounts(words[0x07]) : 0;
+  const auto offset = isTmp117Like(model) ? signedCounts(words[0x07]) : 0;
   const auto reported = std::clamp<std::int32_t>(mean + offset, -32768, 32767);
   words[0x00] = static_cast<std::uint16_t>(reported);
   config |= 0x2000u;
@@ -166,7 +171,7 @@ bool FakeTmp11xDevice::addConversion(std::int16_t counts) {
 
 bool FakeTmp11xBus::attach(std::uint8_t address, FakeTmp11xDevice& device) {
   if (!targetAddress(address) ||
-      (device.model != Model::TMP116 && device.model != Model::TMP116N && !hasOffset(device.model))) {
+      (device.model != Model::TMP116 && device.model != Model::TMP116N && !isTmp117Like(device.model))) {
     return false;
   }
   _devices[address - 0x48] = &device;

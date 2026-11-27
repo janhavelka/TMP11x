@@ -91,3 +91,39 @@ Phase b starts with command admission (case 1). The public operation,
 addressed-reset fixtures and their acceptance tests remain open. Stage 27
 consumes the synchronous API and stage 38 owns CLI reset integration.
 Physical reset behavior remains unverified. Remote CI belongs to stage 43.
+
+## Phase b — Private reset command admission, 2026-11-27
+
+Case 1 passed on a working tree based on `b253326808bb88686e0ebcb2830934fd2d4d6d5d`.
+The phase-a commit matched the wrapper request and local upstream. The
+wrapper recorded upstream equality at 01:45:09 Prague time.
+
+The [private transport](../../src/RegisterTransport.cpp) admits an addressed
+reset only at CONFIG on TMP117/M/N and TMP119. The command must contain bit 1,
+with all remaining set bits inside the canonical stable mask (`0x07FC`).
+The typed caller supplies the startup and locked-idle proofs. The public
+operation still owns deriving the word from the last verified profile and
+acquiring a new guard. The [fixture](../../test/support/FakeTmp11xDevice.cpp)
+accepts the frame and models one possible outcome in which the register image
+stays unchanged.
+
+In [addressedResetAdmission](../../test/test_register_transport.cpp), each
+accepted word produced one write to the selected address `0x4B`. The literal
+frames included `01 02 22` and `01 06 22`. TMP116/N returned `UNSUPPORTED`
+before I²C. All six models refused the other 255 pointers and incorrect write
+purposes at CONFIG. On supported models each missing proof, missing command,
+noncanonical MOD, status bit and reserved bit produced zero callbacks.
+`protectedWritesDenyEveryPayload` also swept all 65,536 payloads at each
+protected pointer with the new purpose.
+
+| Local check | Result |
+| --- | --- |
+| `cmake --build build/host --config Release --target tmp11x_register_transport_test --parallel` | PASS with CMake 4.0.1 and GCC 15.1.0. |
+| `cmake -E chdir build/host ctest -C Release -R '^register_transport_cpp$' --output-on-failure` | PASS, 1/1. |
+| `python scripts/check_references.py` and `python scripts/check_promptset.py` | PASS, 14 pinned PDFs and 55 stages, Python 3.12.10. |
+| `python tools/check_register_ledger.py` and `python tools/test_check_register_ledger.py` | PASS, six models and 31 regression cases. |
+| `git diff --check` and `git diff --cached --check` | PASS. The wrapper owns staging, commit and push. |
+
+Continue phase b with case 2, timed preflight and invalidation immediately
+before the reset write, including ambiguous and late completion. The full
+public operation, post-reset observations and explicit recovery tests remain open.

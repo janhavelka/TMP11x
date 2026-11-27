@@ -2,6 +2,7 @@
 
 #include <algorithm>
 
+#include "ModelDescriptor.h"
 #include "TMP11x/CommandTable.h"
 
 namespace TMP11x::detail {
@@ -75,8 +76,8 @@ std::uint16_t decodeWord(const std::uint8_t* bytes) {
   return static_cast<std::uint16_t>((static_cast<std::uint16_t>(bytes[0]) << 8) | bytes[1]);
 }
 
-Status checkWrite(command::Access policy, std::uint16_t value, WriteAccess access) {
-  switch (policy) {
+Status checkWrite(Model model, std::uint8_t pointer, std::uint16_t value, WriteAccess access) {
+  switch (command::accessFor(model, pointer)) {
     case command::Access::INVALID:
       return Status::Error(Err::INVALID_PARAM, "Unmapped register pointer");
     case command::Access::OBSERVE:
@@ -87,6 +88,13 @@ Status checkWrite(command::Access policy, std::uint16_t value, WriteAccess acces
         if ((value & command::modeMask) != command::modeMask ||
             (value & ~(command::stableConfigMask | command::modeMask)) != 0) {
           return Status::Error(Err::INVALID_PARAM, "Expected one-shot CONFIG command");
+        }
+      } else if (access.purpose == WritePurpose::ADDRESSED_RESET) {
+        if (!findModelDescriptor(model)->capabilities.hasAddressedReset) {
+          return Status::Error(Err::UNSUPPORTED, "Model has no addressed reset");
+        }
+        if ((value & ~command::stableConfigMask) != command::softReset) {
+          return Status::Error(Err::INVALID_PARAM, "Expected stable CONFIG fields and Soft_Reset");
         }
       } else if (access.purpose != WritePurpose::STABLE_CONFIG || (value & ~command::stableConfigMask) != 0) {
         return Status::Error(Err::INVALID_PARAM, "Expected canonical stable CONFIG fields");
@@ -143,7 +151,7 @@ TransferResult writeFrame(RegisterTransport transport, const std::uint8_t* tx, s
   if (tx == nullptr || txLen != 3) {
     return {Status::Error(Err::INVALID_PARAM, "Expected a pointer and two data bytes"), false};
   }
-  const auto permission = checkWrite(command::accessFor(binding.model, tx[0]), decodeWord(tx + 1), access);
+  const auto permission = checkWrite(binding.model, tx[0], decodeWord(tx + 1), access);
   if (!permission.ok()) return {permission, false};
 
   const auto grant = std::min(binding.i2cTimeoutMs, remainingMs);

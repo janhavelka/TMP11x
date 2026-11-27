@@ -40,7 +40,7 @@ struct TransferResult {
   std::optional<std::uint32_t> completedMs{};  // The same tick recorded by tracked health.
 };
 
-enum class WritePurpose { STABLE_CONFIG, LIMIT, MANAGED_OFFSET, ONE_SHOT };
+enum class WritePurpose { STABLE_CONFIG, LIMIT, MANAGED_OFFSET, ONE_SHOT, ADDRESSED_RESET };
 
 // Supplied by the typed operation owner. Both proofs belong to the current
 // target and uninterrupted operation. The serializer never acquires a guard.

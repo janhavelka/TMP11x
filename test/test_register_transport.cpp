@@ -39,6 +39,7 @@ constexpr WriteAccess limit{WritePurpose::LIMIT, true, true};
 constexpr WriteAccess stable{WritePurpose::STABLE_CONFIG, true, true};
 constexpr WriteAccess offset{WritePurpose::MANAGED_OFFSET, true, true};
 constexpr WriteAccess oneShot{WritePurpose::ONE_SHOT, true, true};
+constexpr WriteAccess addressedReset{WritePurpose::ADDRESSED_RESET, true, true};
 
 // A rejected transfer cannot account for a physical success or failure.
 void checkRefused(TransferResult result, const FakeTmp11xBus& bus, std::size_t before) {
@@ -56,7 +57,7 @@ void protectedWritesDenyEveryPayload() {
     const auto config = configFor(bus, model);
     for (std::uint8_t pointer = 0x04; pointer <= 0x08; ++pointer) {
       if (pointer == 0x07 && model != Model::TMP116 && model != Model::TMP116N) continue;
-      for (const auto access : {stable, limit, offset, oneShot}) {
+      for (const auto access : {stable, limit, offset, oneShot, addressedReset}) {
         // Includes relock, EUN-only, each reserved bit, and all bits set.
         for (std::uint32_t word = 0; word <= 0xFFFF; ++word) {
           const auto result = writeWord(config, pointer, static_cast<std::uint16_t>(word), access, 50);
@@ -185,6 +186,59 @@ void registerAccessByModel() {
         const auto before = bus.trace.size();
         checkRefused(writeWord(config, ptr, 0, unmet, 50), bus, before);
       }
+    }
+  }
+}
+
+void addressedResetAdmission() {
+  constexpr struct {
+    std::uint16_t word;
+    std::uint8_t msb, lsb;
+  } commands[] = {{0x0222, 0x02, 0x22}, {0x0622, 0x06, 0x22},
+                  {0x0002, 0x00, 0x02}, {0x07FE, 0x07, 0xFE}};
+  for (const auto model : {Model::TMP116, Model::TMP116N, Model::TMP117,
+                           Model::TMP117M, Model::TMP117N, Model::TMP119}) {
+    FakeTmp11xDevice chip{model};
+    FakeTmp11xBus bus;
+    const auto config = configFor(bus, model, 0x4B);
+    CHECK(bus.attach(0x4B, chip));
+    for (const auto command : commands) {
+      const auto before = bus.trace.size();
+      const auto result = writeWord(config, 1, command.word, addressedReset, 3);
+      if (model == Model::TMP116 || model == Model::TMP116N) {
+        CHECK(result.status.is(Err::UNSUPPORTED));
+        checkRefused(result, bus, before);
+      } else {
+        CHECK(result.status.ok() && result.attempted && bus.trace.size() == before + 1);
+        const auto& frame = bus.trace.back();
+        CHECK(!frame.combinedRead && frame.address == 0x4B && frame.timeoutMs == 3);
+        CHECK(frame.txLen == 3 && frame.rxLen == 0);
+        CHECK((frame.tx == std::vector<std::uint8_t>{0x01, command.msb, command.lsb}));
+      }
+    }
+    const auto before = bus.trace.size();
+    for (unsigned pointer = 0; pointer <= 0xFF; ++pointer) {
+      if (pointer == 1) continue;
+      checkRefused(writeWord(config, static_cast<std::uint8_t>(pointer), 0x0622,
+                             addressedReset, 3), bus, before);
+    }
+    for (const auto otherPurpose : {stable, limit, offset, oneShot}) {
+      checkRefused(writeWord(config, 1, 0x0622, otherPurpose, 3), bus, before);
+    }
+    if (model == Model::TMP116 || model == Model::TMP116N) continue;
+    // Missing command, MOD=10/11, each status bit, and reserved bit 0.
+    constexpr std::uint16_t invalid[] = {0x0620, 0x0A22, 0x0E22, 0x8622,
+                                         0x4622, 0x2622, 0x1622, 0x0623};
+    for (const auto word : invalid) {
+      const auto result = writeWord(config, 1, word, addressedReset, 3);
+      CHECK(result.status.is(Err::INVALID_PARAM));
+      checkRefused(result, bus, before);
+    }
+    for (const auto missingProof : {WriteAccess{WritePurpose::ADDRESSED_RESET, false, true},
+                                    WriteAccess{WritePurpose::ADDRESSED_RESET, true, false}}) {
+      const auto result = writeWord(config, 1, 0x0622, missingProof, 3);
+      CHECK(result.status.is(Err::INVALID_CONFIG));
+      checkRefused(result, bus, before);
     }
   }
 }
@@ -476,6 +530,7 @@ int main() {
   testCommandTable();
   registerAccessByModel();
   protectedWritesDenyEveryPayload();
+  addressedResetAdmission();
   publicRoutesPreserveEeprom();
   bindingAndBudget();
   invalidFrames();
