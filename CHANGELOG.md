@@ -49,3 +49,6 @@
 - Fresh samples carry observed unmanaged or verified managed offset counts.
   Latest reads on offset-capable parts leave attribution unknown. All TMP116/N
   samples report the hardware offset as unavailable.
+- Added bound-only reads of individual EEPROM data shadows and an ID-first
+  snapshot of lock, BUSY and the model's three or four shadow words.
+  A failed scan reports the completed prefix and first unsuccessful pointer.

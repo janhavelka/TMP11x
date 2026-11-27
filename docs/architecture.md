@@ -49,6 +49,10 @@ word or identity helper. The frame helper records the normalized outcome
 on callback return, before any register comparison. Callers use the
 `attempted` flag for their work budget. Public identity diagnostics pass
 the binding alone, which leaves counters, fault history and clock untouched.
+The EEPROM snapshot uses the same neutral reads and samples the optional
+clock after each complete word. Its result retains that scan's ID, lock and
+ordered shadow observations through the first failure. A lock read can
+latch EUN or invalidate an acquisition guard on BUSY.
 
 `detail::LatestRead` reuses the transport's completion tick for both the
 sample timestamp and the timed owner's expiry check. Its result retains a

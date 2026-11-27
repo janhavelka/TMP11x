@@ -10,6 +10,7 @@ struct DeviceEvidence {
 
   // Record a complete EEPROM_UL word, including when its callback was late.
   Status observeGuard(std::uint16_t raw) noexcept;
+  void observeBusy(std::optional<std::uint32_t> tick) noexcept;
 
   // Compare owned registers, including managed OFFSET, and check unmanaged calibration continuity.
   Status observeRegister(std::uint8_t pointer, std::uint16_t raw, const TransferResult& transfer,

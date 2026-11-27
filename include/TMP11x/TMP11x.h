@@ -2,6 +2,7 @@
 /// @brief Device binding, verified volatile initialization, transport health and measurement evidence.
 #pragma once
 
+#include <array>
 #include <cstdint>
 #include <optional>
 
@@ -79,6 +80,31 @@ struct IdentityInfo {
   std::uint8_t revision = 0;                     ///< Raw revision nibble when revisionValid is true.
   bool revisionValid = false;                    ///< The recognized group defines a revision field.
   bool compatible = false;                       ///< A complete observed word matches the selected model's ID rule.
+};
+
+/// Complete EEPROM_UL observation at pointer 0x04. Lock and BUSY can change between reads.
+struct EepromLockObservation {
+  std::uint16_t raw{};                       ///< Complete register, including unused bits 13:0.
+  std::optional<std::uint32_t> observedAtMs; ///< Callback completion tick if a clock was bound.
+  bool unlocked() const noexcept;            ///< EUN (bit 15) was set at this read.
+  bool busy() const noexcept;                ///< BUSY (bit 14) was set at this read.
+};
+
+/// One addressed read of a volatile EEPROM data shadow.
+struct EepromWordObservation {
+  std::uint8_t pointer{};                    ///< Physical register selected for this word.
+  std::uint16_t raw{};                       ///< First received byte in bits 15:8, second in bits 7:0.
+  std::optional<std::uint32_t> observedAtMs; ///< Callback completion tick if a clock was bound.
+};
+
+/// Ordered, non-atomic observations. Each field describes only its own transfer.
+struct EepromSnapshot {
+  IdentityInfo identity{};                     ///< Bound model/address, plus ID evidence on a complete ID read.
+  std::optional<std::uint32_t> identityAtMs;   ///< Completion tick of the ID observation, including zero.
+  std::optional<EepromLockObservation> lock;   ///< Absent until the complete EEPROM_UL word is received.
+  std::array<EepromWordObservation, 4> words{}; ///< Index 1 is words[0]. Only the first wordCount entries are valid.
+  std::uint8_t wordCount{};                    ///< Number of complete shadow words in this scan.
+  std::optional<std::uint8_t> failedPointer;   ///< First failed pointer, including DEVICE_ID on mismatch.
 };
 
 /// Acquisition method used to obtain a sample.
@@ -292,6 +318,21 @@ class TMP11x {
   /// Neither diagnostic establishes initialization or a power-on time.
   Status probe();
 
+  /// Read one raw 16-bit volatile shadow (MSB first) in one health-neutral transfer after bind().
+  /// One-based indices map to 0x05/06/07/08 on TMP116/N and 0x05/06/08 on TMP117/M/N and TMP119.
+  /// NOT_BOUND, INVALID_PARAM (index outside the selected map), and a cached IDENTITY_MISMATCH
+  /// reject before I2C. Unknown identity permits the read. All failures preserve @p out.
+  Status readEepromWord(std::uint8_t index, std::uint16_t& out);
+
+  /// After bind(), read DEVICE_ID, EEPROM_UL, then each mapped shadow in one-based order.
+  /// Takes at most six health-neutral combined reads on TMP116/N or five on TMP117/M/N and TMP119.
+  /// Each read uses the bound callback timeout. A clock is optional. No CONFIG or TEMP flags are consumed.
+  /// On a transfer failure or incompatible ID, return its status and publish the completed prefix
+  /// and failedPointer. Local rejection preserves @p out. EUN and BUSY are reported without polling.
+  /// Observed EUN blocks later guarded operations until external correction and invalidateDeviceState().
+  /// All shadow values, including zero, are valid. Prior volatile writes can obscure factory data.
+  Status readEepromSnapshot(EepromSnapshot& out);
+
   /// Read the stored TEMP word once in either desired mode, including with dirty settings.
   /// Requires binding and managed initialization. A complete TEMP read acknowledges
   /// DATA_READY. It proves no new conversion, including when the word is 0x8000.
@@ -396,6 +437,7 @@ class TMP11x {
   void clearLiveState() noexcept;
   Status requireInitialized() const noexcept;
   Status readObservedRegister(std::uint8_t pointer);
+  Status readDiagnosticWord(std::uint8_t pointer, std::uint16_t& out);
   Status applySettings(const SensorSettings& candidate);
 
   Config _config{};

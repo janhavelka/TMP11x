@@ -127,3 +127,45 @@ Two parallel read-only assessments checked the pinned silicon sources and
 the transport, tests and sibling precedent. Phase b has no software blocker.
 Physical and remote CI checks were not run. Stage 43 owns the first CI
 checkpoint.
+
+## Phase b implementation
+
+Phase b implemented `readonly-eeprom` on clean `main` at input revision
+`7761b4ed4d9bab482c8902810ebd80d6f17fadc8`. Git history, the prior commit
+request and the wrapper log agree on the phase-a report commit and upstream
+synchronization. The eight inputs listed above were present. The exact-part
+maps, EEPROM_UL definitions, locked shadow-write behavior and TI shipment
+lot guidance were rechecked in the pinned sources. The 24Cxx checkout
+remained clean at `139e76cd`.
+
+The [public methods and snapshot types](../../include/TMP11x/TMP11x.h)
+and [implementation](../../src/TMP11x.cpp) reuse the selected model's
+pointer table, bound identity diagnostic and checked neutral transport.
+A scalar publishes only a complete word. A snapshot publishes each
+complete observation, including an incompatible ID, with a separate
+optional tick. An unsuccessful scan identifies the first failed pointer.
+During the snapshot, only complete observations sample the optional clock.
+The [evidence owner](../../src/DeviceEvidence.cpp) retains an observed
+unlock immediately and handles observed BUSY from EEPROM_UL and CONFIG
+consistently. A diagnostic lock read can revoke a guard, while every
+later guarded operation still obtains its own lock word.
+[Using the API](../../README.md#read-eeprom-traceability-metadata).
+
+| Host suite and named cases | What the assertions verified |
+| --- | --- |
+| [eeprom_cpp](../../test/test_eeprom.cpp), `scalarBoundsAndFrames`, `snapshotsAndPartialResults` | All six BOM selections with literal frame order, MSB-first bytes and timeout. Bounds, externally changed and zero words, local output preservation, five/six-read limits, short transfers at every position, absent clock, valid tick zero and independent completion times. |
+| `identityChangesBetweenObservations`, `snapshotsPreserveAlertsAndRespectBusy`, `unlockEvidenceSurvivesPartialSnapshot` | ID-first mismatch and cache recovery, scalar mismatch refusal, retained alert and ready evidence, neutral success and failure, all EUN/BUSY combinations and unused-bit noise. A failed later shadow preserved EUN. A subsequent locked observation left freshness and recovery blocked until explicit invalidation. |
+| [register_transport_cpp](../../test/test_register_transport.cpp), `protectedWritesDenyEveryPayload`, `publicRoutesPreserveEeprom` | All 65,536 payloads × four write purposes × 26 protected model/pointer pairs returned UNSUPPORTED with zero callbacks. Callback traces for begin, latest, scalar and snapshot used only the bound address, preserved all seeded shadow words and attempted no unlock, relock or reset. Existing typed-offset gates remained in force. |
+| [acquisition_cpp](../../test/test_acquisition.cpp), `diagnosticBusyBeforeContinuousTemp` | BUSY observed by an EEPROM snapshot between acquisition steps revoked the prior guard. The untimed path stopped before TEMP. The timed path issued a new guard read and required fresh readiness. |
+
+| Local command | Result |
+| --- | --- |
+| `cmake --build build/host --config Release --parallel 6` and `cmake -E chdir build/host ctest -C Release --output-on-failure` | PASS, 23/23 including the six-model ledger and its 31 regressions. CMake/CTest 4.0.1, GNU C++ 15.1.0, Python 3.12.10. |
+| `doxygen -`, input `include/TMP11x`, XML output in `build/p24b-docs` with `WARN_AS_ERROR=YES` | PASS with Doxygen 1.13.2. |
+| `python scripts/check_references.py`, `python scripts/check_promptset.py`, `git diff --check` | PASS, 14 PDF hashes, 55 stages and the working diff. |
+
+Phase c reviews the implementation and tests from a fresh session. Stage 26
+owns general register dump integration, stage 28 occupied-job rejection,
+and stages 37/38 the CLI. MCU, physical and remote CI checks were not run.
+Physical observation belongs to stage 40 and the first remote checkpoint
+to stage 43. The wrapper owns the staged diff, commit and push.

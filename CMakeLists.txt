@@ -65,6 +65,12 @@ if(TMP11X_BUILD_TESTS)
   target_link_libraries(tmp11x_binding_test PRIVATE TMP11x)
   add_test(NAME binding_cpp COMMAND tmp11x_binding_test)
 
+  add_executable(tmp11x_eeprom_test
+    test/test_eeprom.cpp
+    test/support/FakeTmp11xDevice.cpp)
+  target_link_libraries(tmp11x_eeprom_test PRIVATE TMP11x)
+  add_test(NAME eeprom_cpp COMMAND tmp11x_eeprom_test)
+
   add_executable(tmp11x_health_test
     test/test_health.cpp
     test/support/FakeTmp11xDevice.cpp)
@@ -140,7 +146,7 @@ if(TMP11X_BUILD_TESTS)
                  tmp11x_binding_test tmp11x_health_test tmp11x_temperature_test tmp11x_latest_test
                  tmp11x_configuration_test tmp11x_apply_test tmp11x_trust_test tmp11x_timing_test
                  tmp11x_conversion_settings_test tmp11x_averaging_blocks_test tmp11x_acquisition_test
-                 tmp11x_limits_test tmp11x_alert_comparator_test)
+                 tmp11x_limits_test tmp11x_alert_comparator_test tmp11x_eeprom_test)
     set_target_properties(${target} PROPERTIES
       CXX_STANDARD 17 CXX_STANDARD_REQUIRED YES CXX_EXTENSIONS NO)
     if(MSVC)

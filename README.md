@@ -56,6 +56,35 @@ previous output. Use `probe()` for the same family check when only the status
 is needed. `end()` clears observations and retains the binding for another
 read. `unbind()` also releases the binding. Both use zero bus callbacks.
 
+## Read EEPROM traceability metadata
+
+Bind the sensor on its known route and call `readEepromSnapshot(snapshot)`.
+This works before initialization and with no clock. The driver checks DEVICE_ID,
+reads EEPROM_UL once, then reads each data shadow in a separate combined
+transfer. No data writes, resets, CONFIG reads or TEMP reads occur.
+
+| BOM model | One-based shadow indices, in read order |
+| --- | --- |
+| TMP116, TMP116N | 1 → `0x05`, 2 → `0x06`, 3 → `0x07`, 4 → `0x08` |
+| TMP117, TMP117M, TMP117N, TMP119 | 1 → `0x05`, 2 → `0x06`, 3 → `0x08` |
+
+Use the first `snapshot.wordCount` entries of `snapshot.words`.
+Each entry records its pointer, raw 16-bit
+word (high byte first on the wire) and optional completion time. On a failed
+scan, `failedPointer` identifies where it stopped. A complete incompatible ID
+remains in `snapshot.identity`. An absent `snapshot.lock` means lock and BUSY
+are unknown. A present lock describes only that read. An observed unlock
+blocks guarded operations until the owner corrects the device and calls
+`invalidateDeviceState()`.
+
+For one word, `readEepromWord(index, out)` takes one transfer and preserves
+`out` on failure. It uses the BOM selection even before an ID read and
+refuses a cached identity mismatch. Keep the shipment-label lot code with
+the model, address, route and ordered readings. Every shadow value, including
+zero, is valid. An external writer can change a shadow even with EEPROM
+locked, so the non-atomic snapshot alone cannot authenticate a factory ID
+or establish nonvolatile cell contents. [TI sources and traceability policy](docs/eeprom-and-reset-policy.md#protected-data-and-traceability).
+
 ## Initialize and read a temperature
 
 For managed measurements, provide a monotonic floor clock in `cfg.nowMs` and

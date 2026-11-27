@@ -650,7 +650,7 @@ void diagnosticInterruptsGuard() {
   }
 }
 
-void diagnosticBusyBeforeContinuousTemp() {
+void diagnosticBusyBeforeContinuousTemp(bool readEeprom) {
   for (const bool timed : {false, true}) {
     Fixture f;
     f.config.settings.cycle = Cycle::CODE_0;
@@ -661,10 +661,17 @@ void diagnosticBusyBeforeContinuousTemp() {
     Acquisition read{f.device, ReadKind::CONTINUOUS_FRESH};
     CHECK(read.start(timed ? std::optional<std::uint32_t>{100} : std::nullopt).inProgress());
     while (f.bus.trace.size() < 2) CHECK(stepOnce(f, read, out).inProgress());
-    ConfigurationObservation config;
-    f.chip.words[1] |= 0x1000;
-    CHECK(f.device.readConfiguration(config).ok() && config.eepromBusy);
-    f.chip.words[1] &= 0xEFFF;
+    if (readEeprom) {
+      EepromSnapshot snapshot;
+      f.chip.words[4] = 0x4000;
+      CHECK(f.device.readEepromSnapshot(snapshot).ok() && snapshot.lock && snapshot.lock->busy());
+      f.chip.words[4] = 0;
+    } else {
+      ConfigurationObservation config;
+      f.chip.words[1] |= 0x1000;
+      CHECK(f.device.readConfiguration(config).ok() && config.eepromBusy);
+      f.chip.words[1] &= 0xEFFF;
+    }
     f.clearTrace();
     if (timed) {
       f.beforeIo = [&](std::size_t index) {
@@ -898,7 +905,8 @@ int main() {
   continuousPollingAcrossWrap();
   shortOneShotBudget();
   diagnosticInterruptsGuard();
-  diagnosticBusyBeforeContinuousTemp();
+  diagnosticBusyBeforeContinuousTemp(false);
+  diagnosticBusyBeforeContinuousTemp(true);
   residualOwnedOneShot();
   destructiveReadDuringShot();
   missingReadyAndThermLevel();

@@ -47,6 +47,81 @@ void checkRefused(TransferResult result, const FakeTmp11xBus& bus, std::size_t b
   CHECK(bus.trace.size() == before);
 }
 
+void protectedWritesDenyEveryPayload() {
+  for (const auto model : {Model::TMP116, Model::TMP116N, Model::TMP117,
+                           Model::TMP117M, Model::TMP117N, Model::TMP119}) {
+    FakeTmp11xDevice chip{model};
+    FakeTmp11xBus bus;
+    CHECK(bus.attach(0x48, chip));
+    const auto config = configFor(bus, model);
+    for (std::uint8_t pointer = 0x04; pointer <= 0x08; ++pointer) {
+      if (pointer == 0x07 && model != Model::TMP116 && model != Model::TMP116N) continue;
+      for (const auto access : {stable, limit, offset, oneShot}) {
+        // Includes relock, EUN-only, each reserved bit, and all bits set.
+        for (std::uint32_t word = 0; word <= 0xFFFF; ++word) {
+          const auto result = writeWord(config, pointer, static_cast<std::uint16_t>(word), access, 50);
+          CHECK(result.status.is(Err::UNSUPPORTED));
+          checkRefused(result, bus, 0);
+        }
+      }
+    }
+  }
+}
+
+void publicRoutesPreserveEeprom() {
+  for (const auto model : {Model::TMP116, Model::TMP116N, Model::TMP117,
+                           Model::TMP117M, Model::TMP117N, Model::TMP119}) {
+    const bool fourShadows = model == Model::TMP116 || model == Model::TMP116N;
+    FakeTmp11xDevice chip{model};
+    FakeTmp11xBus bus;
+    auto config = configFor(bus, model, 0x4B);
+    CHECK(bus.attach(config.i2cAddress, chip));
+    std::uint32_t tick = 0;
+    config.timeUser = &tick;
+    config.nowMs = [](void* user) { return (*static_cast<std::uint32_t*>(user))++; };
+    chip.words[0x0F] = fourShadows ? 0x1116 : 0xA117;
+    chip.words[0x05] = 0x4719;
+    chip.words[0x06] = 0xCAF3;
+    chip.words[0x07] = 0x039B;  // EEPROM3 on TMP116/N, unmanaged calibration otherwise.
+    chip.words[0x08] = 0xD5B6;
+    const auto initialWords = chip.words;
+
+    auto checkTrace = [&](bool initialization) {
+      CHECK(!bus.trace.empty());
+      for (const auto& frame : bus.trace) {
+        CHECK(frame.address == config.i2cAddress);
+        if (frame.combinedRead) {
+          CHECK(frame.txLen == 1 && frame.rxLen == 2);
+        } else {
+          CHECK(initialization && frame.txLen == 3 && frame.rxLen == 0);
+          const auto pointer = frame.tx[0];
+          CHECK(pointer == 0x01 || pointer == 0x02 || pointer == 0x03);
+          if (pointer == 0x01) CHECK((frame.tx[2] & 0x02) == 0);  // Soft_Reset
+        }
+      }
+      for (std::uint8_t pointer = 0x04; pointer <= 0x08; ++pointer) {
+        CHECK(chip.words[pointer] == initialWords[pointer]);
+      }
+      bus.trace.clear();
+    };
+
+    ::TMP11x::TMP11x device;
+    CHECK(device.begin(config).ok());
+    checkTrace(true);
+    Sample latest;
+    CHECK(device.readLatest(latest).ok());
+    checkTrace(false);
+    std::uint16_t word = 0;
+    for (std::uint8_t index = 1; index <= (fourShadows ? 4 : 3); ++index) {
+      CHECK(device.readEepromWord(index, word).ok());
+      checkTrace(false);
+    }
+    EepromSnapshot snapshot;
+    CHECK(device.readEepromSnapshot(snapshot).ok());
+    checkTrace(false);
+  }
+}
+
 void registerAccessByModel() {
   for (const auto model : {Model::TMP116, Model::TMP116N, Model::TMP117,
                            Model::TMP117M, Model::TMP117N, Model::TMP119}) {
@@ -400,6 +475,8 @@ void ambiguousOneShotCommands() {
 int main() {
   testCommandTable();
   registerAccessByModel();
+  protectedWritesDenyEveryPayload();
+  publicRoutesPreserveEeprom();
   bindingAndBudget();
   invalidFrames();
   framesAndSharedAdapter();

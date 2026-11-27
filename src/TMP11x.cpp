@@ -4,6 +4,7 @@
 #include "Apply.h"
 #include "DeviceEvidence.h"
 #include "Identity.h"
+#include "ModelDescriptor.h"
 #include "TMP11x/CommandTable.h"
 #include "TMP11x/Temperature.h"
 
@@ -259,6 +260,74 @@ Status TMP11x::readIdentity(IdentityInfo& out) {
   const auto status = probe();
   if (status.ok() || status.is(Err::IDENTITY_MISMATCH)) out = _identity;
   return status;
+}
+
+bool EepromLockObservation::unlocked() const noexcept {
+  return (raw & command::unlock) != 0;
+}
+
+bool EepromLockObservation::busy() const noexcept {
+  return (raw & command::unlockBusy) != 0;
+}
+
+Status TMP11x::readDiagnosticWord(std::uint8_t pointer, std::uint16_t& out) {
+  const auto result = detail::readWord(_config, pointer, out, _config.i2cTimeoutMs);
+  if (result.attempted && !result.status.ok()) _live.guardInterruption = result.status;
+  return result.status;
+}
+
+Status TMP11x::readEepromWord(std::uint8_t index, std::uint16_t& out) {
+  if (!isBound()) return Status::Error(Err::NOT_BOUND, "No sensor binding");
+  const auto& map = *detail::findModelDescriptor(_config.model);
+  if (index == 0 || index > map.capabilities.eepromWordCount) {
+    return Status::Error(Err::INVALID_PARAM, "EEPROM index outside the selected model's range", index);
+  }
+  if (_identity.rawValid && !_identity.compatible) {
+    return Status::Error(Err::IDENTITY_MISMATCH, "Incompatible device ID", _identity.raw);
+  }
+  return readDiagnosticWord(map.eepromPointers[index - 1], out);
+}
+
+Status TMP11x::readEepromSnapshot(EepromSnapshot& out) {
+  if (!isBound()) return Status::Error(Err::NOT_BOUND, "No sensor binding");
+  const auto completionTime = [this]() -> std::optional<std::uint32_t> {
+    if (_config.nowMs) return _config.nowMs(_config.timeUser);
+    return std::nullopt;
+  };
+
+  out = {};
+  out.identity.model = _config.model;
+  out.identity.i2cAddress = _config.i2cAddress;
+  const auto idStatus = readIdentity(out.identity);
+  if (out.identity.rawValid) out.identityAtMs = completionTime();
+  if (!idStatus.ok()) {
+    out.failedPointer = command::deviceId;
+    return idStatus;
+  }
+
+  std::uint16_t raw{};
+  const auto lockRead = readDiagnosticWord(command::eepromUnlock, raw);
+  if (!lockRead.ok()) {
+    out.failedPointer = command::eepromUnlock;
+    return lockRead;
+  }
+  out.lock = EepromLockObservation{raw, completionTime()};
+  detail::DeviceEvidence evidence{*this};
+  // Keep adverse evidence for guarded operations. Either lock state permits shadow reads.
+  evidence.observeGuard(raw);
+  if (out.lock->busy()) evidence.observeBusy(out.lock->observedAtMs);
+
+  const auto& map = *detail::findModelDescriptor(_config.model);
+  while (out.wordCount < map.capabilities.eepromWordCount) {
+    const auto pointer = map.eepromPointers[out.wordCount];
+    const auto wordRead = readDiagnosticWord(pointer, raw);
+    if (!wordRead.ok()) {
+      out.failedPointer = pointer;
+      return wordRead;
+    }
+    out.words[out.wordCount++] = {pointer, raw, completionTime()};
+  }
+  return Status::Ok();
 }
 
 Status TMP11x::readLatest(Sample& out) {

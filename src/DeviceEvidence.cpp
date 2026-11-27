@@ -25,6 +25,15 @@ Status DeviceEvidence::observeGuard(std::uint16_t raw) noexcept {
   return Status::Ok();
 }
 
+void DeviceEvidence::observeBusy(std::optional<std::uint32_t> tick) noexcept {
+  auto& live = device._live;
+  if (live.guardInterruption.ok()) {
+    live.guardInterruption = Status::Error(Err::MEASUREMENT_NOT_READY, "EEPROM busy");
+  }
+  live.guardBusyMs = tick;
+  live.readyPending = false;
+}
+
 void DeviceEvidence::loseReadiness() noexcept {
   auto& live = device._live;
   live.readyPending = false;
@@ -70,11 +79,7 @@ void DeviceEvidence::captureConfig(std::uint16_t raw, std::optional<std::uint32_
   alerts.readClearMask = config.readClearMask;
   // A matching preflight still observes the current generation until the first write.
   if (config.eepromBusy) {
-    if (live.guardInterruption.ok()) {
-      live.guardInterruption = Status::Error(Err::MEASUREMENT_NOT_READY, "EEPROM busy");
-    }
-    live.guardBusyMs = tick;
-    live.readyPending = false;
+    observeBusy(tick);
   } else if (timely && live.trust == ConfigTrust::VERIFIED) {
     if (config.mode == ObservedMode::CONTINUOUS) {
       if (live.baselineMs) live.readyPending |= config.dataReady;
