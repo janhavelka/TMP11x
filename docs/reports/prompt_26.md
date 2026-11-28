@@ -181,3 +181,37 @@ Phase c reviews the wrapper's resulting implementation commit. Phase d owns
 acceptance, the progress row and report index. Stage 28 owns the cooperative
 slot gate and stages 37/38 own CLI rendering. MCU, physical and remote CI
 checks were not run in this phase.
+
+## Phase c review of diagnostic identity admission, 2026-11-28
+
+The review baseline was clean `main` at `c6e96f6a1c24144594a02a82c0b6b40e19fd41b9`.
+Its parent, subject and 14 changed paths matched the phase-b run and commit
+request. The wrapper verified upstream equality at 01:19:25 Prague time.
+
+The shared decoder accepts the complete word `0x1116` for TMP116/N and
+the low 12 bits `0x117` for TMP117/M/N and TMP119. Both TMP119 defaults
+in the source tables qualify. The full and EEPROM dumps read a new ID for
+each scan. A partial ID leaves that scan without identity evidence. A complete
+mismatch publishes the observed ID and stops before a second transfer.
+The foreign-device fixtures exercise zero, a CRC-related NACK and a complete
+`0xFFFF`. The exact response to an omitted CRC byte remains unknown.
+[ID tables and page references](../variants.md#identity-decision),
+[decoder](../../src/Identity.cpp), [diagnostic paths](../../src/Diagnostics.cpp).
+
+A read-only reviewer identified a missing scalar regression. In
+`changedIdentityAndTrackedFault`, the cached TMP117 ID is `0xD117` and the
+next ID transfer receives only `0x11`. The test now checks the terminal
+short-transfer status and detail, exactly one callback, preservation of
+the caller's complete CONFIG observation, and retention of the cached ID
+and initialization. The subsequent complete `0x1116` revokes initialization.
+The production implementation already handled both outcomes.
+[Diagnostics test](../../test/test_diagnostics.cpp).
+
+The Release build passed with GCC 15.1.0 and CMake 4.0.1
+(`cmake --build build/host --config Release --parallel 6`).
+All six focused suites passed with
+`cmake -E chdir build/host ctest -C Release -R '^(diagnostics|identity|binding|health|register_transport|eeprom)_cpp$' --output-on-failure`.
+`python -B scripts/check_references.py` verified all 14 pinned PDFs.
+The remaining phase-c review covers destructive-read masks and ticks,
+configuration and offset continuity, EEPROM behavior beyond ID admission,
+and the documented dump.

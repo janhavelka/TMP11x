@@ -242,19 +242,35 @@ void changedIdentityAndTrackedFault() {
   CHECK(health.totalSuccess != 0 && health.consecutiveFailures == 1 && health.lastError.detail == -7);
   RegisterSnapshot snap;
   CHECK(f.device.readRegisterSnapshot(snap).ok());
+  // A partial ID with a different high byte cannot replace a complete scalar or cached ID.
+  const auto saved = snap.words[2];  // CONFIG has read effects, a completion tick and a verified generation.
+  RegisterObservation word = saved;
+  f.chip.words[0x0F] = 0x1116;
+  f.shortReadAfter(0);
+  f.bus.trace.clear();
+  const auto shortId = f.device.readRegister(0x0F, word);
+  CHECK(shortId.is(Err::I2C_SHORT_TRANSFER) && shortId.detail == -19);
+  CHECK(f.bus.trace.size() == 1);
+  checkFrame(f.bus.trace.front(), 0x4B, 0x0F, 1);
+  CHECK(f.bus.trace.front().rx[0] == 0x11);
+  CHECK(word.pointer == saved.pointer && word.raw == saved.raw && word.readClearMask == saved.readClearMask);
+  CHECK(word.observedAtMs == saved.observedAtMs && word.profileGeneration == saved.profileGeneration);
+  CHECK(word.trust == ConfigTrust::VERIFIED && word.startupReady);
+  CHECK(word.identity.model == Model::TMP117 && word.identity.i2cAddress == 0x4B);
+  CHECK(word.identity.rawValid && word.identity.raw == 0xD117 && word.identity.compatible);
+  CHECK(word.identity.group == IdentityGroup::TMP117_LIKE && word.identity.revisionValid && word.identity.revision == 13);
+  CHECK(f.device.identityInfo().raw == 0xD117 && f.device.identityInfo().compatible && f.device.isInitialized());
   // A failed ID recheck publishes no ID from the previous scan.
   f.shortReadAfter(0);
   f.bus.trace.clear();
   CHECK(f.device.readRegisterSnapshot(snap).is(Err::I2C_SHORT_TRANSFER));
   CHECK(snap.wordCount == 0 && snap.failedPointer == 0x0F && !snap.identity.rawValid);
   CHECK(f.bus.trace.size() == 1 && f.device.identityInfo().compatible && f.device.isInitialized());
-  f.chip.words[0x0F] = 0x1116;
   f.bus.trace.clear();
   CHECK(f.device.readRegisterSnapshot(snap).is(Err::IDENTITY_MISMATCH));
   CHECK(snap.wordCount == 1 && snap.failedPointer == 0x0F && snap.identity.raw == 0x1116);
   checkFrame(f.bus.trace.at(0), 0x4B, 0x0F);
   CHECK(!f.device.isInitialized() && f.device.configTrust() == ConfigTrust::UNKNOWN);
-  RegisterObservation word;
   word.raw = 0xCAFE;
   CHECK(f.device.readRegister(1, word).is(Err::IDENTITY_MISMATCH) && word.raw == 0xCAFE);
   CHECK(f.bus.trace.size() == 1);
