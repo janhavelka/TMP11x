@@ -404,6 +404,10 @@ void driftDoesNotRetarget() {
   f.chip.words[7] = 64;
   RegisterSnapshot snap;
   CHECK(f.device.readRegisterSnapshot(snap).ok() && snap.wordCount == order.size());
+  // The CONFIG row is the first evidence of drift in this dump.
+  for (std::size_t i = 0; i < snap.wordCount; ++i) {
+    CHECK(snap.words[i].trust == (i < 2 ? ConfigTrust::VERIFIED : ConfigTrust::DIRTY));
+  }
   auto settings = f.device.getSettingsSnapshot();
   CHECK(settings.trust == ConfigTrust::DIRTY && settings.dirtyReason == DirtyReason::READBACK_MISMATCH);
   CHECK(settings.affectedFields == 0x0F);
@@ -421,8 +425,9 @@ void driftDoesNotRetarget() {
 }
 
 void calibrationContinuity() {
+  enum class Read { Scalar, CompleteDump, ShortFinalRead };
   for (const auto model : models) {
-    for (const bool dump : {false, true}) {
+    for (const auto read : {Read::Scalar, Read::CompleteDump, Read::ShortFinalRead}) {
       Fixture f{model};
       f.initialize();
       f.chip.words[0] = 0x0C00;
@@ -434,13 +439,20 @@ void calibrationContinuity() {
       CHECK(f.device.readRegister(1, word).ok() && (word.raw & 0x2000) != 0);
       f.chip.words[7] = 64;
       f.bus.trace.clear();
-      if (dump) {
+      if (read == Read::Scalar) {
+        CHECK(f.device.readRegister(7, word).ok() && f.bus.trace.size() == 1);
+      } else {
+        if (read == Read::ShortFinalRead) f.shortReadAfter(9);
         RegisterSnapshot snap;
-        CHECK(f.device.readRegisterSnapshot(snap).ok() && snap.wordCount == order.size());
+        const auto status = f.device.readRegisterSnapshot(snap);
+        if (read == Read::ShortFinalRead) {
+          CHECK(status.is(Err::I2C_SHORT_TRANSFER) && snap.wordCount == 9 && snap.failedPointer == 8);
+        } else {
+          CHECK(status.ok() && snap.wordCount == order.size());
+        }
+        CHECK(snap.words[7].trust == ConfigTrust::VERIFIED && snap.words[7].startupReady);
         word = snap.words[8];
         CHECK(f.bus.trace.size() == order.size());
-      } else {
-        CHECK(f.device.readRegister(7, word).ok() && f.bus.trace.size() == 1);
       }
       CHECK(word.pointer == 7 && word.raw == 64);
       const auto settings = f.device.getSettingsSnapshot();
@@ -451,13 +463,15 @@ void calibrationContinuity() {
       CHECK(!settings.desired.managedOffsetCounts);
       f.bus.trace.clear();
       if (fourShadows(model)) {
+        CHECK(word.trust == ConfigTrust::VERIFIED && word.startupReady);
         CHECK(!word.signedCounts() && !settings.offset && f.device.isInitialized());
         CHECK(settings.trust == ConfigTrust::VERIFIED && cached->offset.state == OffsetState::UNAVAILABLE);
         CHECK(!cached->offset.countsValid);
-        // Only the full dump read TEMP and acknowledged the pending indication.
+        // Both dump paths read TEMP and acknowledged the pending indication.
         const auto status = f.device.tryReadFresh(sample);
-        CHECK(dump ? status.is(Err::MEASUREMENT_NOT_READY) : status.ok());
+        CHECK(read == Read::Scalar ? status.ok() : status.is(Err::MEASUREMENT_NOT_READY));
       } else {
+        CHECK(word.trust == ConfigTrust::UNKNOWN && !word.startupReady);
         CHECK(word.signedCounts() == 64 && settings.offset && settings.offset->counts == 64);
         CHECK(settings.offset->observedAtMs == word.observedAtMs);
         CHECK(!f.device.isInitialized() && settings.trust == ConfigTrust::UNKNOWN);

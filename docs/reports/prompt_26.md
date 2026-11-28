@@ -251,3 +251,38 @@ passed with `cmake -E chdir build/host ctest -C Release -R '^(diagnostics|acquis
 `python -B scripts/check_promptset.py` and `git diff --check` passed.
 The next phase-c slice covers dirty settings and unmanaged offset continuity.
 EEPROM protection and the documented dump also remain open for review.
+
+## Phase c review of settings drift and calibration continuity, 2026-11-28
+
+The slice started on clean `main` at
+`eaf0633d6f1a69cd5459fa1bf7436fc69f0f5edf`. Its parent, subject and two
+paths matched the previous slice and its commit request. The wrapper recorded
+upstream equality at 01:45:02 Prague time.
+
+`driftDoesNotRetarget` now checks trust on each row. ID and TEMP retain
+VERIFIED. The first mismatching CONFIG reports DIRTY, as do all later rows.
+The existing assertions check that both limit mismatches and managed OFFSET
+join the affected fields, the desired settings survive, and a second dump
+with matching words retains the original dirty reason.
+[Diagnostic route](../../src/Diagnostics.cpp), [settings evidence](../../src/DeviceEvidence.cpp).
+
+The independent read-only review found a missing case in `calibrationContinuity`.
+A short final read at `0x08` leaves nine complete rows. On TMP117/M/N and
+TMP119, the row preceding OFFSET retains startup proof and VERIFIED trust.
+The OFFSET row records the newly observed +64 counts (+0.5 °C) and its
+completion tick, with startup proof cleared and trust UNKNOWN. Fresh reads
+require recovery, and the historical sample retains its zero-offset attribution.
+On TMP116/N, the same completed word is EEPROM3 and the device remains
+initialized with VERIFIED trust. The existing driver passed the added cases.
+[Diagnostic tests](../../test/test_diagnostics.cpp),
+[TMP116 p. 30](../reference/source/TMP116-Digital-Temperature-Sensor-Datasheet-SBOS740A.pdf#page=30),
+[TMP117 p. 31](../reference/source/TMP117-Digital-Temperature-Sensor-Datasheet-SNOSD82D.pdf#page=31),
+[TMP119 p. 38](../reference/source/TMP119-Digital-Temperature-Sensor-Datasheet-SNIS236.pdf#page=38).
+
+The Release build passed with GCC 15.1.0 and CMake 4.0.1 using
+`cmake --build build/host --config Release --parallel 6`. All seven suites passed with
+`cmake -E chdir build/host ctest -C Release -R '^(diagnostics|trust|apply|configuration|limits|latest|acquisition)_cpp$' --output-on-failure`.
+With Python 3.12.10, `python -B scripts/check_references.py` verified 14 PDFs,
+`python -B tools/check_register_ledger.py` verified six models and
+`python -B tools/test_check_register_ledger.py` passed 31 tests.
+The next phase-c slice covers EEPROM safety, protected write denials and the README dump.
