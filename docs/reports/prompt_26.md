@@ -138,3 +138,46 @@ dump and its acceptance cases follow on that path. Stage 26 has no software
 prerequisite blocker. Stage 40 owns physical observation. Exact flag-clear
 timing and TEMP coherence across a concurrent conversion remain open.
 Stage 43 owns the first remote CI checkpoint.
+
+## Phase b implementation
+
+On 2026-11-28 the implementation started on clean `main` at
+`9c40e73484c4c8f5809c5c3ff614d604a660634d`. The phase-a request matched
+that commit's subject and single report path. Its parent was `65dcacdb`.
+The wrapper recorded equality with `origin/main` at 01:01:02 Prague time.
+Both sibling source revisions above still matched their clean local checkouts.
+The selected map, CONFIG and ID tables were rechecked in the three pinned PDFs.
+
+The `diagnostics` artifact now exposes `readRegister` and
+`readRegisterSnapshot`. The scalar path uses the bound target, register
+policy and family decoder. CONFIG, TEMP, limits, OFFSET and EEPROM_UL feed
+the existing device evidence at transfer completion. A complete word can
+reveal drift or an unsafe EEPROM lock while remaining available to the caller.
+The full dump retains the words in wire order, the first unsuccessful pointer,
+and the flags that its failed read could have consumed. The EEPROM snapshot
+uses the same path with its existing sparse order and output contract.
+[Public types and methods](../../include/TMP11x/TMP11x.h),
+[implementation](../../src/Diagnostics.cpp), [family decoding](../../src/Identity.cpp),
+[full and partial dump examples](../../README.md#inspect-registers-after-binding).
+
+| Public native case | Observed result |
+| --- | --- |
+| `scalarMap`, `bindOnlyTranscript` | Across 1,536 model/pointer combinations, every mapped selector used one combined read and every hole or alias used zero. A clockless bound instance read ID, CONFIG, TEMP and an EEPROM shadow in four reads with unknown startup/profile trust. |
+| `snapshotPrefixes`, `sharedBusNeighbors`, `changedIdentityAndTrackedFault` | All six models completed ten ordered reads. Sixty injected short reads retained exactly the completed prefix and failed pointer. A new ID error after earlier success exposed no stale ID in the dump. The foreign-device zero, NACK and `0xFFFF` cases stopped at ID. Neutral reads preserved a prior tracked timeout. |
+| `repeatedConfigAndFreshness`, `ambiguousDestructiveScalars` | A repeated CONFIG read retained both alert events and a single usable ready indication. THERM HIGH remained a level. A short CONFIG or TEMP read invalidated readiness. The CONFIG attempt also marked possible alert loss. |
+| `driftDoesNotRetarget`, `calibrationContinuity`, `guardObservations` | Managed register drift preserved desired settings. The scalar and dump paths retained changed unmanaged calibration and the original sample's provenance. On TMP116/N the same word was EEPROM3. A later failure and a subsequent locked read preserved the earlier EUN latch. |
+
+[Diagnostics tests](../../test/test_diagnostics.cpp), [EEPROM regression suite](../../test/test_eeprom.cpp)
+and [private register write denials](../../test/test_register_transport.cpp).
+
+| Local check on the phase-b working tree | Result |
+| --- | --- |
+| `cmake -S . -B build/host -DTMP11X_BUILD_TESTS=ON -DCMAKE_BUILD_TYPE=Release`, `cmake --build build/host --config Release --parallel 6`, `cmake -E chdir build/host ctest -C Release --output-on-failure` | PASS, 26/26 suites on the final implementation and tests. GCC 15.1.0 and CMake/CTest 4.0.1. |
+| [Tests-off MinGW Release consumer](../testing.md#source-consumer) in `build/p26b-consumer`, then `cmake --build build/p26b-consumer --config Release --parallel 4` and `build/p26b-consumer/tmp11x_native_consumer.exe` | PASS, linked and printed `0.1.0`. |
+| Compile the public device header with `g++ -std=c++17 -Wall -Wextra -Wpedantic -Werror -Iinclude -fsyntax-only -x c++ -`. Generate XML from `include/TMP11x` using `doxygen -`, `GENERATE_XML=YES`, `WARN_AS_ERROR=YES`. | PASS. Doxygen 1.13.2 generated both diagnostic entry points and documented observation and snapshot fields in `build/p26b-docs/xml`. |
+| `python -B scripts/check_references.py`, `python -B tools/check_register_ledger.py`, `python -B tools/test_check_register_ledger.py`, `python -B scripts/check_promptset.py`, `git diff --check` | PASS, 14 pinned PDFs, six model rows, 31 ledger regressions and 55 stages. Python 3.12.10. |
+
+Phase c reviews the wrapper's resulting implementation commit. Phase d owns
+acceptance, the progress row and report index. Stage 28 owns the cooperative
+slot gate and stages 37/38 own CLI rendering. MCU, physical and remote CI
+checks were not run in this phase.

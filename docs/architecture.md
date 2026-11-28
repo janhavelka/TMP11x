@@ -16,7 +16,7 @@ conversion or startup interval runs. [Public API and operation gates](api-contra
 | `Temperature.h` | Pure signed count, Celsius and register-word conversions for TEMP and thresholds. |
 | `Configuration.h` | Bus-silent profile validation, CONFIG encoding and observation, and expected-register comparison for CONFIG, THIGH, TLOW and managed OFFSET. |
 | `Timing.h` | Bus-silent conversion timing for the selected model, cycle and averaging. |
-| `TMP11x.h` | The device class and its sample, identity, health, settings and alert evidence. Public operations include binding, initialization and recovery, addressed reset, identity checks, guarded settings changes, CONFIG and limit readback, alert event consumption, GPIO sampling and temperature acquisition. |
+| `TMP11x.h` | The device class and its sample, identity, health, settings, register and alert evidence. Public operations include binding, initialization and recovery, addressed reset, identity checks, read-only diagnostics, guarded settings changes, CONFIG and limit readback, alert event consumption, GPIO sampling and temperature acquisition. |
 | `Version.h` | Checked-in generated package version from `library.json`. Its constants describe the header, and the out-of-line `version()` describes the linked library. |
 
 Implementation belongs in `src/`. Each public header must compile on its
@@ -47,12 +47,13 @@ attempt evidence to update observation history and configuration trust.
 Managed engines pass `detail::RegisterTransport::tracked(device)` to the
 word or identity helper. The frame helper records the normalized outcome
 on callback return, before any register comparison. Callers use the
-`attempted` flag for their work budget. Public identity diagnostics pass
-the binding alone, which leaves counters, fault history and clock untouched.
-The EEPROM snapshot uses the same neutral reads and samples the optional
-clock after each complete word. Its result retains that scan's ID, lock and
-ordered shadow observations through the first failure. A lock read can
-latch EUN or invalidate an acquisition guard on BUSY.
+`attempted` flag for their work budget. Public `readIdentity` and `probe`
+leave counters, fault history and clock untouched. Checked register
+observations use neutral transport and carry one optional completion tick
+for the word and its effects. Both full-map and EEPROM snapshots check
+identity first and retain complete words through the first failed pointer.
+The full-map scan reads TEMP before CONFIG. The EEPROM scan skips both.
+A lock read can latch EUN or invalidate an acquisition guard on BUSY.
 
 `detail::LatestRead` reuses the transport's completion tick for both the
 sample timestamp and the timed owner's expiry check. Its result retains a
@@ -75,7 +76,7 @@ datasheets leave byte latching within the combined TEMP read unspecified.
 [Acquisition engine](../src/Acquisition.cpp), [operation budget](../src/OperationBudget.h).
 
 `detail::DeviceEvidence` records each CONFIG, limit, OFFSET and TEMP outcome for
-apply, managed observation and verification. It captures flags on complete
+apply, managed observation, diagnostics and verification. It captures flags on complete
 CONFIG reads, records possible loss after ambiguous reads and keeps each
 register's observation time. The owner resolves its deadline separately,
 so a late CONFIG word can record a mismatch and pending alerts even though
@@ -101,10 +102,10 @@ establish the next verified generation. [Reset implementation](../src/Reset.cpp)
 | Owner | Exclusive decision and callers |
 | --- | --- |
 | Model and transport (11–12) | One pure model/capability table supplies family, ID policy, EEPROM index map, offset/reset support. One checked transport maps the requested function to a permitted single-word transfer and accounts its physical outcome once. Deny holes/aliases, any data write to TEMP/ID/EEPROM_UL/shadows, and command encodings on the ordinary CONFIG path. Private typed commands have distinct permission. No transfer accepts an arbitrary caller-supplied bus address. |
-| Identity (13, public at 14) | The private `detail::readIdentity` returns the family check and the underlying `TransferResult`. Stage 14 uses the family status for neutral diagnostics. Stage 18 passes the tracked transport view so a complete ID read counts once even on a mismatch. ID-first dumps reuse this check at stage 26. [Identity interface](../src/Identity.h) |
+| Identity (13, public at 14) | Managed and diagnostic reads pass each complete ID word through the same family decoder. The private `detail::readIdentity` returns both family status and the tracked transfer result to managed operations. A complete incompatible ID counts as a physical success there. Neutral diagnostics publish the complete ID and stop a dump on mismatch. [Identity interface](../src/Identity.h), [diagnostic implementation](../src/Diagnostics.cpp). |
 | Configuration (17–20, 22–23, 25) | One encoder/expected-state comparison for CONFIG. The configuration engine owns `0x04` safety decisions, stable CONFIG fields, THIGH/TLOW and supported managed OFFSET, including ordered apply and final verification. It supplies the guarded SD/command encoder to measurement and the explicit reset command at 25. Stage 19 owns common observation bookkeeping for CONFIG/TEMP and generation/trust invalidation. Every reader calls it. Stage 22 exposes retained alert events. |
 | Measurement (16, 21) | One signed-word codec for TEMP, limits and offset. One acquisition engine owns the TEMP-to-Sample publication point, continuous-ready evidence, one-shot preflight/baseline/trigger sequence, and last-good sample. It asks configuration to compare CONFIG and enforce the guard. It never installs a new profile. |
-| Diagnostics (24, 26) | Shadow access maps a one-based word index through the selected capability. Diagnostics own observation formatting, ID-first traversal and the fixed dump order. They reuse the same decoders, checked transport and read-effect bookkeeping. A raw view never applies a profile, publishes a managed sample or programs EEPROM. |
+| Diagnostics (24, 26) | Shadow access maps a one-based word index through the selected capability. Diagnostics own model-specific labels, signed count interpretation and ID-first traversal. A ten-entry array holds the full-map observations in wire order. Applications render its completed prefix and the first unsuccessful pointer. The checked read path reuses the managed decoders and evidence bookkeeping. |
 
 Stage 14 owns bus-silent binding and stage 15 owns transport health. Stage 18
 supplies real initialize/recover and a resumable full-profile apply with a

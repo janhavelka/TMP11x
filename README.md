@@ -10,8 +10,8 @@ without accessing hardware. `<TMP11x/CommandTable.h>` exposes the register
 pointers, field masks and per-model access classes. The private transport
 has native tests for one-word reads and guarded writes. The public device
 class supports bus-silent binding, explicit family checks, verified volatile
-initialization and recovery, latest and fresh temperature reads and passive transport
-health. Physical qualification is pending.
+initialization and recovery, latest and fresh temperature reads, read-only
+register dumps and passive transport health. Physical qualification is pending.
 `<TMP11x/Version.h>` exposes `TMP11x::version()` for the linked library.
 [Value and binding contracts](docs/api-contracts.md).
 
@@ -55,6 +55,48 @@ one combined read of register `0x0F`. On `IDENTITY_MISMATCH`, inspect
 previous output. Use `probe()` for the same family check when only the status
 is needed. `end()` clears observations and retains the binding for another
 read. `unbind()` also releases the binding. Both use zero bus callbacks.
+
+## Inspect registers after binding
+
+Use `readRegister(pointer, observation)` for one mapped word or
+`readRegisterSnapshot(dump)` for the whole map. The dump checks the ID on
+every call and stops immediately if the transfer fails or the family differs.
+It reads up to ten words separately at the bound address. Both operations
+work without a clock or initialization and leave tracked bus health alone.
+
+An application can render a clockless, freshly bound TMP117 dump as follows.
+The rows are in callback order. TEMP acknowledges DATA_READY, so the zero
+ready bit in the subsequent CONFIG row cannot establish its earlier value.
+
+```text
+model=TMP117 address=0x48 id=0x2117 family=compatible revision=2 status=OK
+startup=unknown profile=UNKNOWN sample_freshness=unknown time_ms=unavailable
+ptr   register   raw     decoded                                 read clears
+0x0F  DEVICE_ID  0x2117  DID=0x117 REV=2                         -
+0x00  TEMP       0xFF80  -128 counts (-1 °C)                     DATA_READY
+0x01  CONFIG     0x8220  ALERT HIGH=1 LOW=0 READY=0 BUSY=0       HIGH,LOW,DATA_READY
+0x02  THIGH      0x0C80  +3200 counts (+25 °C)                   -
+0x03  TLOW       0xFD80  -640 counts (-5 °C)                     -
+0x04  EEPROM_UL  0x0000  EUN=0 BUSY=0                            -
+0x05  EEPROM1    0xCAFE  raw shadow                              -
+0x06  EEPROM2    0x0000  raw shadow                              -
+0x07  OFFSET     0x0040  +64 counts (+0.5 °C)                    -
+0x08  EEPROM3    0x1234  raw shadow                              -
+```
+
+On TMP116/N the ID must be `0x1116`, revision is unavailable, and `0x07`
+and `0x08` are EEPROM3 and EEPROM4. A shadow's raw word has no temperature
+units or guaranteed factory provenance. On any model, CONFIG in THERM mode
+acknowledges DATA_READY alone. HIGH is the therm level and LOW reads zero.
+In this example `0x8220` also encodes continuous MOD=00, CONV=4, AVG=1
+(eight conversions), active-low threshold routing and clear bits 1:0.
+
+On an admitted failure, display the returned status and only the first
+`dump.wordCount` rows. For example, a short CONFIG read in the scan above
+would leave DEVICE_ID and TEMP available. Report `failedPointer=0x01`,
+`status=I2C_SHORT_TRANSFER`, CONFIG and later words unavailable, and
+possible loss of HIGH, LOW and DATA_READY. A complete incompatible ID is
+itself a valid raw row. [Diagnostic output contract](docs/api-contracts.md#register-diagnostics).
 
 ## Read EEPROM traceability metadata
 

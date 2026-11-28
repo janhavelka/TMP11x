@@ -27,6 +27,7 @@ enum class ConfigReadSource : std::uint8_t {
   VERIFICATION,  ///< Read-only profile verification.
   ACQUISITION,   ///< Freshness preflight, shutdown baseline or readiness poll.
   RESET,         ///< Profile readback after an addressed reset command.
+  DIAGNOSTIC,    ///< A health-neutral scalar read or ordered register dump.
 };
 
 /// Origin of the first pending alert-mode event. Later observations may add either flag.
@@ -121,6 +122,34 @@ enum class ConfigTrust : std::uint8_t {
   UNKNOWN,   ///< No current profile verification evidence.
   DIRTY,     ///< An unresolved change or mismatch requires verified replay.
   VERIFIED,  ///< Owned settings were verified for the current profile generation.
+};
+
+/// One complete addressed diagnostic read. TEMP supplies a stored word with unknown
+/// conversion freshness. The raw word alone cannot establish startup or sample validity.
+struct RegisterObservation {
+  IdentityInfo identity{};                   ///< Bound model/address and family evidence available at this read.
+  std::uint8_t pointer{};                    ///< Exact register selector sent on the bus.
+  std::uint16_t raw{};                       ///< Complete unsigned word, most significant byte first.
+  std::optional<std::uint32_t> observedAtMs; ///< Completion tick in the binding's clock epoch, if available.
+  std::uint16_t readClearMask{};             ///< Flag positions acknowledged by this read, including clear flags.
+  ConfigTrust trust = ConfigTrust::UNKNOWN;  ///< Live profile trust after recording this word.
+  bool startupReady = false;                 ///< The driver holds startup timing evidence for the target.
+  std::uint32_t profileGeneration{};         ///< Last verified generation, zero before any verified replay.
+
+  /// Static register label for this BOM model, or UNKNOWN for an unmapped selection.
+  const char* name() const noexcept;
+  /// Signed counts of 1/128 degree Celsius for TEMP, either limit or a supported OFFSET.
+  /// Other register types, including all EEPROM data shadows, have no decoded temperature.
+  std::optional<std::int16_t> signedCounts() const noexcept;
+};
+
+/// Ordered, non-atomic dump. Only words[0..wordCount) contain completed observations.
+struct RegisterSnapshot {
+  IdentityInfo identity{};                    ///< Target and ID evidence from this scan only.
+  std::array<RegisterObservation, 10> words{}; ///< Transfer order, including any complete incompatible ID.
+  std::uint8_t wordCount{};                    ///< Number of complete raw words in this scan.
+  std::optional<std::uint8_t> failedPointer;   ///< First unsuccessful pointer, including an incompatible ID.
+  std::uint16_t possibleReadClearMask{};       ///< Flags the failed transfer might have acknowledged.
 };
 
 /// First unresolved cause of lost profile trust.
@@ -334,6 +363,21 @@ class TMP11x {
   /// Neither diagnostic establishes initialization or a power-on time.
   Status probe();
 
+  /// Read one documented pointer at the bound address in one health-neutral transfer.
+  /// Works immediately after bind(). Unknown identity is labelled in the result. A known
+  /// mismatch blocks non-ID reads. Holes and aliases return INVALID_PARAM before I2C.
+  /// Local refusal or transfer failure preserves @p out. A complete incompatible ID is
+  /// published with IDENTITY_MISMATCH. TEMP acknowledges DATA_READY. CONFIG also acknowledges
+  /// HIGH/LOW in alert mode. A failed attempt can still consume those flags. Complete words
+  /// update live evidence, including drift or unsafe EEPROM state, without publishing a Sample.
+  Status readRegister(std::uint8_t pointer, RegisterObservation& out);
+
+  /// Read ID first, then 0x00 through 0x08 in order, once each. Every read uses the bound
+  /// callback cap. TEMP precedes CONFIG, so its read can explain a clear DATA_READY in CONFIG.
+  /// Local rejection preserves @p out. On ID mismatch or transfer failure, stop immediately
+  /// and return its status with the completed prefix, failed pointer and possible flag loss.
+  Status readRegisterSnapshot(RegisterSnapshot& out);
+
   /// Read one raw 16-bit volatile shadow (MSB first) in one health-neutral transfer after bind().
   /// One-based indices map to 0x05/06/07/08 on TMP116/N and 0x05/06/08 on TMP117/M/N and TMP119.
   /// NOT_BOUND, INVALID_PARAM (index outside the selected map), and a cached IDENTITY_MISMATCH
@@ -455,7 +499,7 @@ class TMP11x {
   void clearLiveState() noexcept;
   Status requireInitialized() const noexcept;
   Status readObservedRegister(std::uint8_t pointer);
-  Status readDiagnosticWord(std::uint8_t pointer, std::uint16_t& out);
+  Status readDiagnosticWord(std::uint8_t pointer, RegisterObservation& out, bool timestamp);
   Status applySettings(const SensorSettings& candidate);
 
   Config _config{};

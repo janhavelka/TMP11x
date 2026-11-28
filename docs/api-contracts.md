@@ -276,6 +276,47 @@ A clockless binding supports identity and bounded diagnostics. The
 latest-value read engine itself requires no clock for decoding or
 publication, while public managed initialization requires one.
 
+### Register diagnostics
+
+`readRegister(pointer, out)` accepts the full pointer byte on a bound
+instance. Pointers `0x00–0x08` and `0x0F` map to single MSB-first word
+reads. An unmapped pointer returns `INVALID_PARAM` before I²C. An explicit
+read before an ID check labels the word with the selected model and address
+and leaves `identity.rawValid` false. A cached incompatible ID blocks
+every non-ID read. A complete ID read updates both the result and the
+cached identity, including on `IDENTITY_MISMATCH`.
+
+`RegisterObservation` carries `pointer`, `raw`, `identity`, an optional
+completion tick `observedAtMs`, `startupReady`, `trust` and
+`profileGeneration`. Tick zero is valid when present. `name()` labels the
+pointer for the selected model. `signedCounts()` returns signed 1/128 °C
+units for TEMP, THIGH, TLOW and a supported OFFSET. To inspect CONFIG use
+`decodeConfiguration(raw)` for MOD, cycle, averaging, comparator mode,
+polarity, pin selection and the four observed status bits. The
+[register ledger](registers/tmp11x.json) identifies the reserved and reset-command
+bits for each model. [Register and field coverage](feature-coverage.md#registers).
+
+`readClearMask` describes which flags a complete read acknowledges.
+It is `0x2000` for TEMP, `0xE000` for CONFIG in ALERT mode, `0x2000`
+for CONFIG in THERM mode and zero for the remaining pointers. A dump reads
+TEMP before CONFIG, so even a clear CONFIG ready bit can follow a pending
+conversion. CONFIG reads enter the same sticky-event and generation-specific
+readiness history as managed observations. Diagnostics alone supply no
+sample or startup proof. A fresh binding keeps unknown trust even when
+the observed fields differ from the software defaults.
+
+`readRegisterSnapshot(out)` reads `0F 00 01 02 03 04 05 06 07 08` (hex)
+using one combined transfer per pointer. Each call checks the ID again.
+Read `words[0..wordCount)` in order. An admitted failure sets
+`failedPointer` and returns the terminal status. An incompatible ID is a
+complete row even though the check stops the scan there. A transfer error
+leaves the failed word unavailable. Its `possibleReadClearMask` is
+`0xE000` for CONFIG, `0x2000` for TEMP and zero otherwise. Earlier
+observations and their effects survive. Local refusal preserves the caller's
+snapshot. [Example dump](../README.md#inspect-registers-after-binding).
+
+### Retained configuration and alert observations
+
 `readLimits(pair)` reads TLOW then THIGH. It publishes the signed pair on a
 complete read, including a pair that reveals drift. A transfer failure keeps
 the caller's pair intact. Each complete word updates the settings snapshot.

@@ -7,6 +7,7 @@ set(TMP11X_SOURCES
   src/Config.cpp
   src/Configuration.cpp
   src/DeviceEvidence.cpp
+  src/Diagnostics.cpp
   src/Identity.cpp
   src/LatestRead.cpp
   src/RegisterTransport.cpp
@@ -85,6 +86,13 @@ if(TMP11X_BUILD_TESTS)
   target_link_libraries(tmp11x_eeprom_test PRIVATE TMP11x)
   add_test(NAME eeprom_cpp COMMAND tmp11x_eeprom_test)
 
+  add_executable(tmp11x_diagnostics_test
+    test/test_diagnostics.cpp
+    test/support/FakeTmp11xDevice.cpp)
+  target_link_libraries(tmp11x_diagnostics_test PRIVATE TMP11x)
+  target_include_directories(tmp11x_diagnostics_test PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src")
+  add_test(NAME diagnostics_cpp COMMAND tmp11x_diagnostics_test)
+
   add_executable(tmp11x_health_test
     test/test_health.cpp
     test/support/FakeTmp11xDevice.cpp)
@@ -161,7 +169,7 @@ if(TMP11X_BUILD_TESTS)
                  tmp11x_configuration_test tmp11x_apply_test tmp11x_trust_test tmp11x_timing_test
                  tmp11x_conversion_settings_test tmp11x_averaging_blocks_test tmp11x_acquisition_test
                  tmp11x_limits_test tmp11x_alert_comparator_test tmp11x_eeprom_test tmp11x_reset_test
-                 tmp11x_reset_outcomes_test)
+                 tmp11x_reset_outcomes_test tmp11x_diagnostics_test)
     set_target_properties(${target} PROPERTIES
       CXX_STANDARD 17 CXX_STANDARD_REQUIRED YES CXX_EXTENSIONS NO)
     if(MSVC)

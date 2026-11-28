@@ -55,3 +55,7 @@
 - Added guarded addressed reset on TMP117/M/N and TMP119 with timed identity,
   EEPROM guard and profile readback. Explicit recovery replays owned settings
   and preserves unmanaged calibration. TMP116/N refuses reset before I²C.
+- Added checked single-register reads and an ID-first, ten-word register dump
+  after binding. Results carry model-specific names, raw values, optional
+  signed counts and read effects. A failed dump retains completed words and
+  identifies flags the unsuccessful transfer may have acknowledged.
