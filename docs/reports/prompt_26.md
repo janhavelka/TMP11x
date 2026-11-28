@@ -215,3 +215,39 @@ All six focused suites passed with
 The remaining phase-c review covers destructive-read masks and ticks,
 configuration and offset continuity, EEPROM behavior beyond ID admission,
 and the documented dump.
+
+## Phase c review of CONFIG and TEMP observations, 2026-11-28
+
+The previous slice's subject, parent and two paths matched commit
+`5908704ee697dfdf1d9909319ae2fff1285821fb`. The wrapper recorded upstream
+equality at 01:29:34 Prague time. This slice started on that clean revision.
+
+TEMP acknowledges DATA_READY. CONFIG acknowledges DATA_READY and, in alert
+mode, HIGH and LOW. In therm mode HIGH is a level. The diagnostic route
+uses the same completion tick for the returned CONFIG word and its retained
+event. A failed CONFIG read has no complete mode field, so the dump reports
+possible loss across all three flags. The existing prefix and scalar tests
+cover these masks, tick zero, clockless reads and ambiguous transfers.
+[TMP116 p. 26](../reference/source/TMP116-Digital-Temperature-Sensor-Datasheet-SBOS740A.pdf#page=26),
+[TMP117 p. 27](../reference/source/TMP117-Digital-Temperature-Sensor-Datasheet-SNOSD82D.pdf#page=27),
+[TMP119 p. 34](../reference/source/TMP119-Digital-Temperature-Sensor-Datasheet-SNIS236.pdf#page=34),
+[diagnostic route](../../src/Diagnostics.cpp), [evidence handling](../../src/DeviceEvidence.cpp).
+
+The read-only review found a missing case for a conversion completing between
+TEMP and CONFIG on an initialized sensor. In `conversionDuringPartialSnapshot`,
+TEMP returns 99 counts, the fixture completes a conversion at 101 counts
+against a high limit of 100, and CONFIG captures HIGH and DATA_READY. A short
+THIGH read ends the dump after three complete words. The test verifies the
+retained alert's generation and timestamp, unchanged health and an empty
+sample cache. The next fresh read retrieves 101 counts with one guard read and
+one TEMP read. A second attempt reports not ready. The existing driver passed
+this case. [Diagnostic tests](../../test/test_diagnostics.cpp).
+
+The Release build passed with GCC 15.1.0 and CMake 4.0.1 using
+`cmake --build build/host --config Release --parallel 6`. All seven suites
+passed with `cmake -E chdir build/host ctest -C Release -R '^(diagnostics|acquisition|latest|trust|alert_comparator|health|configuration)_cpp$' --output-on-failure`.
+`python -B scripts/check_references.py` verified 14 PDFs,
+`python -B tools/check_register_ledger.py` passed for all six models, and
+`python -B scripts/check_promptset.py` and `git diff --check` passed.
+The next phase-c slice covers dirty settings and unmanaged offset continuity.
+EEPROM protection and the documented dump also remain open for review.

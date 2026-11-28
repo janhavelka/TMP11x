@@ -341,6 +341,58 @@ void ambiguousDestructiveScalars() {
   }
 }
 
+void conversionDuringPartialSnapshot() {
+  Fixture f;
+  f.config.settings.averaging = Averaging::SAMPLES_1;
+  f.config.settings.limits.highCounts = 100;
+  struct Clock {
+    Fixture& fixture;
+    bool convertAfterTemp = false;
+  } clock{f};
+  f.config.timeUser = &clock;
+  f.config.nowMs = [](void* user) {
+    auto& clock = *static_cast<Clock*>(user);
+    auto& fixture = clock.fixture;
+    if (clock.convertAfterTemp && fixture.bus.trace.size() == 2 && fixture.bus.trace.back().tx.at(0) == 0) {
+      // The diagnostic TEMP callback has returned. CONFIG will see the new result.
+      CHECK(fixture.chip.addContinuousConversion(101));
+      clock.convertAfterTemp = false;
+    }
+    return fixture.tick++;
+  };
+  CHECK(f.device.begin(f.config).ok());
+  const auto generation = f.device.getSettingsSnapshot().verifiedGeneration;
+  const auto health = f.device.healthSnapshot();
+  CHECK(f.chip.addContinuousConversion(99));
+  f.bus.trace.clear();
+  f.shortReadAfter(3);
+  clock.convertAfterTemp = true;
+  RegisterSnapshot snap;
+  CHECK(f.device.readRegisterSnapshot(snap).is(Err::I2C_SHORT_TRANSFER));
+  CHECK(snap.wordCount == 3 && snap.failedPointer == 2 && snap.possibleReadClearMask == 0);
+  CHECK(f.bus.trace.size() == 4 && !clock.convertAfterTemp);
+  const auto& temp = snap.words[1];
+  const auto& config = snap.words[2];
+  CHECK(temp.raw == 99 && temp.readClearMask == 0x2000);
+  CHECK((config.raw & 0xE000) == 0xA000 && config.readClearMask == 0xE000);
+  CHECK(temp.observedAtMs && config.observedAtMs && *temp.observedAtMs < *config.observedAtMs);
+  CHECK(config.trust == ConfigTrust::VERIFIED && config.profileGeneration == generation);
+  const auto alerts = f.device.getAlertStatus();
+  CHECK(alerts.pendingHigh && !alerts.pendingLow && !alerts.possibleLoss && !alerts.mixedOrUnknown);
+  CHECK(alerts.firstEvent && alerts.firstEvent->source == ConfigReadSource::DIAGNOSTIC);
+  CHECK(alerts.firstEvent->observedAtMs == config.observedAtMs && alerts.firstEvent->profileGeneration == generation);
+  CHECK(!detail::LatestRead{f.device}.cache);
+  checkTransportHealth(f.device, health);
+
+  f.bus.trace.clear();
+  Sample sample;
+  CHECK(f.device.tryReadFresh(sample).ok() && sample.raw == 101 && sample.freshConversion);
+  CHECK(sample.profileGeneration == generation && f.bus.trace.size() == 2);
+  checkFrame(f.bus.trace[0], 0x4B, 4);
+  checkFrame(f.bus.trace[1], 0x4B, 0);
+  CHECK(f.device.tryReadFresh(sample).is(Err::MEASUREMENT_NOT_READY));
+}
+
 void driftDoesNotRetarget() {
   Fixture f;
   f.config.settings.managedOffsetCounts = 31;
@@ -452,6 +504,7 @@ int main() {
   changedIdentityAndTrackedFault();
   repeatedConfigAndFreshness();
   ambiguousDestructiveScalars();
+  conversionDuringPartialSnapshot();
   driftDoesNotRetarget();
   calibrationContinuity();
   guardObservations();
